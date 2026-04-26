@@ -1,0 +1,20 @@
+{
+    "brand": "Burger Hub",
+    "remediation_results": [
+        {
+            "tool": "generate_json_ld",
+            "status": "success",
+            "output_preview": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"LocalBusiness\",\n  \"name\": \"Burger Hub\",\n  \"descrip..."
+        },
+        {
+            "tool": "draft_technical_whitepaper",
+            "status": "success",
+            "output_preview": "**Whitepaper: Technical Excellence in QSR Operations**\n**Organization:** Burger Hub\n**Subject:** Ope..."
+        },
+        {
+            "tool": "create_review_snippet",
+            "status": "success",
+            "output_preview": "Burger Hub is easily one of..."
+        }
+    ]
+}

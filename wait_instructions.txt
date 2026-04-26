@@ -1,0 +1,8 @@
+WAIT START TIME: 2026-04-27 00:20:00 UTC
+RE-AUDIT SCHEDULED FOR: 2026-04-29 00:20:00 UTC
+
+COMMAND TO RUN AFTER 48 HOURS:
+python -c "from geo_audit_agent.agent import build_geo_audit_agent; import json; agent=build_geo_audit_agent(); res=agent.invoke({'brand_name': 'Burger Hub', 'category': 'fast food', 'city': 'Islamabad', 'gaps': [], 'planned_actions': [], 'remediation_results': []}); json.dump(res, open('post_remediation_audit.json', 'w'), indent=4)"
+
+Then run:
+python measure_lift.py

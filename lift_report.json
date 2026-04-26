@@ -1,0 +1,22 @@
+{
+    "brand": "Burger Hub",
+    "metrics": {
+        "is_cited": {
+            "before": true,
+            "after": true,
+            "lift": "Maintained"
+        },
+        "confidence_score": {
+            "before": 0.5,
+            "after": 0.5,
+            "absolute_increase": 0.0,
+            "percentage_lift": "0.0%"
+        },
+        "gaps": {
+            "before": 2,
+            "after": 2,
+            "resolved": 0
+        }
+    },
+    "summary": "Audit cycle completed. Content deployed and re-indexed (mocked)."
+}
