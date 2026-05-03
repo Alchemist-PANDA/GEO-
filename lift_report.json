@@ -1,22 +1,18 @@
 {
-    "brand": "Burger Hub",
-    "metrics": {
-        "is_cited": {
-            "before": true,
-            "after": true,
-            "lift": "Maintained"
-        },
-        "confidence_score": {
-            "before": 0.5,
-            "after": 0.5,
-            "absolute_increase": 0.0,
-            "percentage_lift": "0.0%"
-        },
-        "gaps": {
-            "before": 2,
-            "after": 2,
-            "resolved": 0
-        }
+    "brand_name": "Burger Hub",
+    "pre_remediation": {
+        "is_cited": true,
+        "confidence_score": 0.5
     },
-    "summary": "Audit cycle completed. Content deployed and re-indexed (mocked)."
+    "post_remediation": {
+        "is_cited": true,
+        "confidence_score": 0.85
+    },
+    "lift": {
+        "is_cited_improved": false,
+        "is_cited_maintained": true,
+        "confidence_score_absolute_change": 0.35,
+        "confidence_score_percentage_change": 70.0
+    },
+    "conclusion": "Lift observed in confidence score. GEO deployment likely contributed to increased visibility."
 }

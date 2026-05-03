@@ -1,0 +1,15 @@
+python-dotenv
+google-genai
+langgraph>=0.2.0
+pydantic
+tenacity
+plotly
+scikit-learn
+mlflow
+sentence-transformers
+chromadb
+extruct
+beautifulsoup4
+requests
+pandas
+numpy

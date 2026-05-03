@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.insert(0, r'C:\Users\CGS_Computer')
 import streamlit as st
 import json
 import logging

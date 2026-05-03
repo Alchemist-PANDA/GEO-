@@ -2,55 +2,10 @@
     "brand_name": "Burger Hub",
     "category": "fast food",
     "city": "Islamabad",
-    "llm_response": "Based on local popularity and consistent reviews, here are the top fast-food options in Islamabad:\n\n*   **Cheezious:** Highly popular for its \"Crown Crust\" pizza and fried chicken.\n*   **Howdy:** Known for high-quality charcoal-grilled burgers and a cowboy-themed atmosphere.\n*   **Daily Deli Co:** Widely considered one of the best spots for juicy beef burgers.\n*   **Savour Foods:** An iconic local staple famous for its Pulao-Kebab combo.\n*   **Burger Fest:** A local favorite for classic beef and chicken burgers.\n*   **OPTP (One Potato Two Potato):** The go-to for specialized fries and Nashville-style chicken.\n*   **Jessie\u2019s:** Known for premium, gourmet-style burgers and shakes.",
     "is_cited": true,
     "confidence_score": 0.5,
-    "gaps": [
-        {
-            "gap_type": "Structured Data",
-            "description": "brand's schema.org (JSON-LD) is missing.",
-            "severity": "high",
-            "tool_required": "generate_json_ld"
-        },
-        {
-            "gap_type": "Authority Signals",
-            "description": "Domain authority is low.",
-            "severity": "medium",
-            "tool_required": "draft_technical_whitepaper"
-        }
+    "citations": [
+        "Some people mention Burger Hub."
     ],
-    "planned_actions": [
-        {
-            "action": "Generate and implement comprehensive Organization and LocalBusiness JSON-LD schema to provide AI crawlers with structured brand data.",
-            "tool_required": "generate_json_ld",
-            "estimated_effort_days": 1
-        },
-        {
-            "action": "Author a technical whitepaper on Burger Hub's proprietary food safety protocols and sustainable sourcing to build industry authority and earn high-quality backlinks.",
-            "tool_required": "draft_technical_whitepaper",
-            "estimated_effort_days": 7
-        },
-        {
-            "action": "Create and deploy review snippet markup to aggregate customer ratings, enhancing the brand's trust signals in AI-generated search results.",
-            "tool_required": "create_review_snippet",
-            "estimated_effort_days": 2
-        }
-    ],
-    "remediation_results": [
-        {
-            "tool": "generate_json_ld",
-            "status": "success",
-            "output_preview": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"LocalBusiness\",\n  \"name\": \"Burger Hub\",\n  \"descrip..."
-        },
-        {
-            "tool": "draft_technical_whitepaper",
-            "status": "success",
-            "output_preview": "**Whitepaper: Technical Excellence in QSR Operations**\n**Organization:** Burger Hub\n**Subject:** Ope..."
-        },
-        {
-            "tool": "create_review_snippet",
-            "status": "success",
-            "output_preview": "Burger Hub is easily one of..."
-        }
-    ]
+    "analysis": "Baseline audit before remediation."
 }

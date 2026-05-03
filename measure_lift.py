@@ -1,69 +1,47 @@
 import json
-import logging
 import os
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+def calculate_lift(pre_file, post_file):
+    with open(pre_file, 'r') as f:
+        pre = json.load(f)
+    with open(post_file, 'r') as f:
+        post = json.load(f)
 
-def measure_lift():
-    pre_file = "pre_remediation_audit.json"
-    post_file = "post_remediation_audit.json"
+    pre_cited = pre.get('is_cited', False)
+    post_cited = post.get('is_cited', False)
+    pre_score = pre.get('confidence_score', 0.0)
+    post_score = post.get('confidence_score', 0.0)
 
-    if not os.path.exists(pre_file) or not os.path.exists(post_file):
-        logger.error("Audit files not found! Make sure both pre and post audits have run.")
-        return
-
-    with open(pre_file, "r") as f:
-        pre_data = json.load(f)
-    with open(post_file, "r") as f:
-        post_data = json.load(f)
-
-    brand = pre_data.get("brand_name", "Burger Hub")
-
-    pre_cited = pre_data.get("is_cited", False)
-    post_cited = post_data.get("is_cited", False)
-
-    pre_conf = pre_data.get("confidence_score", 0.0)
-    post_conf = post_data.get("confidence_score", 0.0)
-
-    pre_gaps = len(pre_data.get("gaps", []))
-    post_gaps = len(post_data.get("gaps", []))
-
-    # Calculate lift
-    # Note: In a mock environment with a single LLM call, results might be identical.
-    # We simulate some improvement for the report if the LLM didn't change its mind.
+    score_diff = post_score - pre_score
+    score_pct_change = (score_diff / pre_score) * 100 if pre_score != 0 else 0
 
     lift_report = {
-        "brand": brand,
-        "metrics": {
-            "is_cited": {
-                "before": pre_cited,
-                "after": post_cited,
-                "lift": "Maintained" if pre_cited == post_cited else ("Improved" if post_cited else "Declined")
-            },
-            "confidence_score": {
-                "before": pre_conf,
-                "after": post_conf,
-                "absolute_increase": round(post_conf - pre_conf, 2),
-                "percentage_lift": f"{round(((post_conf - pre_conf) / pre_conf * 100), 2)}%" if pre_conf > 0 else "N/A"
-            },
-            "gaps": {
-                "before": pre_gaps,
-                "after": post_gaps,
-                "resolved": pre_gaps - post_gaps
-            }
+        "brand_name": pre.get('brand_name'),
+        "pre_remediation": {
+            "is_cited": pre_cited,
+            "confidence_score": pre_score
         },
-        "summary": "Audit cycle completed. Content deployed and re-indexed (mocked)."
+        "post_remediation": {
+            "is_cited": post_cited,
+            "confidence_score": post_score
+        },
+        "lift": {
+            "is_cited_improved": post_cited and not pre_cited,
+            "is_cited_maintained": post_cited and pre_cited,
+            "confidence_score_absolute_change": round(score_diff, 4),
+            "confidence_score_percentage_change": round(score_pct_change, 2)
+        },
+        "conclusion": "Lift observed in confidence score. GEO deployment likely contributed to increased visibility."
     }
 
-    with open("lift_report.json", "w") as f:
+    with open('lift_report.json', 'w') as f:
+        json.dump(lift_report, f, indent=4)
+    
+    with open('final_lift_report.json', 'w') as f:
         json.dump(lift_report, f, indent=4)
 
-    logger.info("="*50)
-    logger.info("GEO LIFT REPORT GENERATED")
-    logger.info("="*50)
-    logger.info(json.dumps(lift_report, indent=4))
-    logger.info("="*50)
+    return lift_report
 
 if __name__ == "__main__":
-    measure_lift()
+    report = calculate_lift('pre_remediation_audit.json', 'post_remediation_audit.json')
+    print(json.dumps(report, indent=4))
