@@ -1,0 +1,7 @@
+# Ralph Progress Tracking
+# Started: 2026-05-04
+
+## [Iteration 1]
+- Initialized prd.json with specific acceptance criteria.
+- Target: Fix API key/quota issue and verify Burger Hub audit.
+- New API Key provided: AIzaSyDnnICXkhjQgsENagi699phFuOxizahB8c

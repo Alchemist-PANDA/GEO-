@@ -14,5 +14,5 @@
         "confidence_score_absolute_change": 0.35,
         "confidence_score_percentage_change": 70.0
     },
-    "conclusion": "Lift observed in confidence score. GEO deployment likely contributed to increased visibility."
+    "conclusion": "Positive lift observed (+70.0%). GEO deployment likely contributed to increased visibility."
 }

@@ -15,6 +15,13 @@ def calculate_lift(pre_file, post_file):
     score_diff = post_score - pre_score
     score_pct_change = (score_diff / pre_score) * 100 if pre_score != 0 else 0
 
+    if score_diff > 0.01:
+        conclusion = f"Positive lift observed (+{round(score_pct_change, 1)}%). GEO deployment likely contributed to increased visibility."
+    elif score_diff < -0.01:
+        conclusion = f"Negative change observed ({round(score_pct_change, 1)}%). Visibility decreased after deployment."
+    else:
+        conclusion = "No significant change in confidence score."
+
     lift_report = {
         "brand_name": pre.get('brand_name'),
         "pre_remediation": {
@@ -31,12 +38,9 @@ def calculate_lift(pre_file, post_file):
             "confidence_score_absolute_change": round(score_diff, 4),
             "confidence_score_percentage_change": round(score_pct_change, 2)
         },
-        "conclusion": "Lift observed in confidence score. GEO deployment likely contributed to increased visibility."
+        "conclusion": conclusion
     }
 
-    with open('lift_report.json', 'w') as f:
-        json.dump(lift_report, f, indent=4)
-    
     with open('final_lift_report.json', 'w') as f:
         json.dump(lift_report, f, indent=4)
 

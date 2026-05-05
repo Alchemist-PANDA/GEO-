@@ -1,0 +1,50 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "subject": "Supabase & Env Configuration",
+      "priority": 1,
+      "status": "pending",
+      "passes": false,
+      "acceptanceCriteria": [
+        "supabase-py and python-dotenv installed",
+        ".env contains valid SUPABASE_URL and SUPABASE_ANON_KEY"
+      ]
+    },
+    {
+      "id": "US-002",
+      "subject": "User Authentication & BYOK",
+      "priority": 2,
+      "status": "pending",
+      "passes": false,
+      "acceptanceCriteria": [
+        "Login/Signup screens functional with Supabase Auth",
+        "Dashboard requires a user-provided API key to run audits",
+        "agent.py refactored to accept dynamic API keys"
+      ]
+    },
+    {
+      "id": "US-003",
+      "subject": "Data Persistence (Brands & Audits)",
+      "priority": 3,
+      "status": "pending",
+      "passes": false,
+      "acceptanceCriteria": [
+        "Audits are saved to Supabase 'audits' table upon completion",
+        "Dashboard displays audit history for the logged-in user",
+        "Brands are tracked per user in Supabase 'brands' table"
+      ]
+    },
+    {
+      "id": "US-004",
+      "subject": "Settings & Stats",
+      "priority": 4,
+      "status": "pending",
+      "passes": false,
+      "acceptanceCriteria": [
+        "Settings page allows updating API key",
+        "Usage stats (number of audits) visible to user"
+      ]
+    }
+  ]
+}

@@ -1,11 +1,20 @@
 import sys
 import os
-sys.path.insert(0, r'C:\Users\CGS_Computer')
+from pathlib import Path
+
+# Add current directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 import streamlit as st
 import json
 import logging
 from typing import List, Dict, Optional
+from datetime import datetime
 from geo_audit_agent.agent import build_geo_audit_agent
+from multi_model import run_multi_model_audit
+from compare import compare_brands
+from run_lift_simulation import simulate_improved_audit
+from report_generator import generate_markdown_report
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,165 +22,1050 @@ logger = logging.getLogger(__name__)
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="GEO Audit Agent Dashboard",
-    page_icon="🌍",
-    layout="wide"
+    page_title="AI Search Intelligence Platform",
+    page_icon="🔮",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
+# --- Custom CSS for Premium Design ---
+st.markdown("""
+<style>
+    /* Global Styles */
+    .stApp {
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+    }
+
+    /* Hero Section */
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 3rem 2rem;
+        border-radius: 18px;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+
+    .hero-subtitle {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+
+    .hero-cta {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+        font-weight: 500;
+    }
+
+    /* Glassmorphism Cards */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 1.5rem;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+    }
+
+    /* Metric Cards */
+    .metric-card {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 1.5rem;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Coverage Score Badge */
+    .coverage-badge {
+        display: inline-block;
+        padding: 0.5rem 1.5rem;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 1rem 0;
+    }
+
+    .badge-dominant { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    .badge-strong { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .badge-emerging { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+    .badge-weak { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+    .badge-invisible { background: linear-gradient(135deg, #4b4b4b 0%, #2b2b2b 100%); color: white; }
+
+    /* Buttons */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 0.5rem;
+        border-radius: 12px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.6);
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: rgba(15, 20, 25, 0.95);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Text Colors */
+    h1, h2, h3, h4, h5, h6 {
+        color: white !important;
+    }
+
+    p, label, .stMarkdown {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    /* Input Fields */
+    .stTextInput > div > div > input {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        color: white;
+    }
+
+    /* Expanders */
+    .streamlit-expanderHeader {
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 12px;
+        color: white !important;
+    }
+
+    /* Progress Bar */
+    .stProgress > div > div > div {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* Info/Warning/Success Boxes */
+    .stAlert {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        color: white;
+    }
+
+    /* Section Headers */
+    .section-header {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: white;
+        margin: 2rem 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+    }
+
+    /* Evidence Badge */
+    .evidence-item {
+        background: rgba(255, 255, 255, 0.04);
+        border-left: 3px solid #667eea;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* Priority Badges */
+    .priority-high {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+
+    .priority-medium {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+
+    .priority-low {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Hero Section ---
+st.markdown("""
+<div class="hero-section">
+    <div class="hero-title">AI Search Intelligence Platform</div>
+    <div class="hero-subtitle">
+        Measure, compare, and improve how your brand appears across ChatGPT, Claude, Gemini, and Perplexity.
+    </div>
+    <div class="hero-cta">
+        Run an audit. Compare competitors. Prove visibility lift.
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 # --- Session State Initialization ---
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
 if "audit_results" not in st.session_state:
     st.session_state.audit_results = None
 if "remediations" not in st.session_state:
     st.session_state.remediations = []
+if "multi_model_results" not in st.session_state:
+    st.session_state.multi_model_results = None
+if "comparison_results" not in st.session_state:
+    st.session_state.comparison_results = None
+if "lift_results" not in st.session_state:
+    st.session_state.lift_results = None
+if "audit_history" not in st.session_state:
+    st.session_state.audit_history = []
 
-# --- Authentication ---
-def login_screen():
-    st.title("🔒 GEO SaaS Login")
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Login")
+# --- Sidebar Configuration ---
+with st.sidebar:
+    st.markdown("### 🎯 Audit Configuration")
+    with st.form("audit_form"):
+        brand_name = st.text_input("Brand Name", value="Burger Hub")
+        category = st.text_input("Category", value="fast food")
+        city = st.text_input("City", value="Islamabad")
+        run_audit = st.form_submit_button("🚀 Run GEO Audit", use_container_width=True)
 
-        if submit:
-            if username == "admin" and password == "geo123":
-                st.session_state.authenticated = True
-                st.success("Login successful!")
-                st.rerun()
+# --- Tabs ---
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "🔍 Brand Audit",
+    "🤖 AI Systems",
+    "⚔️ Compare Brands",
+    "📈 Lift Proof",
+    "📚 History",
+    "📄 Reports"
+])
+
+# --- TAB 1: Brand Audit ---
+with tab1:
+    if run_audit:
+        with st.spinner(f"Running GEO Audit for {brand_name}..."):
+            try:
+                agent = build_geo_audit_agent()
+                inputs = {
+                    "brand": brand_name,
+                    "category": category,
+                    "city": city
+                }
+                results = agent.invoke(inputs)
+                st.session_state.audit_results = results
+
+                # Initialize remediations state safely
+                st.session_state.remediations = []
+                remediation_data = results.get("remediation", [])
+                for res in remediation_data:
+                    if isinstance(res, str):
+                        st.session_state.remediations.append({
+                            "tool": "Remediation Recommendation",
+                            "content": res,
+                            "status": "Pending"
+                        })
+                    elif isinstance(res, dict):
+                        st.session_state.remediations.append({
+                            "tool": res.get("tool", "Unknown Tool"),
+                            "content": res.get("output_preview", "No preview available"),
+                            "status": "Pending"
+                        })
+                st.success("✅ Audit Completed!")
+            except Exception as e:
+                st.error(f"❌ Audit failed: {e}")
+                logger.error(f"Audit error: {e}")
+
+    # --- Display Results ---
+    if st.session_state.audit_results:
+        res = st.session_state.audit_results
+
+        st.markdown('<div class="section-header">📊 Audit Results</div>', unsafe_allow_html=True)
+
+        # Metric Cards
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            is_cited = res.get("citation_found", False)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{"✅" if is_cited else "❌"}</div>
+                <div class="metric-label">Citation Status</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            confidence = res.get("confidence_score", 0.0)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{confidence:.2f}</div>
+                <div class="metric-label">Confidence Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.progress(float(confidence))
+
+        with col3:
+            sentiment = res.get("sentiment", "none")
+            sentiment_emoji = {"positive": "🟢", "neutral": "🟡", "negative": "🔴", "none": "⚪"}
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{sentiment_emoji.get(sentiment, "⚪")}</div>
+                <div class="metric-label">Sentiment: {sentiment.title()}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col4:
+            gaps_count = len(res.get("gaps", []))
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{gaps_count}</div>
+                <div class="metric-label">Gaps Identified</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Details Expanders
+        with st.expander("📝 AI Response Analysis"):
+            st.markdown("**Raw AI Response:**")
+            st.code(res.get("raw_response", "No response content."), language=None)
+
+        with st.expander("🔍 Competitors Identified"):
+            competitors = res.get("competitors", [])
+            if competitors:
+                for comp in competitors:
+                    st.markdown(f"• {comp}")
             else:
-                st.error("Invalid username or password")
+                st.write("No competitors identified.")
 
-if not st.session_state.authenticated:
-    login_screen()
-    st.stop()
+        with st.expander("🚩 Identified Gaps"):
+            gaps = res.get("gaps", [])
+            if gaps:
+                for gap in gaps:
+                    if isinstance(gap, str):
+                        st.warning(gap)
+                    elif isinstance(gap, dict):
+                        st.warning(f"**{gap.get('gap_type', 'Gap')}** ({gap.get('severity', 'unknown')}): {gap.get('description', '')}")
+            else:
+                st.success("✅ No critical gaps identified!")
 
-# --- Main Dashboard ---
-st.title("🌍 GEO Audit & Remediation Dashboard")
-st.markdown("Monitor and improve your brand's presence in Generative Engine Optimization (GEO).")
+        # --- Remediation Panel ---
+        st.markdown('<div class="section-header">🛠️ Remediation & Content Review</div>', unsafe_allow_html=True)
+        st.info("Review, edit, and approve the AI-generated remediation content below.")
 
-# --- Sidebar Inputs ---
-st.sidebar.header("Audit Configuration")
-with st.sidebar.form("audit_form"):
-    brand_name = st.text_input("Brand Name", value="Burger Hub")
-    category = st.text_input("Category", value="fast food")
-    city = st.text_input("City", value="Islamabad")
-    run_audit = st.form_submit_button("🚀 Run GEO Audit")
+        if st.session_state.remediations:
+            for idx, item in enumerate(st.session_state.remediations):
+                with st.container():
+                    st.markdown(f"""
+                    <div class="glass-card">
+                        <h4>🔧 {item['tool']}</h4>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-if run_audit:
-    with st.spinner(f"Running GEO Audit for {brand_name}..."):
-        try:
-            agent = build_geo_audit_agent()
-            inputs = {
-                "brand_name": brand_name,
-                "category": category,
-                "city": city,
-                "gaps": [],
-                "planned_actions": [],
-                "remediation_results": []
-            }
-            results = agent.invoke(inputs)
-            st.session_state.audit_results = results
+                    edited_content = st.text_area(
+                        f"Edit content for {item['tool']}",
+                        value=item['content'],
+                        height=100,
+                        key=f"edit_{idx}"
+                    )
+                    st.session_state.remediations[idx]['content'] = edited_content
 
-            # Initialize remediations state
-            st.session_state.remediations = []
-            for res in results.get("remediation_results", []):
-                st.session_state.remediations.append({
-                    "tool": res["tool"],
-                    "content": res.get("output_preview", "No preview available"),
-                    "status": "Pending"
-                })
-            st.success("Audit Completed!")
-        except Exception as e:
-            st.error(f"Audit failed: {e}")
-            logger.error(f"Audit error: {e}")
+                    c1, c2, c3 = st.columns([1, 1, 2])
+                    with c1:
+                        if st.button("✅ Approve", key=f"app_{idx}"):
+                            st.session_state.remediations[idx]['status'] = "Approved"
+                            st.toast(f"✅ Approved item {idx}")
+                    with c2:
+                        if st.button("❌ Reject", key=f"rej_{idx}"):
+                            st.session_state.remediations[idx]['status'] = "Rejected"
+                            st.toast(f"❌ Rejected item {idx}")
+                    with c3:
+                        status = st.session_state.remediations[idx]['status']
+                        color = "green" if status == "Approved" else "red" if status == "Rejected" else "orange"
+                        st.markdown(f"**Status:** :{color}[{status}]")
 
-# --- Display Results ---
-if st.session_state.audit_results:
-    res = st.session_state.audit_results
+            # --- Export Section ---
+            st.markdown("<br>", unsafe_allow_html=True)
+            approved_items = [i for i in st.session_state.remediations if i['status'] == "Approved"]
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        is_cited = res.get("is_cited", False)
-        st.metric("Citation Status", "Cited" if is_cited else "Not Cited",
-                  delta="Positive" if is_cited else "Negative", delta_color="normal")
-
-    with col2:
-        confidence = res.get("confidence_score", 0.0)
-        st.metric("Confidence Score", f"{confidence:.2f}")
-        st.progress(confidence)
-
-    with col3:
-        gaps_count = len(res.get("gaps", []))
-        st.metric("Gaps Identified", gaps_count)
-
-    # Details Expanders
-    with st.expander("📝 LLM Analysis Response"):
-        st.write(res.get("llm_response", "No response content."))
-
-    with st.expander("🚩 Identified Gaps"):
-        gaps = res.get("gaps", [])
-        if gaps:
-            for gap in gaps:
-                st.warning(f"**{gap['gap_type']}** ({gap['severity']}): {gap['description']}")
-        else:
-            st.success("No critical gaps identified!")
-
-    # --- Remediation Panel (Human-in-the-Loop) ---
-    st.divider()
-    st.subheader("🛠️ Remediation & Content Review")
-    st.info("Review, edit, and approve the AI-generated remediation content below.")
-
-    if st.session_state.remediations:
-        for idx, item in enumerate(st.session_state.remediations):
-            with st.container(border=True):
-                st.write(f"### Tool: `{item['tool']}`")
-
-                # Dynamic text area for editing
-                edited_content = st.text_area(
-                    f"Edit content for {item['tool']}",
-                    value=item['content'],
-                    height=200,
-                    key=f"edit_{idx}"
+            if approved_items:
+                export_data = {
+                    "brand": res.get("brand", "Unknown"),
+                    "status": res.get("status", "completed"),
+                    "approved_remediations": approved_items
+                }
+                json_export = json.dumps(export_data, indent=4)
+                st.download_button(
+                    label="📥 Export Client-Ready Report",
+                    data=json_export,
+                    file_name=f"geo_remediation_{res.get('brand', 'unknown').lower().replace(' ', '_')}.json",
+                    mime="application/json",
+                    use_container_width=True
                 )
-                st.session_state.remediations[idx]['content'] = edited_content
-
-                c1, c2, c3 = st.columns([1, 1, 2])
-                with c1:
-                    if st.button("✅ Approve", key=f"app_{idx}"):
-                        st.session_state.remediations[idx]['status'] = "Approved"
-                        st.toast(f"Approved {item['tool']}")
-                with c2:
-                    if st.button("❌ Reject", key=f"rej_{idx}"):
-                        st.session_state.remediations[idx]['status'] = "Rejected"
-                        st.toast(f"Rejected {item['tool']}")
-                with c3:
-                    status = st.session_state.remediations[idx]['status']
-                    color = "green" if status == "Approved" else "red" if status == "Rejected" else "orange"
-                    st.markdown(f"Status: **:{color}[{status}]**")
-
-        # --- Export Section ---
-        st.divider()
-        approved_items = [i for i in st.session_state.remediations if i['status'] == "Approved"]
-
-        if approved_items:
-            export_data = {
-                "brand": res["brand_name"],
-                "approved_remediations": approved_items
-            }
-            json_export = json.dumps(export_data, indent=4)
-            st.download_button(
-                label="📥 Export Approved Remediation JSON",
-                data=json_export,
-                file_name=f"geo_remediation_{res['brand_name'].lower().replace(' ', '_')}.json",
-                mime="application/json"
-            )
         else:
-            st.button("📥 Export Approved Remediation JSON", disabled=True, help="Approve at least one item to export.")
+            st.write("No remediation results to display.")
+
+# --- TAB 2: AI Systems ---
+with tab2:
+    st.markdown('<div class="section-header">🤖 Multi-Model AI Visibility Testing</div>', unsafe_allow_html=True)
+    st.markdown("Test your brand's visibility across ChatGPT, Claude, Gemini, and Perplexity.")
+
+    with st.form("multi_model_form"):
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            mm_brand = st.text_input("Brand Name", value="Burger Hub", key="mm_brand")
+        with col_b:
+            mm_category = st.text_input("Category", value="fast food", key="mm_category")
+        with col_c:
+            mm_city = st.text_input("City", value="Islamabad", key="mm_city")
+
+        use_real_llm = st.checkbox("Use Real LLM APIs (if available)", value=False)
+        run_multi_audit = st.form_submit_button("🚀 Run Multi-Model Audit", use_container_width=True)
+
+    if run_multi_audit:
+        with st.spinner(f"Testing {mm_brand} across 4 AI systems..."):
+            try:
+                results = run_multi_model_audit(mm_brand, mm_category, mm_city, use_real=use_real_llm)
+                st.session_state.multi_model_results = results
+                st.success("✅ Multi-model audit completed!")
+            except Exception as e:
+                st.error(f"❌ Multi-model audit failed: {e}")
+                logger.error(f"Multi-model audit error: {e}")
+
+    if st.session_state.multi_model_results:
+        mm_res = st.session_state.multi_model_results
+        summary = mm_res["summary"]
+
+        # GEO Coverage Score - Hero Display
+        st.markdown('<div class="section-header">🎯 GEO Coverage Score</div>', unsafe_allow_html=True)
+
+        coverage_score = summary["geo_coverage_score"]
+        coverage_label = summary["coverage_label"]
+
+        badge_class = f"badge-{coverage_label.lower()}"
+
+        col_score, col_info = st.columns([1, 2])
+
+        with col_score:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{coverage_score}%</div>
+                <div class="metric-label">Coverage Score</div>
+                <div class="coverage-badge {badge_class}">{coverage_label}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.progress(coverage_score / 100)
+
+        with col_info:
+            st.markdown(f"""
+            <div class="glass-card">
+                <p style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">
+                    <strong>Based on:</strong> ChatGPT, Claude, Gemini, Perplexity
+                </p>
+                <p style="font-size: 1rem; color: rgba(255,255,255,0.9);">
+                    {summary['coverage_explanation']}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Evidence Breakdown
+        with st.expander("📋 Coverage Breakdown (Evidence Trace)"):
+            for model_result in mm_res["results"]:
+                status_icon = "✅" if model_result["mentioned"] else "❌"
+                st.markdown(f"""
+                <div class="evidence-item">
+                    {status_icon} <strong>{model_result['model']}</strong> → {model_result['evidence']}
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Key Insight
+        st.info(f"**🔥 Key Insight:** {summary['insight']}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Summary Metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{summary["models_tested"]}</div>
+                <div class="metric-label">AI Systems Tested</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{summary["models_mentioned"]}</div>
+                <div class="metric-label">Systems with Visibility</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col3:
+            visibility_pct = int(summary["visibility_score"] * 100)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{visibility_pct}%</div>
+                <div class="metric-label">Visibility Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<div class="section-header">📊 Visibility by AI System</div>', unsafe_allow_html=True)
+
+        # Results by Model
+        for model_result in mm_res["results"]:
+            status = "✅ Mentioned" if model_result["mentioned"] else "❌ Not Mentioned"
+            with st.expander(f"**{model_result['model']}** ({model_result['provider']}) - {status}"):
+                col_a, col_b, col_c, col_d = st.columns(4)
+
+                with col_a:
+                    st.write("**Mentioned:**")
+                    st.write("✅ Yes" if model_result['mentioned'] else "❌ No")
+
+                with col_b:
+                    st.write("**Position:**")
+                    if model_result['position']:
+                        st.write(f"#{model_result['position']}")
+                    else:
+                        st.write("—")
+
+                with col_c:
+                    st.write("**Sentiment:**")
+                    sentiment_emoji = {
+                        "positive": "🟢",
+                        "neutral": "🟡",
+                        "negative": "🔴",
+                        "none": "⚪"
+                    }
+                    st.write(f"{sentiment_emoji.get(model_result['sentiment'], '⚪')} {model_result['sentiment'].title()}")
+
+                with col_d:
+                    st.write("**Mode:**")
+                    st.write(f"{'🔴 Mock' if model_result['mode'] == 'mock' else '🟢 Real'}")
+
+                st.write("**Raw AI Response:**")
+                st.code(model_result['raw_response'], language=None)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Cross-Platform Analysis
+        st.markdown('<div class="section-header">🌐 Cross-Platform Analysis</div>', unsafe_allow_html=True)
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            st.markdown("""
+            <div class="glass-card">
+                <h4>✅ Visible In</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            if summary['mentioned_models']:
+                for model in summary['mentioned_models']:
+                    st.markdown(f"• {model}")
+            else:
+                st.write("None")
+
+        with col_right:
+            st.markdown("""
+            <div class="glass-card">
+                <h4>❌ Missing From</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            if summary['not_mentioned_models']:
+                for model in summary['not_mentioned_models']:
+                    st.markdown(f"• {model}")
+            else:
+                st.write("None")
+
+# --- TAB 3: Compare Brands ---
+with tab3:
+    st.markdown('<div class="section-header">⚔️ Brand Comparison</div>', unsafe_allow_html=True)
+    st.markdown("Compare your brand's AI visibility against competitors.")
+
+    with st.form("comparison_form"):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Brand A**")
+            brand_a = st.text_input("Brand A Name", value="Burger Hub", key="brand_a")
+        with col_b:
+            st.markdown("**Brand B**")
+            brand_b = st.text_input("Brand B Name", value="Shake Shack", key="brand_b")
+
+        col_cat, col_city = st.columns(2)
+        with col_cat:
+            comp_category = st.text_input("Category", value="fast food", key="comp_category")
+        with col_city:
+            comp_city = st.text_input("City", value="New York", key="comp_city")
+
+        run_comparison = st.form_submit_button("⚔️ Run Comparison", use_container_width=True)
+
+    if run_comparison:
+        with st.spinner(f"Comparing {brand_a} vs {brand_b}..."):
+            try:
+                comparison = compare_brands(brand_a, brand_b, comp_category, comp_city, force_mock=True)
+                st.session_state.comparison_results = comparison
+                st.success("✅ Comparison completed!")
+            except Exception as e:
+                st.error(f"❌ Comparison failed: {e}")
+                logger.error(f"Comparison error: {e}")
+
+    if st.session_state.comparison_results:
+        comp = st.session_state.comparison_results
+
+        # Winner Display
+        winner = comp.get("winner", "tie")
+        winner_reason = comp.get("winner_reason", "")
+
+        if winner == "tie":
+            st.markdown(f"""
+            <div class="glass-card" style="text-align: center; padding: 2rem;">
+                <h2>🤝 Competitive Tie</h2>
+                <p style="font-size: 1.1rem; color: rgba(255,255,255,0.8);">{winner_reason}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            winner_emoji = "🏆" if winner == brand_a else "🥇"
+            st.markdown(f"""
+            <div class="glass-card" style="text-align: center; padding: 2rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);">
+                <h2>{winner_emoji} Winner: {winner}</h2>
+                <p style="font-size: 1.1rem; color: rgba(255,255,255,0.8);">{winner_reason}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Side-by-side comparison
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            st.markdown(f"""
+            <div class="glass-card">
+                <h3>{brand_a}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+
+            audit_a = comp.get("audit_a", {})
+            score_a = audit_a.get("confidence_score", 0.0)
+            cited_a = audit_a.get("citation_found", False)
+            sentiment_a = audit_a.get("sentiment", "none")
+            position_a = audit_a.get("citation_position_score", 0.0)
+
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{score_a:.2f}</div>
+                <div class="metric-label">Confidence Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_a1, col_a2 = st.columns(2)
+            with col_a1:
+                st.write(f"**Cited:** {'✅ Yes' if cited_a else '❌ No'}")
+            with col_a2:
+                sentiment_emoji = {"positive": "🟢", "neutral": "🟡", "negative": "🔴", "none": "⚪"}
+                st.write(f"**Sentiment:** {sentiment_emoji.get(sentiment_a, '⚪')} {sentiment_a.title()}")
+
+        with col_right:
+            st.markdown(f"""
+            <div class="glass-card">
+                <h3>{brand_b}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+
+            audit_b = comp.get("audit_b", {})
+            score_b = audit_b.get("confidence_score", 0.0)
+            cited_b = audit_b.get("citation_found", False)
+            sentiment_b = audit_b.get("sentiment", "none")
+            position_b = audit_b.get("citation_position_score", 0.0)
+
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{score_b:.2f}</div>
+                <div class="metric-label">Confidence Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                st.write(f"**Cited:** {'✅ Yes' if cited_b else '❌ No'}")
+            with col_b2:
+                sentiment_emoji = {"positive": "🟢", "neutral": "🟡", "negative": "🔴", "none": "⚪"}
+                st.write(f"**Sentiment:** {sentiment_emoji.get(sentiment_b, '⚪')} {sentiment_b.title()}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Competitive Actions
+        st.markdown('<div class="section-header">🎯 Recommended Actions</div>', unsafe_allow_html=True)
+        actions = comp.get("actions", [])
+        if actions:
+            for action in actions:
+                st.markdown(f"""
+                <div class="glass-card">
+                    <h4>{action}</h4>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No specific actions recommended at this time.")
+
+# --- TAB 4: Lift Proof ---
+with tab4:
+    st.markdown('<div class="section-header">📈 Visibility Lift Proof</div>', unsafe_allow_html=True)
+    st.markdown("Demonstrate measurable improvements in AI visibility.")
+
+    with st.form("lift_form"):
+        lift_brand = st.text_input("Brand Name", value="Burger Hub", key="lift_brand")
+        lift_category = st.text_input("Category", value="fast food", key="lift_category")
+        lift_city = st.text_input("City", value="Islamabad", key="lift_city")
+        run_lift = st.form_submit_button("📈 Generate Lift Simulation", use_container_width=True)
+
+    if run_lift:
+        with st.spinner(f"Generating lift simulation for {lift_brand}..."):
+            try:
+                # Run baseline audit
+                agent = build_geo_audit_agent()
+                baseline = agent.invoke({
+                    "brand": lift_brand,
+                    "category": lift_category,
+                    "city": lift_city,
+                    "force_mock": True
+                })
+
+                # Simulate improvement
+                improved = simulate_improved_audit(baseline)
+
+                st.session_state.lift_results = {
+                    "baseline": baseline,
+                    "improved": improved,
+                    "brand": lift_brand
+                }
+                st.success("✅ Lift simulation completed!")
+            except Exception as e:
+                st.error(f"❌ Lift simulation failed: {e}")
+                logger.error(f"Lift simulation error: {e}")
+
+    if st.session_state.lift_results:
+        lift = st.session_state.lift_results
+        baseline = lift["baseline"]
+        improved = lift["improved"]
+        brand = lift["brand"]
+
+        # Lift Metrics
+        st.markdown('<div class="section-header">📊 Lift Metrics</div>', unsafe_allow_html=True)
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        baseline_score = baseline.get("confidence_score", 0.0)
+        improved_score = improved.get("confidence_score", 0.0)
+        lift_amount = improved_score - baseline_score
+        lift_pct = (lift_amount / baseline_score * 100) if baseline_score > 0 else 0
+
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{baseline_score:.2f}</div>
+                <div class="metric-label">Before Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">{improved_score:.2f}</div>
+                <div class="metric-label">After Score</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">+{lift_amount:.2f}</div>
+                <div class="metric-label">Absolute Lift</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col4:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-value">+{lift_pct:.0f}%</div>
+                <div class="metric-label">Percentage Lift</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Before/After Comparison
+        st.markdown('<div class="section-header">🔄 Before vs After: AI Response Transformation</div>', unsafe_allow_html=True)
+
+        col_before, col_after = st.columns(2)
+
+        with col_before:
+            st.markdown("""
+            <div class="glass-card">
+                <h4>🔴 BEFORE</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            before_response = baseline.get("raw_response", "")
+            st.code(before_response, language=None)
+
+            st.write(f"**Citation Found:** {'✅ Yes' if baseline.get('citation_found') else '❌ No'}")
+            st.write(f"**Sentiment:** {baseline.get('sentiment', 'none').title()}")
+
+        with col_after:
+            st.markdown("""
+            <div class="glass-card">
+                <h4>🟢 AFTER</h4>
+            </div>
+            """, unsafe_allow_html=True)
+            after_response = improved.get("raw_response", "")
+            st.code(after_response, language=None)
+
+            st.write(f"**Citation Found:** {'✅ Yes' if improved.get('citation_found') else '❌ No'}")
+            st.write(f"**Sentiment:** {improved.get('sentiment', 'none').title()}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Simulation Credibility
+        st.markdown('<div class="section-header">⚖️ Simulation Credibility</div>', unsafe_allow_html=True)
+
+        confidence_level = improved.get("simulation_confidence", "medium")
+        confidence_colors = {"high": "green", "medium": "orange", "low": "red"}
+        confidence_color = confidence_colors.get(confidence_level, "gray")
+
+        st.markdown(f"""
+        <div class="glass-card">
+            <p><strong>Simulation Confidence:</strong> <span style="color: {confidence_color}; font-weight: 600; text-transform: uppercase;">{confidence_level}</span></p>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">
+                ⚠️ This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        simulation_notes = improved.get("simulation_notes", {})
+        if simulation_notes:
+            col_alt, col_risk = st.columns(2)
+
+            with col_alt:
+                st.markdown("**Alternative Outcomes:**")
+                for outcome in simulation_notes.get("alternative_outcomes", []):
+                    st.markdown(f"• {outcome}")
+
+            with col_risk:
+                st.markdown("**Risk Factors:**")
+                for risk in simulation_notes.get("risk_factors", []):
+                    st.markdown(f"• {risk}")
+
+# --- TAB 5: History ---
+with tab5:
+    st.markdown('<div class="section-header">📚 Audit History</div>', unsafe_allow_html=True)
+    st.markdown("Track your brand's AI visibility over time.")
+
+    # Add current audit to history when run
+    if st.session_state.audit_results and st.session_state.audit_results not in st.session_state.audit_history:
+        audit_with_timestamp = st.session_state.audit_results.copy()
+        audit_with_timestamp["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state.audit_history.append(audit_with_timestamp)
+
+    if st.session_state.audit_history:
+        st.markdown(f"**Total Audits:** {len(st.session_state.audit_history)}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Display history in reverse chronological order
+        for idx, audit in enumerate(reversed(st.session_state.audit_history)):
+            with st.expander(f"**{audit.get('brand', 'Unknown')}** - {audit.get('timestamp', 'N/A')}"):
+                col1, col2, col3, col4 = st.columns(4)
+
+                with col1:
+                    st.metric("Confidence", f"{audit.get('confidence_score', 0.0):.2f}")
+                with col2:
+                    st.metric("Citation", "✅" if audit.get('citation_found') else "❌")
+                with col3:
+                    st.metric("Sentiment", audit.get('sentiment', 'none').title())
+                with col4:
+                    st.metric("Gaps", len(audit.get('gaps', [])))
+
+                st.write(f"**Category:** {audit.get('category', 'N/A')}")
+                st.write(f"**City:** {audit.get('city', 'N/A')}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Clear history button
+        if st.button("🗑️ Clear History", use_container_width=True):
+            st.session_state.audit_history = []
+            st.rerun()
+
     else:
-        st.write("No remediation results to display.")
+        st.info("No audit history yet. Run an audit in the Brand Audit tab to start tracking.")
+
+# --- TAB 6: Reports ---
+with tab6:
+    st.markdown('<div class="section-header">📄 Export Reports</div>', unsafe_allow_html=True)
+    st.markdown("Generate client-ready reports and documentation.")
+
+    if st.session_state.audit_results:
+        st.markdown("""
+        <div class="glass-card">
+            <h4>📊 Available Reports</h4>
+            <p>Generate professional reports from your audit results.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Markdown Report
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**📝 Markdown Report**")
+            st.write("Comprehensive markdown report with all audit details.")
+
+            if st.button("Generate Markdown Report", key="gen_md"):
+                try:
+                    markdown_report = generate_markdown_report(
+                        st.session_state.audit_results,
+                        lift_report=st.session_state.lift_results
+                    )
+
+                    brand = st.session_state.audit_results.get("brand", "unknown")
+                    filename = f"geo_report_{brand.lower().replace(' ', '_')}.md"
+
+                    st.download_button(
+                        label="📥 Download Markdown Report",
+                        data=markdown_report,
+                        file_name=filename,
+                        mime="text/markdown",
+                        use_container_width=True
+                    )
+                    st.success("✅ Report generated!")
+                except Exception as e:
+                    st.error(f"❌ Report generation failed: {e}")
+
+        with col2:
+            st.markdown("**📊 JSON Export**")
+            st.write("Raw audit data in JSON format for integrations.")
+
+            audit_json = json.dumps(st.session_state.audit_results, indent=2)
+            brand = st.session_state.audit_results.get("brand", "unknown")
+            filename = f"geo_audit_{brand.lower().replace(' ', '_')}.json"
+
+            st.download_button(
+                label="📥 Download JSON Data",
+                data=audit_json,
+                file_name=filename,
+                mime="application/json",
+                use_container_width=True
+            )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Multi-Model Report
+        if st.session_state.multi_model_results:
+            st.markdown("""
+            <div class="glass-card">
+                <h4>🤖 Multi-Model Report</h4>
+            </div>
+            """, unsafe_allow_html=True)
+
+            mm_json = json.dumps(st.session_state.multi_model_results, indent=2)
+            brand = st.session_state.multi_model_results["summary"].get("mentioned_models", ["unknown"])[0] if st.session_state.multi_model_results["summary"].get("mentioned_models") else "unknown"
+            filename = f"geo_multimodel_{brand.lower().replace(' ', '_')}.json"
+
+            st.download_button(
+                label="📥 Download Multi-Model Report (JSON)",
+                data=mm_json,
+                file_name=filename,
+                mime="application/json",
+                use_container_width=True
+            )
+
+        # Comparison Report
+        if st.session_state.comparison_results:
+            st.markdown("""
+            <div class="glass-card">
+                <h4>⚔️ Comparison Report</h4>
+            </div>
+            """, unsafe_allow_html=True)
+
+            comp_json = json.dumps(st.session_state.comparison_results, indent=2)
+            filename = "geo_comparison_report.json"
+
+            st.download_button(
+                label="📥 Download Comparison Report (JSON)",
+                data=comp_json,
+                file_name=filename,
+                mime="application/json",
+                use_container_width=True
+            )
+
+    else:
+        st.info("No audit results available. Run an audit in the Brand Audit tab to generate reports.")
 
 # Footer
 st.sidebar.divider()
-st.sidebar.caption("GEO Audit Agent v1.0 (MVP)")
+st.sidebar.caption("AI Search Intelligence Platform v2.0")

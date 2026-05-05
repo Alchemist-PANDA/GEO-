@@ -76,18 +76,33 @@ cp .env.example .env
 ```
 Fill in your API keys in the `.env` file. You can use **Groq** for free high-speed inference or **OpenAI/Gemini**.
 
-### 4. Running the Dashboard
+### 4. Run Locally
 ```bash
-streamlit run geo_upload/dashboard.py
+streamlit run dashboard.py
 ```
 
-### 5. Login
-Access the dashboard and use these default credentials:
-- **Username**: `admin`
-- **Password**: `geo123`
+The dashboard will open at `http://localhost:8501`
 
-### 6. First Audit
-Enter a brand name (e.g., "Burger Hub"), click **"Run GEO Audit"**, and watch the agent analyze visibility across multiple LLMs!
+### 5. First Audit
+Enter a brand name (e.g., "Burger Hub"), select a category and city, then click **"Run Multi-Model Audit"** to analyze visibility across ChatGPT, Claude, Gemini, and Perplexity.
+
+---
+
+## 🌐 Deployment
+
+### Streamlit Community Cloud
+1. Push your code to GitHub
+2. Connect your repo at [share.streamlit.io](https://share.streamlit.io)
+3. Set `dashboard.py` as the entry file
+4. Add secrets in the Streamlit dashboard (Settings → Secrets):
+   ```toml
+   GOOGLE_API_KEY = "your-key-here"
+   ```
+
+### Render / Railway / Fly.io
+Use `dashboard.py` as the Streamlit entry file. All platforms support Streamlit apps natively.
+
+**Important**: The app runs in mock mode by default if no API keys are present. This is deployment-safe.
 
 ---
 
