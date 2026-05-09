@@ -28,17 +28,58 @@ def generate_markdown_report(audit_result: dict, lift_report: Optional[dict] = N
     city = audit_result.get("city", "N/A")
     mode = audit_result.get("mode", "unknown")
 
-    # Header
-    report = f"""# GEO Visibility Report for {brand}
+    # Determine data source label
+    if mode in ["simulated", "mock"]:
+        mode_label = "Simulated Demo Mode"
+        is_simulated = True
+    elif mode in ["live_api", "real"]:
+        mode_label = "Live API Mode"
+        is_simulated = False
+    else:
+        mode_label = "Unknown"
+        is_simulated = True
+
+    # Header with strong disclaimer for simulated mode
+    if is_simulated:
+        report = f"""# GEO Visibility Report for {brand}
+
+⚠️ **IMPORTANT: SIMULATED DEMO MODE**
+
+**This report was generated in Simulated Demo Mode and should not be used as a real visibility measurement.**
+
+Simulated Demo Mode uses deterministic sample outputs for product demonstration purposes only. It does not represent actual AI model responses or real brand visibility data.
+
+For accurate visibility analysis, configure API keys and run in Live API Mode.
+
+---
 
 **Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **Category:** {category}
 **Location:** {city}
-**Mode:** {"Real (Live API)" if mode == "real" else "Simulated (Demo)"}
+**Data Source:** {mode_label}
 
 ---
 
 ## Executive Summary
+
+This report analyzes {brand}'s visibility in AI-generated search recommendations for the {category} category in {city}.
+
+**Note:** All data in this report is simulated for demonstration purposes.
+
+"""
+    else:
+        report = f"""# GEO Visibility Report for {brand}
+
+**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Category:** {category}
+**Location:** {city}
+**Data Source:** {mode_label} (Live API responses collected at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+
+---
+
+## Executive Summary
+
+This report is based on live API responses collected at the time of generation. AI recommendation algorithms evolve continuously, so regular monitoring is recommended.
 
 This report analyzes {brand}'s visibility in AI-generated search recommendations for the {category} category in {city}.
 
@@ -320,18 +361,29 @@ This report analyzes your brand's visibility in AI-generated search recommendati
 """
 
     # Disclaimer
-    if mode == "mock":
+    if is_simulated:
         report += """## Disclaimer
 
-⚠️ **This report was generated in Simulated Mode for demonstration purposes.**
+⚠️ **This report was generated in Simulated Demo Mode for demonstration purposes.**
 
-The results shown are estimates based on typical patterns and may not reflect actual AI model behavior. For accurate, real-time analysis, run the audit in Real Mode with a valid API key.
+The results shown are deterministic sample outputs and do not reflect actual AI model behavior or real brand visibility. All scores, citations, and recommendations are simulated for product demonstration only.
+
+**For accurate, real-time analysis:**
+- Configure GROQ_API_KEY or GOOGLE_API_KEY in your environment
+- Enable Live API Mode in the dashboard
+- Run a new audit to collect live API responses
 
 """
     else:
-        report += """## Disclaimer
+        report += f"""## Disclaimer
 
-This report reflects AI model behavior at the time of generation. AI recommendation algorithms evolve continuously, so regular monitoring is recommended.
+This report is based on live API responses collected at {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.
+
+AI recommendation algorithms evolve continuously, so regular monitoring is recommended. Results may vary based on:
+- Model updates and training data changes
+- Regional data availability
+- Query timing and context
+- Competitive landscape shifts
 
 """
 

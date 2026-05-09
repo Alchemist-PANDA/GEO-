@@ -4,6 +4,7 @@ python-dotenv>=1.0.0
 
 # AI/ML libraries
 google-genai>=0.3.0
+groq>=0.4.0
 langgraph>=0.2.0
 pydantic>=2.0.0
 tenacity>=8.2.0

@@ -3,6 +3,9 @@ Multi-model GEO audit module.
 
 Runs brand visibility audits across multiple AI systems (ChatGPT, Claude, Gemini, Perplexity)
 to provide cross-platform visibility analysis.
+
+IMPORTANT: This module supports both Live API Mode and Simulated Demo Mode.
+Simulated mode uses deterministic sample outputs for demonstration purposes only.
 """
 
 from typing import Dict, List
@@ -18,7 +21,7 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
         brand: Brand name
         category: Business category
         city: City location
-        use_real: If True, use real APIs where available. If False, use simulated responses.
+        use_real: If True, attempt live API calls. If False, use simulated responses.
 
     Returns:
         Dictionary with per-model results and cross-model summary
@@ -37,11 +40,11 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
         if use_real:
             result = _run_real_audit(brand, category, city, model_info)
         else:
-            result = _run_mock_audit(brand, category, city, model_info)
+            result = _run_simulated_audit(brand, category, city, model_info)
 
         results.append(result)
 
-    summary = _generate_summary(results, brand)
+    summary = _generate_summary(results, brand, use_real)
 
     return {
         "results": results,
@@ -50,7 +53,7 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
 
 
 def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> dict:
-    """Run real API audit if available, fallback to mock."""
+    """Run real API audit if available, fallback to simulated."""
     try:
         from geo_audit_agent.agent import build_geo_audit_agent
 
@@ -89,14 +92,15 @@ def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> d
             "confidence": varied_audit["confidence_score"],
             "raw_response": varied_audit["raw_response"],
             "evidence": evidence,
-            "mode": "real"
+            "evidence_type": "live_response",
+            "mode": "live_api"
         }
     except Exception:
-        return _run_mock_audit(brand, category, city, model_info)
+        return _run_simulated_audit(brand, category, city, model_info)
 
 
-def _run_mock_audit(brand: str, category: str, city: str, model_info: dict) -> dict:
-    """Generate deterministic mock audit result."""
+def _run_simulated_audit(brand: str, category: str, city: str, model_info: dict) -> dict:
+    """Generate deterministic simulated audit result for demonstration purposes."""
     seed = _get_deterministic_seed(brand, model_info["name"])
     random.seed(seed)
 
@@ -119,7 +123,7 @@ def _run_mock_audit(brand: str, category: str, city: str, model_info: dict) -> d
 
         confidence = 0.6 + (seed % 40) / 100.0
 
-        raw_response = _generate_mock_response(brand, category, city, model_info["style"], mentioned=True)
+        raw_response = _generate_simulated_response(brand, category, city, model_info["style"], mentioned=True)
 
         # Evidence trace
         if position == 1:
@@ -134,7 +138,7 @@ def _run_mock_audit(brand: str, category: str, city: str, model_info: dict) -> d
         position = None
         sentiment = "none"
         confidence = 0.0
-        raw_response = _generate_mock_response(brand, category, city, model_info["style"], mentioned=False)
+        raw_response = _generate_simulated_response(brand, category, city, model_info["style"], mentioned=False)
         evidence = f"{brand} not mentioned in response"
 
     return {
@@ -146,7 +150,8 @@ def _run_mock_audit(brand: str, category: str, city: str, model_info: dict) -> d
         "confidence": confidence,
         "raw_response": raw_response,
         "evidence": evidence,
-        "mode": "mock"
+        "evidence_type": "simulated",
+        "mode": "simulated"
     }
 
 
@@ -171,8 +176,8 @@ def _apply_model_variation(audit: dict, model_info: dict, brand: str) -> dict:
     return varied
 
 
-def _generate_mock_response(brand: str, category: str, city: str, style: str, mentioned: bool) -> str:
-    """Generate a mock AI response in the specified style."""
+def _generate_simulated_response(brand: str, category: str, city: str, style: str, mentioned: bool) -> str:
+    """Generate a simulated AI response in the specified style for demonstration purposes."""
     if not mentioned:
         if style == "structured":
             return f"For {category} options in {city}, consider these top choices:\n\n1. Established Brand A - Known for quality\n2. Popular Choice B - Great reviews\n3. Local Favorite C - Community favorite\n\nThese options consistently receive positive feedback."
@@ -207,11 +212,22 @@ def _calculate_position(position_score: float) -> int:
         return 5
 
 
-def _generate_summary(results: List[dict], brand: str) -> dict:
-    """Generate cross-model summary and insight."""
+def _generate_summary(results: List[dict], brand: str, use_real: bool = False) -> dict:
+    """Generate cross-model summary and insight with data source labeling."""
     models_tested = len(results)
     models_mentioned = sum(1 for r in results if r["mentioned"])
     visibility_score = models_mentioned / models_tested if models_tested > 0 else 0.0
+
+    # Determine data source
+    live_count = sum(1 for r in results if r.get("mode") == "live_api")
+    simulated_count = sum(1 for r in results if r.get("mode") == "simulated")
+
+    if live_count == models_tested:
+        data_source = "live_api"
+    elif simulated_count == models_tested:
+        data_source = "simulated"
+    else:
+        data_source = "mixed"
 
     # GEO Coverage Score with label
     coverage_percentage = int(visibility_score * 100)
@@ -252,6 +268,12 @@ def _generate_summary(results: List[dict], brand: str) -> dict:
         "visibility_score": visibility_score,
         "geo_coverage_score": coverage_percentage,
         "coverage_label": coverage_label,
+        "coverage_explanation": coverage_explanation,
+        "insight": insight,
+        "mentioned_models": mentioned_models,
+        "not_mentioned_models": not_mentioned_models,
+        "data_source": data_source
+    }
         "coverage_explanation": coverage_explanation,
         "insight": insight,
         "mentioned_models": mentioned_models,

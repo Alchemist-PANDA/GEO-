@@ -504,6 +504,15 @@ with tab2:
         mm_res = st.session_state.multi_model_results
         summary = mm_res["summary"]
 
+        # Data source disclaimer
+        data_source = summary.get("data_source", "simulated")
+        if data_source == "simulated":
+            st.warning("⚠️ **Simulated Demo Mode**: These results use deterministic sample outputs for demonstration purposes. They do not represent live AI model responses. Enable Live API Mode in the sidebar to test with real APIs.")
+        elif data_source == "mixed":
+            st.info("ℹ️ **Mixed Mode**: Some results are from live APIs, others are simulated due to missing API keys.")
+        else:
+            st.success("✅ **Live API Mode**: Results are based on actual API responses.")
+
         # GEO Coverage Score - Hero Display
         st.markdown('<div class="section-header">🎯 GEO Coverage Score</div>', unsafe_allow_html=True)
 
