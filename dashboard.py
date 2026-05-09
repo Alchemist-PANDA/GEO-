@@ -618,7 +618,8 @@ with tab2:
 
                 with col_d:
                     st.write("**Mode:**")
-                    st.write(f"{'🔴 Mock' if model_result['mode'] == 'mock' else '🟢 Real'}")
+                    mode_label = "🎭 Simulated" if model_result['mode'] == 'simulated' else "✅ Live API"
+                    st.write(mode_label)
 
                 st.write("**Raw AI Response:**")
                 st.code(model_result['raw_response'], language=None)

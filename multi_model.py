@@ -274,11 +274,6 @@ def _generate_summary(results: List[dict], brand: str, use_real: bool = False) -
         "not_mentioned_models": not_mentioned_models,
         "data_source": data_source
     }
-        "coverage_explanation": coverage_explanation,
-        "insight": insight,
-        "mentioned_models": mentioned_models,
-        "not_mentioned_models": not_mentioned_models
-    }
 
 
 def _get_deterministic_seed(brand: str, model: str) -> int:

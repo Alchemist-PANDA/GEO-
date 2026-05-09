@@ -135,7 +135,7 @@ def test_no_crash_without_api_keys():
     assert "results" in result
     assert len(result["results"]) == 4
     for model_result in result["results"]:
-        assert model_result["mode"] in ["real", "mock"]
+        assert model_result["mode"] in ["live_api", "simulated"]
 
 
 def test_models_differ_in_mock_mode():
