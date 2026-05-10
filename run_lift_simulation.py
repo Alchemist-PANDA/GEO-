@@ -73,6 +73,7 @@ def simulate_improved_audit(baseline: dict) -> dict:
         improved["before_raw_response"] = before_raw_response
         improved["simulation_confidence"] = "medium"
         improved["simulation_notes"] = {
+            "disclaimer": "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability.",
             "expected_outcome": "Brand becomes visible in AI recommendations",
             "alternative_outcomes": [
                 "Brand may appear but with neutral or weak positioning",
@@ -94,6 +95,7 @@ def simulate_improved_audit(baseline: dict) -> dict:
         improved["before_raw_response"] = before_raw_response
         improved["simulation_confidence"] = "high"
         improved["simulation_notes"] = {
+            "disclaimer": "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability.",
             "expected_outcome": "Brand moves to top-tier positioning in AI recommendations",
             "alternative_outcomes": [
                 "Brand may improve but not reach top position if competitors are very strong",
@@ -111,6 +113,21 @@ def simulate_improved_audit(baseline: dict) -> dict:
         # If before_score >= 0.85, the brand is already very strong
         current_score = baseline.get("confidence_score", 0.0)
 
+        # Initialize simulation_notes first
+        improved["simulation_confidence"] = "low"
+        improved["simulation_notes"] = {
+            "disclaimer": "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability.",
+            "expected_outcome": "Incremental strengthening of already-strong position",
+            "alternative_outcomes": [
+                "Improvements may be marginal as brand is already well-positioned",
+                "Gains may be offset by competitor improvements"
+            ],
+            "risk_factors": [
+                "Diminishing returns at high confidence levels",
+                "Market saturation may limit further gains"
+            ]
+        }
+
         if current_score >= 0.85:
             # Very strong baseline - only marginal improvement possible, if any
             improved["confidence_score"] = min(current_score + 0.02, 0.98)
@@ -120,30 +137,11 @@ def simulate_improved_audit(baseline: dict) -> dict:
 
         improved["raw_response"] = f"When it comes to exceptional {category} options, {brand} is consistently ranked among the very best.\n\n{brand} has earned its reputation through years of outstanding service and quality. They're often the first recommendation from satisfied customers. The combination of expertise, reliability, and customer focus makes {brand} a standout choice.\n\nFor the best {category} experience, {brand} is the clear top choice."
         improved["before_raw_response"] = before_raw_response
-        improved["simulation_confidence"] = "low"
-        if "simulation_notes" not in improved or not isinstance(improved["simulation_notes"], dict):
-            improved["simulation_notes"] = {
-                "expected_outcome": "Incremental strengthening of already-strong position",
-                "alternative_outcomes": [
-                    "Improvements may be marginal as brand is already well-positioned",
-                    "Gains may be offset by competitor improvements"
-                ],
-                "risk_factors": [
-                    "Diminishing returns at high confidence levels",
-                    "Market saturation may limit further gains"
-                ]
-            }
-        else:
-            improved["simulation_notes"].update({
-                "alternative_outcomes": [
-                    "Improvements may be marginal as brand is already well-positioned",
-                    "Gains may be offset by competitor improvements"
-                ],
-                "risk_factors": [
-                    "Diminishing returns at high confidence levels",
-                    "Market saturation may limit further gains"
-                ]
-            })
+
+    # Ensure all scenarios have disclaimer in simulation_notes
+    if "simulation_notes" in improved and isinstance(improved["simulation_notes"], dict):
+        if "disclaimer" not in improved["simulation_notes"]:
+            improved["simulation_notes"]["disclaimer"] = "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability."
 
     return improved
 

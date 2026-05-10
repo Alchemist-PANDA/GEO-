@@ -20,6 +20,36 @@ from report_generator import generate_markdown_report
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# --- Helper Functions ---
+def format_signed(value, decimals=2, suffix=""):
+    """Format a number with proper sign (+, -, or nothing for zero)."""
+    if value > 0:
+        return f"+{value:.{decimals}f}{suffix}"
+    elif value < 0:
+        return f"{value:.{decimals}f}{suffix}"
+    else:
+        return f"0.{'0' * decimals}{suffix}"
+
+def format_signed_percent(value):
+    """Format a percentage with proper sign."""
+    if value > 0:
+        return f"+{value:.0f}%"
+    elif value < 0:
+        return f"{value:.0f}%"
+    else:
+        return "0%"
+
+def clean_display_text(value):
+    """Strip leaked HTML tags from text fields."""
+    if not value:
+        return ""
+    value = str(value)
+    for tag in ["</div>", "<div>", "<p>", "</p>", "<strong>", "</strong>", "<h4>", "</h4>"]:
+        value = value.replace(tag, "")
+    return value.strip()
+
+DEFAULT_SIMULATION_DISCLAIMER = "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability."
+
 # --- Page Configuration ---
 st.set_page_config(
     page_title="AI Search Intelligence Platform",
@@ -536,43 +566,56 @@ with tab1:
 
             for idx, item in enumerate(unique_remediation):
                 if isinstance(item, dict) and 'title' in item:
-                    # Priority badge styling
-                    priority = item.get('priority', 'medium').lower()
-                    priority_class = f"priority-{priority}"
+                    with st.container():
+                        # Extract fields
+                        title = item.get('title', 'Remediation')
+                        priority = item.get('priority', 'medium').upper()
+                        rec_type = item.get('type', 'general')
+                        reason = item.get('reason', '')
+                        why = item.get('why_this_works', '')
+                        action = item.get('action', '')
+                        effort = item.get('effort', 'medium').title()
+                        impact = item.get('impact', 'medium').title()
+                        quick_win = item.get('quick_win', False)
 
-                    # Quick win badge
-                    quick_win_badge = ""
-                    if item.get('quick_win'):
-                        quick_win_badge = '<span style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;">⚡ Quick Win</span>'
+                        # Render using Streamlit components
+                        st.markdown(f"### 🔧 {title}")
 
-                    st.markdown(f"""
-                    <div class="glass-card">
-                        <h4>🔧 {item.get('title', 'Remediation')}</h4>
-                        <div style="margin-bottom: 1rem;">
-                            <span class="{priority_class}">{priority.upper()}</span>
-                            {quick_win_badge}
-                        </div>
-                        <p><strong>Why this matters:</strong> {item.get('reason', '')}</p>
-                        <p><strong>Why this works:</strong> {item.get('why_this_works', '')}</p>
-                        <p style="margin-top: 0.5rem;"><strong>Effort:</strong> {item.get('effort', 'unknown').title()} | <strong>Impact:</strong> {item.get('impact', 'unknown').title()}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        # Priority and quick win badges
+                        badge_text = f"**Priority:** {priority}"
+                        if quick_win:
+                            badge_text += " ⚡ **Quick Win**"
+                        st.markdown(badge_text)
 
-                    edited_content = st.text_area(
-                        f"Action plan",
-                        value=item.get('action', ''),
-                        height=120,
-                        key=f"edit_{idx}",
-                        help="Edit the action plan before approving"
-                    )
+                        st.markdown(f"**Type:** {rec_type}")
 
-                    c1, c2, c3 = st.columns([1, 1, 2])
-                    with c1:
-                        if st.button("✅ Approve", key=f"app_{idx}"):
-                            st.toast(f"✅ Approved: {item.get('title', 'item')}")
-                    with c2:
-                        if st.button("❌ Reject", key=f"rej_{idx}"):
-                            st.toast(f"❌ Rejected: {item.get('title', 'item')}")
+                        if reason:
+                            st.markdown(f"**Why this matters:** {reason}")
+
+                        if why:
+                            st.markdown(f"**Why this works:** {why}")
+
+                        st.markdown(f"**Effort:** {effort} | **Impact:** {impact}")
+
+                        # Action plan text area
+                        edited_content = st.text_area(
+                            "Action plan",
+                            value=action,
+                            height=120,
+                            key=f"edit_{idx}",
+                            help="Edit the action plan before approving"
+                        )
+
+                        # Approve/Reject buttons
+                        c1, c2, c3 = st.columns([1, 1, 2])
+                        with c1:
+                            if st.button("✅ Approve", key=f"app_{idx}"):
+                                st.toast(f"✅ Approved: {title}")
+                        with c2:
+                            if st.button("❌ Reject", key=f"rej_{idx}"):
+                                st.toast(f"❌ Rejected: {title}")
+
+                        st.markdown("---")
 
             # --- Export Section ---
             st.markdown("<br>", unsafe_allow_html=True)
@@ -712,8 +755,18 @@ with tab2:
 
         # Results by Model
         for model_result in mm_res["results"]:
+            # Determine display label based on mode
+            mode = model_result.get('mode', 'simulated')
+            model_name = model_result['model']
+            provider = model_result.get('provider', '')
+
+            if mode == 'live_api':
+                display_label = f"{model_name} — Live API"
+            else:
+                display_label = f"{model_name} — Simulated Demo"
+
             status = "✅ Mentioned" if model_result["mentioned"] else "❌ Not Mentioned"
-            with st.expander(f"**{model_result['model']}** ({model_result['provider']}) - {status}"):
+            with st.expander(f"**{display_label}** - {status}"):
                 col_a, col_b, col_c, col_d = st.columns(4)
 
                 with col_a:
@@ -739,7 +792,7 @@ with tab2:
 
                 with col_d:
                     st.write("**Mode:**")
-                    mode_label = "🎭 Simulated" if model_result['mode'] == 'simulated' else "✅ Live API"
+                    mode_label = "✅ Live API" if mode == 'live_api' else "🎭 Simulated Demo"
                     st.write(mode_label)
 
                 st.write("**Raw AI Response:**")
@@ -931,12 +984,24 @@ with tab4:
                 # Simulate improvement
                 improved = simulate_improved_audit(baseline)
 
+                # Calculate lift to determine success message
+                baseline_score = baseline.get("confidence_score", 0.0)
+                improved_score = improved.get("confidence_score", 0.0)
+                lift_amount = improved_score - baseline_score
+
                 st.session_state.lift_results = {
                     "baseline": baseline,
                     "improved": improved,
                     "brand": lift_brand
                 }
-                st.success("✅ Lift simulation completed!")
+
+                # Show appropriate message based on lift
+                if lift_amount < 0:
+                    st.warning("⚠️ No lift detected — visibility decreased in this simulation.")
+                elif baseline_score >= 0.85:
+                    st.info("ℹ️ Already strong visibility — focus on maintenance and monitoring.")
+                else:
+                    st.success("✅ Lift simulation completed!")
             except Exception as e:
                 st.error(f"❌ Lift simulation failed: {e}")
                 logger.error(f"Lift simulation error: {e}")
@@ -1070,28 +1135,39 @@ with tab4:
         confidence_colors = {"high": "green", "medium": "orange", "low": "red"}
         confidence_color = confidence_colors.get(confidence_level, "gray")
 
+        # Safe access to simulation_notes with defaults
+        simulation_notes = improved.get("simulation_notes") or {}
+        disclaimer = simulation_notes.get("disclaimer", DEFAULT_SIMULATION_DISCLAIMER)
+        alternative_outcomes = simulation_notes.get("alternative_outcomes", [])
+        risk_factors = simulation_notes.get("risk_factors", [])
+
         st.markdown(f"""
         <div class="glass-card">
             <p><strong>Simulation Confidence:</strong> <span style="color: {confidence_color}; font-weight: 600; text-transform: uppercase;">{confidence_level}</span></p>
             <p style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">
-                ⚠️ This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability.
+                ⚠️ {disclaimer}
             </p>
         </div>
         """, unsafe_allow_html=True)
 
-        simulation_notes = improved.get("simulation_notes", {})
-        if simulation_notes:
+        if alternative_outcomes or risk_factors:
             col_alt, col_risk = st.columns(2)
 
             with col_alt:
                 st.markdown("**Alternative Outcomes:**")
-                for outcome in simulation_notes.get("alternative_outcomes", []):
-                    st.markdown(f"• {outcome}")
+                if alternative_outcomes:
+                    for outcome in alternative_outcomes:
+                        st.markdown(f"• {outcome}")
+                else:
+                    st.info("No alternative outcomes provided")
 
             with col_risk:
                 st.markdown("**Risk Factors:**")
-                for risk in simulation_notes.get("risk_factors", []):
-                    st.markdown(f"• {risk}")
+                if risk_factors:
+                    for risk in risk_factors:
+                        st.markdown(f"• {risk}")
+                else:
+                    st.info("No risk factors provided")
 
 # --- TAB 5: History ---
 with tab5:
