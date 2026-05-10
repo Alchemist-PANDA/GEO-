@@ -513,12 +513,8 @@ with tab1:
         st.markdown('<div class="section-header">🛠️ Remediation & Content Review</div>', unsafe_allow_html=True)
         st.info("Review, edit, and approve the AI-generated remediation content below.")
 
-        # Check for remediation from new system
+        # Prefer new remediation format over old remediation_results
         remediation_list = res.get("remediation", [])
-
-        # Fallback to old remediation_results for backward compatibility
-        if not remediation_list:
-            remediation_list = res.get("remediation_results", [])
 
         # Warning if gaps exist but no remediation
         gaps = res.get("gaps", [])
@@ -526,63 +522,73 @@ with tab1:
             st.warning("⚠️ Gaps were found, but no remediation was generated. This indicates a remediation pipeline issue.")
 
         if remediation_list:
-            for idx, item in enumerate(remediation_list):
-                with st.container():
-                    # Handle new remediation format
-                    if isinstance(item, dict) and 'title' in item:
-                        st.markdown(f"""
-                        <div class="glass-card">
-                            <h4>🔧 {item.get('title', 'Remediation')}</h4>
-                            <p><strong>Priority:</strong> {item.get('priority', 'medium').upper()}</p>
-                            <p><strong>Reason:</strong> {item.get('reason', '')}</p>
-                            <p><strong>Why this works:</strong> {item.get('why_this_works', '')}</p>
-                            <p><strong>Effort:</strong> {item.get('effort', 'unknown')} | <strong>Impact:</strong> {item.get('impact', 'unknown')}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+            # Deduplicate by title
+            seen_titles = set()
+            unique_remediation = []
+            for item in remediation_list:
+                if isinstance(item, dict):
+                    title = item.get('title', '')
+                    if title and title not in seen_titles:
+                        seen_titles.add(title)
+                        unique_remediation.append(item)
+                    elif not title:
+                        unique_remediation.append(item)
 
-                        edited_content = st.text_area(
-                            f"Action plan",
-                            value=item.get('action', ''),
-                            height=100,
-                            key=f"edit_{idx}"
-                        )
-                    # Handle old remediation format
-                    else:
-                        tool_name = item.get('tool', 'Remediation') if isinstance(item, dict) else 'Remediation'
-                        st.markdown(f"""
-                        <div class="glass-card">
-                            <h4>🔧 {tool_name}</h4>
-                        </div>
-                        """, unsafe_allow_html=True)
+            for idx, item in enumerate(unique_remediation):
+                if isinstance(item, dict) and 'title' in item:
+                    # Priority badge styling
+                    priority = item.get('priority', 'medium').lower()
+                    priority_class = f"priority-{priority}"
 
-                        content = item.get('content', item.get('output_preview', str(item))) if isinstance(item, dict) else str(item)
-                        edited_content = st.text_area(
-                            f"Edit content",
-                            value=content,
-                            height=100,
-                            key=f"edit_{idx}"
-                        )
+                    # Quick win badge
+                    quick_win_badge = ""
+                    if item.get('quick_win'):
+                        quick_win_badge = '<span style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem;">⚡ Quick Win</span>'
+
+                    st.markdown(f"""
+                    <div class="glass-card">
+                        <h4>🔧 {item.get('title', 'Remediation')}</h4>
+                        <div style="margin-bottom: 1rem;">
+                            <span class="{priority_class}">{priority.upper()}</span>
+                            {quick_win_badge}
+                        </div>
+                        <p><strong>Why this matters:</strong> {item.get('reason', '')}</p>
+                        <p><strong>Why this works:</strong> {item.get('why_this_works', '')}</p>
+                        <p style="margin-top: 0.5rem;"><strong>Effort:</strong> {item.get('effort', 'unknown').title()} | <strong>Impact:</strong> {item.get('impact', 'unknown').title()}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    edited_content = st.text_area(
+                        f"Action plan",
+                        value=item.get('action', ''),
+                        height=120,
+                        key=f"edit_{idx}",
+                        help="Edit the action plan before approving"
+                    )
 
                     c1, c2, c3 = st.columns([1, 1, 2])
                     with c1:
                         if st.button("✅ Approve", key=f"app_{idx}"):
-                            st.toast(f"✅ Approved item {idx}")
+                            st.toast(f"✅ Approved: {item.get('title', 'item')}")
                     with c2:
                         if st.button("❌ Reject", key=f"rej_{idx}"):
-                            st.toast(f"❌ Rejected item {idx}")
+                            st.toast(f"❌ Rejected: {item.get('title', 'item')}")
 
             # --- Export Section ---
             st.markdown("<br>", unsafe_allow_html=True)
             export_data = {
-                "brand": res.get("brand", "Unknown"),
+                "brand": res.get("brand_name", res.get("brand", "Unknown")),
+                "category": res.get("category", ""),
+                "city": res.get("city", ""),
                 "status": "completed",
-                "remediation": remediation_list
+                "gaps": gaps,
+                "remediation": unique_remediation
             }
             json_export = json.dumps(export_data, indent=4)
             st.download_button(
                 label="📥 Export Client-Ready Report",
                 data=json_export,
-                file_name=f"geo_remediation_{res.get('brand', 'unknown').lower().replace(' ', '_')}.json",
+                file_name=f"geo_remediation_{res.get('brand_name', res.get('brand', 'unknown')).lower().replace(' ', '_')}.json",
                 mime="application/json",
                 use_container_width=True
             )
