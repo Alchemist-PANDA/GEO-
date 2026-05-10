@@ -297,6 +297,17 @@ with st.sidebar:
         brand_name = st.text_input("Brand Name", value="Burger Hub")
         category = st.text_input("Category", value="fast food")
         city = st.text_input("City", value="Islamabad")
+
+        st.markdown("**Known business facts / listing data**")
+        business_context_text = st.text_area(
+            "Business Context",
+            value="",
+            placeholder="4.5 rating, 231 Google reviews, swimming pool, sauna, spa, physiotherapy, Instagram 18.3K followers, Facebook 12.2K followers, F-9 Park Islamabad",
+            help="Paste Google listing details, rating, review count, services, address, social links, or notes. This helps avoid false gaps.",
+            height=100,
+            label_visibility="collapsed"
+        )
+
         run_audit = st.form_submit_button("🚀 Run GEO Audit", use_container_width=True)
 
     st.markdown("---")
@@ -334,12 +345,53 @@ with tab1:
             try:
                 agent = build_geo_audit_agent()
 
+                # Parse business context
+                business_context = {}
+                if business_context_text.strip():
+                    # Simple parsing of business context
+                    text = business_context_text.lower()
+
+                    # Extract rating
+                    import re
+                    rating_match = re.search(r'(\d+\.?\d*)\s*rating', text)
+                    if rating_match:
+                        business_context['rating'] = float(rating_match.group(1))
+
+                    # Extract review count
+                    review_match = re.search(r'(\d+)\s*(?:google\s*)?reviews?', text)
+                    if review_match:
+                        business_context['review_count'] = int(review_match.group(1))
+
+                    # Extract services
+                    services = []
+                    service_keywords = ['swimming pool', 'pool', 'sauna', 'spa', 'physiotherapy', 'gym', 'steam', 'protein bar', 'online classes']
+                    for keyword in service_keywords:
+                        if keyword in text:
+                            services.append(keyword)
+                    if services:
+                        business_context['services'] = services
+
+                    # Extract social followers
+                    instagram_match = re.search(r'instagram[:\s]+(\d+\.?\d*)\s*k', text)
+                    if instagram_match:
+                        business_context['instagram_followers'] = int(float(instagram_match.group(1)) * 1000)
+
+                    facebook_match = re.search(r'facebook[:\s]+(\d+\.?\d*)\s*k', text)
+                    if facebook_match:
+                        business_context['facebook_followers'] = int(float(facebook_match.group(1)) * 1000)
+
+                    # Extract location
+                    if 'f-9' in text or 'park' in text:
+                        business_context['is_central_location'] = True
+                        business_context['location_description'] = business_context_text.strip()
+
                 # Send both brand and brand_name for backward compatibility
                 inputs = {
                     "brand": brand_name,
                     "brand_name": brand_name,
                     "category": category,
                     "city": city,
+                    "business_context": business_context,
                     "force_mock": not use_live_api,
                     "use_real": use_live_api
                 }
@@ -427,13 +479,21 @@ with tab1:
             st.markdown("**Raw AI Response:**")
             st.code(res.get("raw_response", "No response content."), language=None)
 
+        with st.expander("💪 Strengths Identified"):
+            strengths = res.get("strengths", [])
+            if strengths:
+                for strength in strengths:
+                    st.success(f"**{strength.get('title', 'Strength')}**: {strength.get('description', '')}")
+            else:
+                st.info("No strengths identified yet.")
+
         with st.expander("🔍 Competitors Identified"):
             competitors = res.get("competitors", [])
             if competitors:
                 for comp in competitors:
                     st.markdown(f"• {comp}")
             else:
-                st.write("No competitors identified.")
+                st.info("No competitors identified.")
 
         with st.expander("🚩 Identified Gaps"):
             gaps = res.get("gaps", [])
@@ -442,7 +502,10 @@ with tab1:
                     if isinstance(gap, str):
                         st.warning(gap)
                     elif isinstance(gap, dict):
-                        st.warning(f"**{gap.get('gap_type', 'Gap')}** ({gap.get('severity', 'unknown')}): {gap.get('description', '')}")
+                        gap_title = gap.get('title', gap.get('gap_type', 'Gap'))
+                        gap_severity = gap.get('severity', 'unknown')
+                        gap_desc = gap.get('description', '')
+                        st.warning(f"**{gap_title}** ({gap_severity}): {gap_desc}")
             else:
                 st.success("✅ No critical gaps identified!")
 
@@ -450,55 +513,79 @@ with tab1:
         st.markdown('<div class="section-header">🛠️ Remediation & Content Review</div>', unsafe_allow_html=True)
         st.info("Review, edit, and approve the AI-generated remediation content below.")
 
-        if st.session_state.remediations:
-            for idx, item in enumerate(st.session_state.remediations):
-                with st.container():
-                    st.markdown(f"""
-                    <div class="glass-card">
-                        <h4>🔧 {item['tool']}</h4>
-                    </div>
-                    """, unsafe_allow_html=True)
+        # Check for remediation from new system
+        remediation_list = res.get("remediation", [])
 
-                    edited_content = st.text_area(
-                        f"Edit content for {item['tool']}",
-                        value=item['content'],
-                        height=100,
-                        key=f"edit_{idx}"
-                    )
-                    st.session_state.remediations[idx]['content'] = edited_content
+        # Fallback to old remediation_results for backward compatibility
+        if not remediation_list:
+            remediation_list = res.get("remediation_results", [])
+
+        # Warning if gaps exist but no remediation
+        gaps = res.get("gaps", [])
+        if gaps and not remediation_list:
+            st.warning("⚠️ Gaps were found, but no remediation was generated. This indicates a remediation pipeline issue.")
+
+        if remediation_list:
+            for idx, item in enumerate(remediation_list):
+                with st.container():
+                    # Handle new remediation format
+                    if isinstance(item, dict) and 'title' in item:
+                        st.markdown(f"""
+                        <div class="glass-card">
+                            <h4>🔧 {item.get('title', 'Remediation')}</h4>
+                            <p><strong>Priority:</strong> {item.get('priority', 'medium').upper()}</p>
+                            <p><strong>Reason:</strong> {item.get('reason', '')}</p>
+                            <p><strong>Why this works:</strong> {item.get('why_this_works', '')}</p>
+                            <p><strong>Effort:</strong> {item.get('effort', 'unknown')} | <strong>Impact:</strong> {item.get('impact', 'unknown')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        edited_content = st.text_area(
+                            f"Action plan",
+                            value=item.get('action', ''),
+                            height=100,
+                            key=f"edit_{idx}"
+                        )
+                    # Handle old remediation format
+                    else:
+                        tool_name = item.get('tool', 'Remediation') if isinstance(item, dict) else 'Remediation'
+                        st.markdown(f"""
+                        <div class="glass-card">
+                            <h4>🔧 {tool_name}</h4>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        content = item.get('content', item.get('output_preview', str(item))) if isinstance(item, dict) else str(item)
+                        edited_content = st.text_area(
+                            f"Edit content",
+                            value=content,
+                            height=100,
+                            key=f"edit_{idx}"
+                        )
 
                     c1, c2, c3 = st.columns([1, 1, 2])
                     with c1:
                         if st.button("✅ Approve", key=f"app_{idx}"):
-                            st.session_state.remediations[idx]['status'] = "Approved"
                             st.toast(f"✅ Approved item {idx}")
                     with c2:
                         if st.button("❌ Reject", key=f"rej_{idx}"):
-                            st.session_state.remediations[idx]['status'] = "Rejected"
                             st.toast(f"❌ Rejected item {idx}")
-                    with c3:
-                        status = st.session_state.remediations[idx]['status']
-                        color = "green" if status == "Approved" else "red" if status == "Rejected" else "orange"
-                        st.markdown(f"**Status:** :{color}[{status}]")
 
             # --- Export Section ---
             st.markdown("<br>", unsafe_allow_html=True)
-            approved_items = [i for i in st.session_state.remediations if i['status'] == "Approved"]
-
-            if approved_items:
-                export_data = {
-                    "brand": res.get("brand", "Unknown"),
-                    "status": res.get("status", "completed"),
-                    "approved_remediations": approved_items
-                }
-                json_export = json.dumps(export_data, indent=4)
-                st.download_button(
-                    label="📥 Export Client-Ready Report",
-                    data=json_export,
-                    file_name=f"geo_remediation_{res.get('brand', 'unknown').lower().replace(' ', '_')}.json",
-                    mime="application/json",
-                    use_container_width=True
-                )
+            export_data = {
+                "brand": res.get("brand", "Unknown"),
+                "status": "completed",
+                "remediation": remediation_list
+            }
+            json_export = json.dumps(export_data, indent=4)
+            st.download_button(
+                label="📥 Export Client-Ready Report",
+                data=json_export,
+                file_name=f"geo_remediation_{res.get('brand', 'unknown').lower().replace(' ', '_')}.json",
+                mime="application/json",
+                use_container_width=True
+            )
         else:
             st.write("No remediation results to display.")
 
