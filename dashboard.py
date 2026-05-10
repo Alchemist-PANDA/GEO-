@@ -299,6 +299,24 @@ with st.sidebar:
         city = st.text_input("City", value="Islamabad")
         run_audit = st.form_submit_button("🚀 Run GEO Audit", use_container_width=True)
 
+    st.markdown("---")
+    st.markdown("### 🔧 Mode Selection")
+    use_live_api = st.checkbox(
+        "Enable Live API Mode",
+        value=False,
+        help="Use live provider APIs when keys are configured. Otherwise the app uses Simulated Demo Mode."
+    )
+
+    # Mode badge
+    if use_live_api:
+        api_key_present = bool(os.getenv("GROQ_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+        if api_key_present:
+            st.success("✅ Live API Mode")
+        else:
+            st.warning("⚠️ Live API Mode (no API key - will use Simulated Demo Mode)")
+    else:
+        st.info("🎭 Simulated Demo Mode")
+
 # --- Tabs ---
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "🔍 Brand Audit",
@@ -322,8 +340,8 @@ with tab1:
                     "brand_name": brand_name,
                     "category": category,
                     "city": city,
-                    "force_mock": not use_real_mode,
-                    "use_real": use_real_mode
+                    "force_mock": not use_live_api,
+                    "use_real": use_live_api
                 }
 
                 # Debug mode - show payload if DEBUG_MODE env var is set
@@ -498,13 +516,12 @@ with tab2:
         with col_c:
             mm_city = st.text_input("City", value="Islamabad", key="mm_city")
 
-        use_real_llm = st.checkbox("Use Real LLM APIs (if available)", value=False)
         run_multi_audit = st.form_submit_button("🚀 Run Multi-Model Audit", use_container_width=True)
 
     if run_multi_audit:
         with st.spinner(f"Testing {mm_brand} across 4 AI systems..."):
             try:
-                results = run_multi_model_audit(mm_brand, mm_category, mm_city, use_real=use_real_llm)
+                results = run_multi_model_audit(mm_brand, mm_category, mm_city, use_real=use_live_api)
                 st.session_state.multi_model_results = results
                 st.success("✅ Multi-model audit completed!")
             except Exception as e:
