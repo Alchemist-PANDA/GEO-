@@ -168,23 +168,24 @@ class FitnessGymTemplate:
         """Identify fitness-specific strengths."""
         strengths = []
 
-        # Strong review base
+        # Strong review base - display if present and decent
         review_count = business_data.get('review_count', 0)
         rating = business_data.get('rating', 0)
 
-        if review_count >= 100 and rating >= 4.0:
-            strengths.append({
-                'type': 'social_proof',
-                'title': 'Strong review base',
-                'description': f'{rating} rating with {review_count} reviews',
-            })
+        if review_count > 0 or rating > 0:
+            if review_count >= 50 or rating >= 4.0:
+                strengths.append({
+                    'type': 'social_proof',
+                    'title': 'Strong review base',
+                    'description': f'{rating} rating with {review_count} reviews' if review_count > 0 and rating > 0 else (f'{rating} rating' if rating > 0 else f'{review_count} reviews'),
+                })
 
         # Premium facilities
         services = business_data.get('services', [])
         premium_services = ['swimming pool', 'sauna', 'spa', 'physiotherapy', 'steam']
         has_premium = [s for s in premium_services if any(s in str(srv).lower() for srv in services)]
 
-        if len(has_premium) >= 2:
+        if len(has_premium) >= 1:
             strengths.append({
                 'type': 'facility_depth',
                 'title': 'Premium facility depth',
@@ -195,11 +196,17 @@ class FitnessGymTemplate:
         instagram_followers = business_data.get('instagram_followers', 0)
         facebook_followers = business_data.get('facebook_followers', 0)
 
-        if instagram_followers >= 10000 or facebook_followers >= 10000:
+        if instagram_followers > 0 or facebook_followers > 0:
+            social_desc = []
+            if instagram_followers > 0:
+                social_desc.append(f'Instagram: {instagram_followers:,}+')
+            if facebook_followers > 0:
+                social_desc.append(f'Facebook: {facebook_followers:,}+')
+
             strengths.append({
                 'type': 'social_proof',
                 'title': 'Active social presence',
-                'description': f'Instagram: {instagram_followers:,}+, Facebook: {facebook_followers:,}+',
+                'description': ", ".join(social_desc),
             })
 
         # Central location

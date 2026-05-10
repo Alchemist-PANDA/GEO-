@@ -164,8 +164,32 @@ class TestMultiModelLabeling:
 
         assert display_label == "ChatGPT — Simulated Demo"
 
-    def test_live_result_label(self):
-        """Test that live result displays 'Live API'."""
+    def test_perplexity_simulated_label(self):
+        """Test that Perplexity always displays 'Simulated Demo' as there is no live API."""
+        model_result = {
+            'model': 'Perplexity',
+            'provider': 'perplexity',
+            'mode': 'simulated',
+            'mentioned': True,
+            'sentiment': 'positive'
+        }
+
+        mode = model_result.get('mode', 'simulated')
+        model_name = model_result['model']
+        provider = model_result.get('provider', '')
+
+        # Dashboard logic for Perplexity
+        if model_name == 'Perplexity':
+            display_label = f"{model_name} — Simulated Demo"
+        elif mode == 'live_api':
+            display_label = f"{model_name} — Live API"
+        else:
+            display_label = f"{model_name} — Simulated Demo"
+
+        assert display_label == "Perplexity — Simulated Demo"
+
+    def test_groq_live_label(self):
+        """Test that Groq displays as Groq — Live API when live."""
         model_result = {
             'model': 'Groq',
             'provider': 'groq',
@@ -177,7 +201,9 @@ class TestMultiModelLabeling:
         mode = model_result.get('mode', 'simulated')
         model_name = model_result['model']
 
-        if mode == 'live_api':
+        if model_name == 'Perplexity':
+            display_label = f"{model_name} — Simulated Demo"
+        elif mode == 'live_api':
             display_label = f"{model_name} — Live API"
         else:
             display_label = f"{model_name} — Simulated Demo"

@@ -194,6 +194,7 @@ class TestFitnessTemplate:
         strengths = template.get_strengths(business_data)
         assert len(strengths) > 0
         assert any('review' in strength['title'].lower() for strength in strengths)
+        assert any('social' in strength['title'].lower() for strength in strengths)
         assert any('facility' in strength['title'].lower() or 'premium' in strength['title'].lower() for strength in strengths)
 
 

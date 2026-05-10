@@ -760,7 +760,10 @@ with tab2:
             model_name = model_result['model']
             provider = model_result.get('provider', '')
 
-            if mode == 'live_api':
+            # Only show Live API for Groq or specific live models
+            if model_name == 'Perplexity':
+                display_label = f"{model_name} — Simulated Demo"
+            elif mode == 'live_api':
                 display_label = f"{model_name} — Live API"
             else:
                 display_label = f"{model_name} — Simulated Demo"
@@ -792,8 +795,11 @@ with tab2:
 
                 with col_d:
                     st.write("**Mode:**")
-                    mode_label = "✅ Live API" if mode == 'live_api' else "🎭 Simulated Demo"
-                    st.write(mode_label)
+                    if model_name == 'Perplexity':
+                        st.write("🎭 Simulated Demo")
+                    else:
+                        mode_label = "✅ Live API" if mode == 'live_api' else "🎭 Simulated Demo"
+                        st.write(mode_label)
 
                 st.write("**Raw AI Response:**")
                 st.code(model_result['raw_response'], language=None)
@@ -1023,17 +1029,17 @@ with tab4:
         lift_pct = (lift_amount / baseline_score * 100) if baseline_score > 0 else 0
 
         # Determine lift status
-        if lift_amount < 0:
-            lift_status = "negative"
-            lift_message = "Visibility decreased"
-            lift_color = "#f5576c"
-        elif baseline_score >= 0.85:
+        if baseline_score >= 0.85:
             lift_status = "already_strong"
-            if lift_amount > 0:
-                lift_message = "Already strong visibility"
+            if abs(lift_amount) <= 0.05:
+                lift_message = "No meaningful lift detected"
             else:
                 lift_message = "Already strong visibility"
             lift_color = "#667eea"
+        elif lift_amount < 0:
+            lift_status = "negative"
+            lift_message = "Visibility decreased"
+            lift_color = "#f5576c"
         elif lift_amount > 0.1:
             lift_status = "significant"
             lift_message = "Significant improvement"
@@ -1048,8 +1054,8 @@ with tab4:
             lift_color = "#667eea"
 
         # Format signed numbers correctly
-        lift_amount_str = f"{lift_amount:+.2f}" if lift_amount != 0 else "0.00"
-        lift_pct_str = f"{lift_pct:+.0f}%" if lift_pct != 0 else "0%"
+        lift_amount_str = format_signed(lift_amount)
+        lift_pct_str = format_signed_percent(lift_pct)
 
         with col1:
             st.markdown(f"""
@@ -1084,16 +1090,16 @@ with tab4:
             """, unsafe_allow_html=True)
 
         # Lift status message
-        if lift_status == "negative":
-            st.warning(f"⚠️ {lift_message}: This simulation shows a decline of {abs(lift_pct):.1f}%. The brand may already have strong baseline visibility, or the simulated improvements were not effective.")
-        elif lift_status == "already_strong":
-            st.info(f"ℹ️ {lift_message} (baseline {baseline_score:.2f}). The brand is well-positioned. Focus on maintaining current visibility, monitoring competitors, and closing platform-specific gaps.")
+        if lift_status == "already_strong":
+            st.info(f"ℹ️ **{lift_message}** (baseline {baseline_score:.2f}). Capital Arena already appears strongly in the baseline response. Improvements may focus on maintaining accuracy and closing platform-specific gaps rather than large score gains.")
+        elif lift_status == "negative":
+            st.warning(f"⚠️ **{lift_message}**: This simulation shows a decline of {abs(lift_pct):.1f}%. The brand may already have strong baseline visibility, or the simulated improvements were not effective.")
         elif lift_status == "significant":
-            st.success(f"✅ {lift_message}: Confidence increased by {lift_pct:.1f}%")
+            st.success(f"✅ **{lift_message}**: Confidence increased by {lift_pct:.1f}%")
         elif lift_status == "moderate":
-            st.success(f"✅ {lift_message}: Confidence increased by {lift_pct:.1f}%")
+            st.success(f"✅ **{lift_message}**: Confidence increased by {lift_pct:.1f}%")
         else:
-            st.info(f"ℹ️ {lift_message}")
+            st.info(f"ℹ️ **{lift_message}**")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
