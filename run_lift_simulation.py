@@ -13,11 +13,24 @@ def compare_audits(baseline: dict, improved: dict) -> dict:
     absolute_lift = after_score - before_score
     percentage_lift = (absolute_lift / before_score * 100) if before_score > 0 else 0
 
-    if absolute_lift > 0.1:
+    # Determine lift status and styling
+    if absolute_lift < 0:
+        lift_status = "negative"
+        summary = f"Visibility decreased by {abs(percentage_lift):.1f}%. This simulation shows a decline, which may indicate the brand already had strong baseline visibility or the simulated improvements were not effective."
+    elif before_score >= 0.85:
+        lift_status = "already_strong"
+        if absolute_lift > 0:
+            summary = f"Already strong visibility (baseline {before_score:.2f}). Marginal improvement of {percentage_lift:.1f}% detected. Recommend monitoring and optimization rather than aggressive lift claims."
+        else:
+            summary = f"Already strong visibility (baseline {before_score:.2f}). No lift detected. The brand is well-positioned; focus on maintaining current visibility and monitoring competitors."
+    elif absolute_lift > 0.1:
+        lift_status = "significant"
         summary = f"Significant improvement: confidence increased by {percentage_lift:.1f}%"
     elif absolute_lift > 0:
+        lift_status = "moderate"
         summary = f"Moderate improvement: confidence increased by {percentage_lift:.1f}%"
     else:
+        lift_status = "no_change"
         summary = "No significant change in confidence score"
 
     return {
@@ -25,7 +38,8 @@ def compare_audits(baseline: dict, improved: dict) -> dict:
         "after_score": after_score,
         "absolute_lift": round(absolute_lift, 4),
         "percentage_lift": round(percentage_lift, 2),
-        "summary": summary
+        "summary": summary,
+        "lift_status": lift_status
     }
 
 def slugify(text: str) -> str:

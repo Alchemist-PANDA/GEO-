@@ -44,9 +44,13 @@ class AgentState(TypedDict):
     llm_response: Optional[str]
     is_cited: Optional[bool]
     confidence_score: Optional[float]
+    sentiment: Optional[str]
+    competitors: Optional[List[str]]
+    strengths: Optional[List[Dict]]
     gaps: List[Dict]
     planned_actions: List[Dict]
     remediation_results: List[Dict]
+    business_context: Optional[Dict]
     # Advanced features state
     enable_prediction: Optional[bool]
     enable_anomalies: Optional[bool]
@@ -142,36 +146,134 @@ def check_citation(state: AgentState) -> AgentState:
     if not response or "error:" in response:
         state["is_cited"] = False
         state["confidence_score"] = 0.0
+        state["sentiment"] = "none"
     elif brand in response:
         state["is_cited"] = True
         state["confidence_score"] = 1.0
+        # Detect sentiment
+        state["sentiment"] = detect_sentiment_from_response(state.get("llm_response", ""), state.get("brand_name", ""))
     else:
         brand_words = brand.split()
         matches = [word for word in brand_words if len(word) > 2 and word in response]
         state["is_cited"] = bool(matches)
         state["confidence_score"] = 0.5 if matches else 0.0
+        state["sentiment"] = "neutral" if matches else "none"
 
-    logger.info(f"Finished Node: check_citation (Cited: {state['is_cited']})")
+    # Extract competitors
+    state["competitors"] = extract_competitors_from_response(state.get("llm_response", ""), state.get("brand_name", ""))
+
+    logger.info(f"Finished Node: check_citation (Cited: {state['is_cited']}, Sentiment: {state.get('sentiment')})")
     return state
+
+def detect_sentiment_from_response(raw_response: str, brand_name: str) -> str:
+    """Detect sentiment based on brand mention and nearby positive terms."""
+    if not brand_name or not raw_response:
+        return 'none'
+
+    import re
+    brand_pattern = re.compile(re.escape(brand_name), re.IGNORECASE)
+    brand_match = brand_pattern.search(raw_response)
+
+    if not brand_match:
+        return 'none'
+
+    positive_terms = [
+        'best', 'top', 'excellent', 'quality', 'stands out', 'trusted',
+        'popular', 'premium', 'well-maintained', 'supportive', 'clean',
+        'recommended', 'commitment', 'customer satisfaction', 'outstanding',
+        'exceptional', 'great', 'amazing', 'wonderful', 'fantastic',
+        'highly rated', 'well-reviewed', 'professional', 'friendly',
+    ]
+
+    start = max(0, brand_match.start() - 100)
+    end = min(len(raw_response), brand_match.end() + 100)
+    context = raw_response[start:end].lower()
+
+    for term in positive_terms:
+        if term in context:
+            return 'positive'
+
+    return 'neutral'
+
+def extract_competitors_from_response(raw_response: str, brand_name: str) -> list:
+    """Extract competitors from raw response, excluding target brand and generic placeholders."""
+    if not raw_response:
+        return []
+
+    import re
+    generic_placeholders = [
+        'local favorite', 'established brand', 'premium choice',
+        'top provider', 'popular option', 'leading brand',
+        'market leader', 'industry leader',
+    ]
+
+    competitors = []
+    numbered_pattern = re.compile(r'^\s*\d+\.\s*(.+)$', re.MULTILINE)
+    matches = numbered_pattern.findall(raw_response)
+
+    for match in matches:
+        competitor = match.strip()
+
+        # Remove trailing descriptions after dash
+        if ' - ' in competitor:
+            competitor = competitor.split(' - ')[0].strip()
+
+        if brand_name and brand_name.lower() in competitor.lower():
+            continue
+
+        if competitor.lower() in generic_placeholders:
+            continue
+
+        if len(competitor) < 3 or len(competitor) > 100:
+            continue
+
+        competitors.append(competitor)
+
+    return competitors
 
 def gap_analyst(state: AgentState) -> AgentState:
     logger.info("Starting Node: gap_analyst")
-    ideal_checklist_results = {
-        "Burger Hub": {"has_json_ld": False, "recent_reviews": True, "high_authority": False, "recency_mention": False, "geo_relevance": True}
-    }
+
+    from .industry_templates import get_template
+
     brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
-    brand_data = ideal_checklist_results.get(brand, {"has_json_ld": False, "recent_reviews": False, "high_authority": False, "recency_mention": False, "geo_relevance": False})
+    category = state.get("category", "business")
+    city = state.get("city", "the area")
+    business_context = state.get("business_context", {})
+
+    # Get industry template
+    template = get_template(category)
 
     gaps = []
-    if not brand_data["has_json_ld"]:
-        gaps.append({"gap_type": "Structured Data", "description": "brand's schema.org (JSON-LD) is missing.", "severity": "high", "tool_required": "generate_json_ld"})
-    if not brand_data["recent_reviews"]:
-        gaps.append({"gap_type": "Third-party Reviews", "description": "No recent reviews found.", "severity": "medium", "tool_required": "create_review_snippet"})
-    if not brand_data["high_authority"]:
-        gaps.append({"gap_type": "Authority Signals", "description": "Domain authority is low.", "severity": "medium", "tool_required": "draft_technical_whitepaper"})
+    strengths = []
+
+    if template:
+        # Use industry-specific template
+        gaps = template.get_gaps(business_context)
+        strengths = template.get_strengths(business_context)
+        logger.info(f"Using industry template: {template.__class__.__name__}")
+    else:
+        # Generic gaps if no template
+        if not business_context.get('has_schema'):
+            gaps.append({
+                "gap_type": "Structured Data",
+                "description": "brand's schema.org (JSON-LD) is missing.",
+                "severity": "high",
+                "tool_required": "generate_json_ld"
+            })
+
+        review_count = business_context.get('review_count', 0)
+        if review_count == 0:
+            gaps.append({
+                "gap_type": "Third-party Reviews",
+                "description": "No recent reviews found.",
+                "severity": "medium",
+                "tool_required": "create_review_snippet"
+            })
 
     state["gaps"] = gaps
-    logger.info(f"Finished Node: gap_analyst (Gaps found: {len(gaps)})")
+    state["strengths"] = strengths
+    logger.info(f"Finished Node: gap_analyst (Gaps: {len(gaps)}, Strengths: {len(strengths)})")
     return state
 
 def planner(state: AgentState) -> AgentState:
@@ -302,9 +404,13 @@ class GeoAuditAgent:
             "brand": brand,
             "category": input_dict.get("category", "business"),
             "city": input_dict.get("city", "the area"),
+            "business_context": input_dict.get("business_context", {}),
             "gaps": [],
             "planned_actions": [],
             "remediation_results": [],
+            "sentiment": "none",
+            "competitors": [],
+            "strengths": [],
             "force_mock": input_dict.get("force_mock", False),
             "enable_prediction": input_dict.get("enable_prediction", False),
             "enable_anomalies": input_dict.get("enable_anomalies", False)
@@ -327,6 +433,9 @@ class GeoAuditAgent:
         result["citation_found"] = result.get("is_cited", False)
         result["confidence_score"] = result.get("confidence_score", 0.0)
         result["raw_response"] = result.get("llm_response", "")
+        result["sentiment"] = result.get("sentiment", "none")
+        result["competitors"] = result.get("competitors", [])
+        result["strengths"] = result.get("strengths", [])
 
         return result
 
