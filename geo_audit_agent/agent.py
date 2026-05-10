@@ -271,9 +271,25 @@ def gap_analyst(state: AgentState) -> AgentState:
                 "tool_required": "create_review_snippet"
             })
 
-    state["gaps"] = gaps
+    # Normalize gaps to include canonical fields for backward compatibility
+    normalized_gaps = []
+    for gap in gaps:
+        normalized_gap = {
+            'gap_type': gap.get('gap_type') or gap.get('title') or gap.get('type') or 'Visibility Gap',
+            'type': gap.get('type') or gap.get('gap_type') or 'generic',
+            'title': gap.get('title') or gap.get('gap_type') or 'Visibility Gap',
+            'description': gap.get('description') or gap.get('reason') or '',
+            'severity': gap.get('severity') or gap.get('priority') or 'medium',
+        }
+        # Preserve original fields like tool_required
+        for key, value in gap.items():
+            if key not in normalized_gap:
+                normalized_gap[key] = value
+        normalized_gaps.append(normalized_gap)
+
+    state["gaps"] = normalized_gaps
     state["strengths"] = strengths
-    logger.info(f"Finished Node: gap_analyst (Gaps: {len(gaps)}, Strengths: {len(strengths)})")
+    logger.info(f"Finished Node: gap_analyst (Gaps: {len(normalized_gaps)}, Strengths: {len(strengths)})")
     return state
 
 def planner(state: AgentState) -> AgentState:

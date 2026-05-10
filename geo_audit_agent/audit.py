@@ -156,11 +156,27 @@ def run_audit(brand_name: str, category: str, city: str, business_data: Optional
     # Extract competitors (simulated for now)
     competitors = extract_competitors(raw_response, brand_name)
 
+    # Normalize gaps to include canonical fields for backward compatibility
+    normalized_gaps = []
+    for gap in gaps:
+        normalized_gap = {
+            'gap_type': gap.get('gap_type') or gap.get('title') or gap.get('type') or 'Visibility Gap',
+            'type': gap.get('type') or gap.get('gap_type') or 'generic',
+            'title': gap.get('title') or gap.get('gap_type') or 'Visibility Gap',
+            'description': gap.get('description') or gap.get('reason') or '',
+            'severity': gap.get('severity') or gap.get('priority') or 'medium',
+        }
+        # Preserve original fields
+        for key, value in gap.items():
+            if key not in normalized_gap:
+                normalized_gap[key] = value
+        normalized_gaps.append(normalized_gap)
+
     return {
         'brand_name': brand_name,
         'category': category,
         'city': city,
-        'gaps': gaps,
+        'gaps': normalized_gaps,
         'strengths': strengths,
         'sentiment': sentiment,
         'competitors': competitors,
