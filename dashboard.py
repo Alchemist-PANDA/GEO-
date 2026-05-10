@@ -315,11 +315,22 @@ with tab1:
         with st.spinner(f"Running GEO Audit for {brand_name}..."):
             try:
                 agent = build_geo_audit_agent()
+
+                # Send both brand and brand_name for backward compatibility
                 inputs = {
                     "brand": brand_name,
+                    "brand_name": brand_name,
                     "category": category,
-                    "city": city
+                    "city": city,
+                    "force_mock": not use_real_mode,
+                    "use_real": use_real_mode
                 }
+
+                # Debug mode - show payload if DEBUG_MODE env var is set
+                if os.getenv("DEBUG_MODE", "").lower() == "true":
+                    st.write("DEBUG payload keys:", list(inputs.keys()))
+                    st.write("DEBUG payload:", inputs)
+
                 results = agent.invoke(inputs)
                 st.session_state.audit_results = results
 
@@ -801,6 +812,7 @@ with tab4:
                 agent = build_geo_audit_agent()
                 baseline = agent.invoke({
                     "brand": lift_brand,
+                    "brand_name": lift_brand,
                     "category": lift_category,
                     "city": lift_city,
                     "force_mock": True

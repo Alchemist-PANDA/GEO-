@@ -88,12 +88,14 @@ def anomaly_node(state: AgentState) -> AgentState:
 def query_llm(state: AgentState) -> AgentState:
     logger.info("Starting Node: query_llm")
 
+    # Safe brand extraction
+    brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+    category = state.get("category", "business")
+    city = state.get("city", "the area")
+
     # Check if force_mock is enabled
     if state.get("force_mock", False):
         logger.info("Force mock mode enabled - using deterministic response")
-        brand = state["brand_name"]
-        category = state["category"]
-        city = state["city"]
         state["llm_response"] = f"For the best {category} in {city}, here are some top recommendations:\n\n1. {brand} - Known for quality and excellent service\n2. Local Favorite - Popular choice in the area\n3. Established Brand - Consistent quality\n\n{brand} stands out for its commitment to customer satisfaction."
         logger.info("Finished Node: query_llm (mock mode)")
         return state
@@ -102,14 +104,14 @@ def query_llm(state: AgentState) -> AgentState:
 
     if client is None:
         logger.warning("Google API key not available - using mock response")
-        brand = state["brand_name"]
-        category = state["category"]
-        city = state["city"]
+        brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+        category = state.get("category", "business")
+        city = state.get("city", "the area")
         state["llm_response"] = f"For the best {category} in {city}, here are some top recommendations:\n\n1. {brand} - Known for quality and excellent service\n2. Local Favorite - Popular choice in the area\n3. Established Brand - Consistent quality\n\n{brand} stands out for its commitment to customer satisfaction."
         logger.info("Finished Node: query_llm (fallback mode)")
         return state
 
-    prompt = f"What is the best {state['category']} in {state['city']}? Return a concise answer with specific names."
+    prompt = f"What is the best {state.get('category', 'business')} in {state.get('city', 'the area')}? Return a concise answer with specific names."
 
     try:
         response = client.models.generate_content(
@@ -124,9 +126,9 @@ def query_llm(state: AgentState) -> AgentState:
     except Exception as e:
         logger.error(f"query_llm failed: {e}")
         # Fallback to mock response on error
-        brand = state["brand_name"]
-        category = state["category"]
-        city = state["city"]
+        brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+        category = state.get("category", "business")
+        city = state.get("city", "the area")
         state["llm_response"] = f"For the best {category} in {city}, here are some top recommendations:\n\n1. {brand} - Known for quality and excellent service\n2. Local Favorite - Popular choice in the area\n3. Established Brand - Consistent quality\n\n{brand} stands out for its commitment to customer satisfaction."
 
     logger.info("Finished Node: query_llm")
@@ -134,8 +136,8 @@ def query_llm(state: AgentState) -> AgentState:
 
 def check_citation(state: AgentState) -> AgentState:
     logger.info("Starting Node: check_citation")
-    brand = state["brand_name"].lower()
-    response = state["llm_response"].lower() if state["llm_response"] else ""
+    brand = (state.get("brand_name") or state.get("brand", "")).lower()
+    response = state.get("llm_response", "").lower() if state.get("llm_response") else ""
 
     if not response or "error:" in response:
         state["is_cited"] = False
@@ -157,7 +159,8 @@ def gap_analyst(state: AgentState) -> AgentState:
     ideal_checklist_results = {
         "Burger Hub": {"has_json_ld": False, "recent_reviews": True, "high_authority": False, "recency_mention": False, "geo_relevance": True}
     }
-    brand_data = ideal_checklist_results.get(state["brand_name"], {"has_json_ld": False, "recent_reviews": False, "high_authority": False, "recency_mention": False, "geo_relevance": False})
+    brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+    brand_data = ideal_checklist_results.get(brand, {"has_json_ld": False, "recent_reviews": False, "high_authority": False, "recency_mention": False, "geo_relevance": False})
 
     gaps = []
     if not brand_data["has_json_ld"]:
@@ -195,7 +198,8 @@ def planner(state: AgentState) -> AgentState:
         return state
 
     gaps_str = json.dumps(state["gaps"])
-    prompt = f"""Based on these gaps: {gaps_str}, write a short action plan to improve AI citation for {state['brand_name']}.
+    brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+    prompt = f"""Based on these gaps: {gaps_str}, write a short action plan to improve AI citation for {brand}.
     Output as valid JSON only, containing a list of objects under 'steps'.
     Each step MUST include a 'tool_required' field corresponding to one of: generate_json_ld, draft_technical_whitepaper, create_review_snippet.
     Each step must have: 'action', 'tool_required', and 'estimated_effort_days'."""
@@ -238,13 +242,17 @@ def remediation_handler(state: AgentState) -> AgentState:
         if tool_name in tool_map:
             logger.info(f"Executing remediation tool: {tool_name}")
             try:
+                brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+                category = state.get("category", "business")
+                city = state.get("city", "the area")
+
                 if tool_name == "generate_json_ld":
-                    product_info = {"name": state["brand_name"], "description": f"Best {state['category']} in {state['city']}"}
-                    result = tool_map[tool_name](state["brand_name"], product_info)
+                    product_info = {"name": brand, "description": f"Best {category} in {city}"}
+                    result = tool_map[tool_name](brand, product_info)
                 elif tool_name == "draft_technical_whitepaper":
-                    result = tool_map[tool_name](state["brand_name"], f"Technical Excellence in {state['category']}", ["Quality", "Innovation"])
+                    result = tool_map[tool_name](brand, f"Technical Excellence in {category}", ["Quality", "Innovation"])
                 elif tool_name == "create_review_snippet":
-                    result = tool_map[tool_name](state["brand_name"], state["category"], state["city"], 4.9)
+                    result = tool_map[tool_name](brand, category, city, 4.9)
                 results.append({"tool": tool_name, "status": "success", "output_preview": result[:100] + "..."})
             except Exception as e:
                 logger.error(f"Error executing {tool_name}: {e}")
@@ -256,9 +264,71 @@ def remediation_handler(state: AgentState) -> AgentState:
 
 def generate_report(state: AgentState) -> AgentState:
     logger.info("Starting Node: generate_report")
-    report = {"brand": state["brand_name"], "is_cited": state["is_cited"], "confidence": state["confidence_score"], "gaps_identified": len(state["gaps"]), "remediation_actions": len(state["remediation_results"]), "remediation_details": state["remediation_results"]}
+    brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+    report = {"brand": brand, "is_cited": state.get("is_cited", False), "confidence": state.get("confidence_score", 0.0), "gaps_identified": len(state.get("gaps", [])), "remediation_actions": len(state.get("remediation_results", [])), "remediation_details": state.get("remediation_results", [])}
     print("\n" + "="*50 + "\nGEO AUDIT AGENT INTEGRATED REPORT\n" + "="*50 + "\n" + json.dumps(report, indent=4) + "\n" + "="*50 + "\n")
     return state
+
+class GeoAuditAgent:
+    """Wrapper for LangGraph agent with backward compatibility for brand/brand_name."""
+
+    def __init__(self, compiled_graph):
+        self.graph = compiled_graph
+
+    def invoke(self, input_dict: dict) -> dict:
+        """
+        Invoke the agent with backward compatibility.
+
+        Accepts both 'brand' and 'brand_name' in the input.
+        Returns both 'brand' and 'brand_name' in the result.
+        """
+        # Input compatibility: accept brand, brand_name, or business_name
+        brand = (
+            input_dict.get("brand")
+            or input_dict.get("brand_name")
+            or input_dict.get("business_name")
+        )
+
+        if not brand:
+            raise ValueError("Brand name is required (provide 'brand', 'brand_name', or 'business_name')")
+
+        # Normalize input - ensure both keys are present
+        input_dict["brand"] = brand
+        input_dict["brand_name"] = brand
+
+        # Prepare state with brand_name (what the graph expects)
+        state = {
+            "brand_name": brand,
+            "brand": brand,
+            "category": input_dict.get("category", "business"),
+            "city": input_dict.get("city", "the area"),
+            "gaps": [],
+            "planned_actions": [],
+            "remediation_results": [],
+            "force_mock": input_dict.get("force_mock", False),
+            "enable_prediction": input_dict.get("enable_prediction", False),
+            "enable_anomalies": input_dict.get("enable_anomalies", False)
+        }
+
+        # Run the graph
+        result = self.graph.invoke(state)
+
+        # Output compatibility: ensure both "brand" and "brand_name" are present
+        result["brand"] = result.get("brand_name") or result.get("brand") or brand
+        result["brand_name"] = result.get("brand_name") or result.get("brand") or brand
+
+        # Add mode field based on whether we used fallback
+        if result.get("force_mock") or not result.get("llm_response"):
+            result["mode"] = "simulated"
+        else:
+            result["mode"] = "live_api"
+
+        # Map state fields to expected output fields
+        result["citation_found"] = result.get("is_cited", False)
+        result["confidence_score"] = result.get("confidence_score", 0.0)
+        result["raw_response"] = result.get("llm_response", "")
+
+        return result
 
 def build_geo_audit_agent():
     workflow = StateGraph(AgentState)
@@ -290,7 +360,8 @@ def build_geo_audit_agent():
     )
     workflow.add_edge("anomaly_node", END)
 
-    return workflow.compile()
+    compiled = workflow.compile()
+    return GeoAuditAgent(compiled)
 
 if __name__ == "__main__":
     agent = build_geo_audit_agent()
