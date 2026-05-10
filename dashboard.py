@@ -957,6 +957,35 @@ with tab4:
         lift_amount = improved_score - baseline_score
         lift_pct = (lift_amount / baseline_score * 100) if baseline_score > 0 else 0
 
+        # Determine lift status
+        if lift_amount < 0:
+            lift_status = "negative"
+            lift_message = "Visibility decreased"
+            lift_color = "#f5576c"
+        elif baseline_score >= 0.85:
+            lift_status = "already_strong"
+            if lift_amount > 0:
+                lift_message = "Already strong visibility"
+            else:
+                lift_message = "Already strong visibility"
+            lift_color = "#667eea"
+        elif lift_amount > 0.1:
+            lift_status = "significant"
+            lift_message = "Significant improvement"
+            lift_color = "#38ef7d"
+        elif lift_amount > 0:
+            lift_status = "moderate"
+            lift_message = "Moderate improvement"
+            lift_color = "#11998e"
+        else:
+            lift_status = "no_change"
+            lift_message = "No significant change"
+            lift_color = "#667eea"
+
+        # Format signed numbers correctly
+        lift_amount_str = f"{lift_amount:+.2f}" if lift_amount != 0 else "0.00"
+        lift_pct_str = f"{lift_pct:+.0f}%" if lift_pct != 0 else "0%"
+
         with col1:
             st.markdown(f"""
             <div class="metric-card">
@@ -975,19 +1004,31 @@ with tab4:
 
         with col3:
             st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">+{lift_amount:.2f}</div>
+            <div class="metric-card" style="border-left: 3px solid {lift_color};">
+                <div class="metric-value" style="color: {lift_color};">{lift_amount_str}</div>
                 <div class="metric-label">Absolute Lift</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col4:
             st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-value">+{lift_pct:.0f}%</div>
+            <div class="metric-card" style="border-left: 3px solid {lift_color};">
+                <div class="metric-value" style="color: {lift_color};">{lift_pct_str}</div>
                 <div class="metric-label">Percentage Lift</div>
             </div>
             """, unsafe_allow_html=True)
+
+        # Lift status message
+        if lift_status == "negative":
+            st.warning(f"⚠️ {lift_message}: This simulation shows a decline of {abs(lift_pct):.1f}%. The brand may already have strong baseline visibility, or the simulated improvements were not effective.")
+        elif lift_status == "already_strong":
+            st.info(f"ℹ️ {lift_message} (baseline {baseline_score:.2f}). The brand is well-positioned. Focus on maintaining current visibility, monitoring competitors, and closing platform-specific gaps.")
+        elif lift_status == "significant":
+            st.success(f"✅ {lift_message}: Confidence increased by {lift_pct:.1f}%")
+        elif lift_status == "moderate":
+            st.success(f"✅ {lift_message}: Confidence increased by {lift_pct:.1f}%")
+        else:
+            st.info(f"ℹ️ {lift_message}")
 
         st.markdown("<br>", unsafe_allow_html=True)
 

@@ -107,21 +107,43 @@ def simulate_improved_audit(baseline: dict) -> dict:
 
     # Scenario 3: Strong presence -> Slight improvement
     else:
-        improved["confidence_score"] = min(baseline.get("confidence_score", 0.0) + 0.05, 0.85)
+        # Cap simulated improvement to small range for strong baseline brands
+        # If before_score >= 0.85, the brand is already very strong
+        current_score = baseline.get("confidence_score", 0.0)
+
+        if current_score >= 0.85:
+            # Very strong baseline - only marginal improvement possible, if any
+            improved["confidence_score"] = min(current_score + 0.02, 0.98)
+            improved["simulation_notes"]["expected_outcome"] = "Already strong visibility. Focus on maintenance and monitoring."
+        else:
+            improved["confidence_score"] = min(current_score + 0.05, 0.85)
+
         improved["raw_response"] = f"When it comes to exceptional {category} options, {brand} is consistently ranked among the very best.\n\n{brand} has earned its reputation through years of outstanding service and quality. They're often the first recommendation from satisfied customers. The combination of expertise, reliability, and customer focus makes {brand} a standout choice.\n\nFor the best {category} experience, {brand} is the clear top choice."
         improved["before_raw_response"] = before_raw_response
         improved["simulation_confidence"] = "low"
-        improved["simulation_notes"] = {
-            "expected_outcome": "Incremental strengthening of already-strong position",
-            "alternative_outcomes": [
-                "Improvements may be marginal as brand is already well-positioned",
-                "Gains may be offset by competitor improvements"
-            ],
-            "risk_factors": [
-                "Diminishing returns at high confidence levels",
-                "Market saturation may limit further gains"
-            ]
-        }
+        if "simulation_notes" not in improved or not isinstance(improved["simulation_notes"], dict):
+            improved["simulation_notes"] = {
+                "expected_outcome": "Incremental strengthening of already-strong position",
+                "alternative_outcomes": [
+                    "Improvements may be marginal as brand is already well-positioned",
+                    "Gains may be offset by competitor improvements"
+                ],
+                "risk_factors": [
+                    "Diminishing returns at high confidence levels",
+                    "Market saturation may limit further gains"
+                ]
+            }
+        else:
+            improved["simulation_notes"].update({
+                "alternative_outcomes": [
+                    "Improvements may be marginal as brand is already well-positioned",
+                    "Gains may be offset by competitor improvements"
+                ],
+                "risk_factors": [
+                    "Diminishing returns at high confidence levels",
+                    "Market saturation may limit further gains"
+                ]
+            })
 
     return improved
 
@@ -179,10 +201,11 @@ def main():
     print("\n" + "="*50)
     print(f"LIFT REPORT: {args.brand}")
     print("-" * 50)
-    print(f"Baseline Score:    {lift_report['before_score']}")
-    print(f"Improved Score:    {lift_report['after_score']}")
-    print(f"Absolute Lift:     +{lift_report['absolute_lift']}")
-    print(f"Percentage Lift:   {lift_report['percentage_lift']}%")
+    print(f"Baseline Score:    {lift_report['before_score']:.2f}")
+    print(f"Improved Score:    {lift_report['after_score']:.2f}")
+    print(f"Absolute Lift:     {lift_report['absolute_lift']:+.4f}")
+    print(f"Percentage Lift:   {lift_report['percentage_lift']:+.2f}%")
+    print(f"Status:            {lift_report['lift_status']}")
     print("-" * 50)
     print(f"Summary: {lift_report['summary']}")
     print("="*50)

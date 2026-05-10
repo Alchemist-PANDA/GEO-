@@ -108,10 +108,32 @@ class TestLiftMeasurement:
         assert result['message'] == 'Visibility decreased'
         assert 'no lift detected' in result['explanation'].lower()
 
+    def test_negative_lift_formatting(self):
+        """Test that negative lift does not show +- prefix."""
+        result = measure_lift(1.00, 0.85)
+        # Verify the values are negative
+        assert result['absolute_lift'] < 0
+        assert result['percentage_lift'] < 0
+        # Format as string with sign
+        abs_str = f"{result['absolute_lift']:+.2f}"
+        pct_str = f"{result['percentage_lift']:+.1f}%"
+        # Should show minus sign, not +-
+        assert abs_str.startswith('-')
+        assert pct_str.startswith('-')
+        assert '+-' not in abs_str
+        assert '+-' not in pct_str
+
     def test_baseline_strong(self):
         """Test baseline strong detection."""
         result = measure_lift(0.90, 0.92)
         assert result['status'] == 'baseline_strong'
+        assert 'already strong' in result['message'].lower()
+
+    def test_baseline_strong_no_improvement(self):
+        """Test baseline strong with no improvement."""
+        result = measure_lift(0.90, 0.90)
+        assert result['status'] == 'baseline_strong'
+        assert result['absolute_lift'] == 0.0
         assert 'already strong' in result['message'].lower()
 
     def test_marginal_lift(self):
