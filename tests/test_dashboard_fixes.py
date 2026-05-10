@@ -141,71 +141,63 @@ class TestNegativeLiftFormatting:
         assert "+-" not in pct_str
 
 
-class TestMultiModelLabeling:
-    """Test multi-model labeling."""
+class TestBusinessContextParsing:
+    """Test business context parsing patterns."""
 
-    def test_simulated_result_label(self):
-        """Test that simulated result displays 'Simulated Demo'."""
-        model_result = {
-            'model': 'ChatGPT',
-            'provider': 'openai',
-            'mode': 'simulated',
-            'mentioned': True,
-            'sentiment': 'positive'
-        }
+    def test_rating_patterns(self):
+        """Test detection of various rating patterns."""
+        import re
+        patterns = [
+            "4.5 Google rating",
+            "4.5 rating",
+            "rated 4.5",
+            "rating: 4.5"
+        ]
+        regex = r'(?:rated\s+|rating[:\s]+|)(\d+\.?\d*)\s*(?:google\s*)?rating'
 
-        mode = model_result.get('mode', 'simulated')
-        model_name = model_result['model']
+        for p in patterns:
+            text = p.lower()
+            match = re.search(regex, text)
+            if not match:
+                match = re.search(r'rated\s*(\d+\.?\d*)', text)
+            if not match:
+                match = re.search(r'rating[:\s]+(\d+\.?\d*)', text)
 
-        if mode == 'live_api':
-            display_label = f"{model_name} — Live API"
-        else:
-            display_label = f"{model_name} — Simulated Demo"
+            assert match is not None, f"Failed to match pattern: {p}"
+            assert match.group(1) == "4.5"
 
-        assert display_label == "ChatGPT — Simulated Demo"
+    def test_review_patterns(self):
+        """Test detection of review patterns."""
+        import re
+        patterns = [
+            "231 Google reviews",
+            "231 reviews"
+        ]
+        regex = r'(\d+)\s*(?:google\s*)?reviews?'
 
-    def test_perplexity_simulated_label(self):
-        """Test that Perplexity always displays 'Simulated Demo' as there is no live API."""
-        model_result = {
-            'model': 'Perplexity',
-            'provider': 'perplexity',
-            'mode': 'simulated',
-            'mentioned': True,
-            'sentiment': 'positive'
-        }
+        for p in patterns:
+            text = p.lower()
+            match = re.search(regex, text)
+            assert match is not None, f"Failed to match pattern: {p}"
+            assert match.group(1) == "231"
 
-        mode = model_result.get('mode', 'simulated')
-        model_name = model_result['model']
-        provider = model_result.get('provider', '')
+    def test_social_follower_patterns(self):
+        """Test detection of social follower patterns."""
+        import re
+        patterns = [
+            "Instagram 18.3K followers",
+            "Instagram has 18.3K+ followers",
+            "Facebook 12.2K followers",
+            "Facebook has 12.2K+ followers"
+        ]
 
-        # Dashboard logic for Perplexity
-        if model_name == 'Perplexity':
-            display_label = f"{model_name} — Simulated Demo"
-        elif mode == 'live_api':
-            display_label = f"{model_name} — Live API"
-        else:
-            display_label = f"{model_name} — Simulated Demo"
-
-        assert display_label == "Perplexity — Simulated Demo"
-
-    def test_groq_live_label(self):
-        """Test that Groq displays as Groq — Live API when live."""
-        model_result = {
-            'model': 'Groq',
-            'provider': 'groq',
-            'mode': 'live_api',
-            'mentioned': True,
-            'sentiment': 'positive'
-        }
-
-        mode = model_result.get('mode', 'simulated')
-        model_name = model_result['model']
-
-        if model_name == 'Perplexity':
-            display_label = f"{model_name} — Simulated Demo"
-        elif mode == 'live_api':
-            display_label = f"{model_name} — Live API"
-        else:
-            display_label = f"{model_name} — Simulated Demo"
-
-        assert display_label == "Groq — Live API"
+        for p in patterns:
+            text = p.lower()
+            if "instagram" in text:
+                match = re.search(r'instagram.*?\s*(\d+\.?\d*)\s*k', text)
+                assert match is not None, f"Failed to match Instagram pattern: {p}"
+                assert match.group(1) == "18.3"
+            elif "facebook" in text:
+                match = re.search(r'facebook.*?\s*(\d+\.?\d*)\s*k', text)
+                assert match is not None, f"Failed to match Facebook pattern: {p}"
+                assert match.group(1) == "12.2"

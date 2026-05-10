@@ -383,7 +383,12 @@ with tab1:
 
                     # Extract rating
                     import re
-                    rating_match = re.search(r'(\d+\.?\d*)\s*rating', text)
+                    rating_match = re.search(r'(?:rated\s+|rating[:\s]+|)(\d+\.?\d*)\s*(?:google\s*)?rating', text)
+                    if not rating_match:
+                        rating_match = re.search(r'rated\s*(\d+\.?\d*)', text)
+                    if not rating_match:
+                        rating_match = re.search(r'rating[:\s]+(\d+\.?\d*)', text)
+
                     if rating_match:
                         business_context['rating'] = float(rating_match.group(1))
 
@@ -402,11 +407,11 @@ with tab1:
                         business_context['services'] = services
 
                     # Extract social followers
-                    instagram_match = re.search(r'instagram[:\s]+(\d+\.?\d*)\s*k', text)
+                    instagram_match = re.search(r'instagram.*?\s*(\d+\.?\d*)\s*k', text)
                     if instagram_match:
                         business_context['instagram_followers'] = int(float(instagram_match.group(1)) * 1000)
 
-                    facebook_match = re.search(r'facebook[:\s]+(\d+\.?\d*)\s*k', text)
+                    facebook_match = re.search(r'facebook.*?\s*(\d+\.?\d*)\s*k', text)
                     if facebook_match:
                         business_context['facebook_followers'] = int(float(facebook_match.group(1)) * 1000)
 
