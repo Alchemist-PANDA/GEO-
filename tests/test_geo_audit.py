@@ -214,6 +214,37 @@ class TestCapitalArenaScenario:
         # Should identify gaps
         assert len(results['gaps']) > 0
 
+    def test_capital_arena_remediation_always_generated(self):
+        """Test that Capital Arena audit always generates remediation when gaps exist."""
+        business_data = {
+            'review_count': 231,
+            'rating': 4.5,
+            'services': ['online classes', 'sauna', 'swimming pool', 'gym', 'spa', 'steam', 'protein bar', 'physiotherapy'],
+            'instagram_followers': 18300,
+            'facebook_followers': 12200,
+            'location_description': 'F-9 Park / Megazone, Islamabad',
+            'is_central_location': True,
+            'raw_response': 'Capital Arena Fitness Club stands out for its commitment to customer satisfaction.',
+            'has_schema': False,
+            'has_trainer_info': False,
+            'has_pricing': False,
+            'has_schedule': False,
+            'has_local_content': False,
+        }
+
+        results = run_audit('Capital Arena Fitness Club', 'fitness gym', 'Islamabad', business_data)
+
+        # If gaps exist, remediation must be generated
+        if len(results['gaps']) > 0:
+            remediation = generate_remediation(results['gaps'], 'fitness gym', 'Islamabad', 'Capital Arena Fitness Club')
+            assert len(remediation) > 0, "Remediation must be generated when gaps exist"
+
+            # Check remediation has business-friendly titles
+            for rem in remediation:
+                assert 'title' in rem
+                assert 'generate_json_ld' not in rem['title'].lower()
+                assert 'tool' not in rem['title'].lower()
+
     def test_capital_arena_remediation(self):
         """Test remediation generation for Capital Arena."""
         gaps = [

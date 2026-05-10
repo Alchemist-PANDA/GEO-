@@ -49,7 +49,8 @@ class AgentState(TypedDict):
     strengths: Optional[List[Dict]]
     gaps: List[Dict]
     planned_actions: List[Dict]
-    remediation_results: List[Dict]
+    remediation: List[Dict]  # New industry-aware remediation
+    remediation_results: List[Dict]  # Legacy format
     business_context: Optional[Dict]
     # Advanced features state
     enable_prediction: Optional[bool]
@@ -352,32 +353,32 @@ def planner(state: AgentState) -> AgentState:
 
 def remediation_handler(state: AgentState) -> AgentState:
     logger.info("Starting Node: remediation_handler")
-    results = []
-    tool_map = {"generate_json_ld": generate_json_ld, "draft_technical_whitepaper": draft_technical_whitepaper, "create_review_snippet": create_review_snippet}
 
-    for action in state.get("planned_actions", []):
-        tool_name = action.get("tool_required")
-        if tool_name in tool_map:
-            logger.info(f"Executing remediation tool: {tool_name}")
-            try:
-                brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
-                category = state.get("category", "business")
-                city = state.get("city", "the area")
+    # Generate industry-aware remediation using the new system
+    from .remediation import generate_remediation
 
-                if tool_name == "generate_json_ld":
-                    product_info = {"name": brand, "description": f"Best {category} in {city}"}
-                    result = tool_map[tool_name](brand, product_info)
-                elif tool_name == "draft_technical_whitepaper":
-                    result = tool_map[tool_name](brand, f"Technical Excellence in {category}", ["Quality", "Innovation"])
-                elif tool_name == "create_review_snippet":
-                    result = tool_map[tool_name](brand, category, city, 4.9)
-                results.append({"tool": tool_name, "status": "success", "output_preview": result[:100] + "..."})
-            except Exception as e:
-                logger.error(f"Error executing {tool_name}: {e}")
-                results.append({"tool": tool_name, "status": "failed", "error": str(e)})
+    gaps = state.get("gaps", [])
+    brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
+    category = state.get("category", "business")
+    city = state.get("city", "the area")
 
-    state["remediation_results"] = results
-    logger.info(f"Finished Node: remediation_handler")
+    # Generate remediation from gaps
+    remediation = generate_remediation(gaps, category, city, brand)
+
+    # Store in both new and legacy fields
+    state["remediation"] = remediation
+
+    # Legacy fallback: convert to old format for backward compatibility
+    legacy_results = []
+    for rem in remediation:
+        legacy_results.append({
+            "tool": rem.get("type", "remediation"),
+            "status": "success",
+            "output_preview": rem.get("action", "")[:100] + "..."
+        })
+    state["remediation_results"] = legacy_results
+
+    logger.info(f"Finished Node: remediation_handler (Generated {len(remediation)} remediation items)")
     return state
 
 def generate_report(state: AgentState) -> AgentState:
@@ -423,6 +424,7 @@ class GeoAuditAgent:
             "business_context": input_dict.get("business_context", {}),
             "gaps": [],
             "planned_actions": [],
+            "remediation": [],
             "remediation_results": [],
             "sentiment": "none",
             "competitors": [],
@@ -452,6 +454,7 @@ class GeoAuditAgent:
         result["sentiment"] = result.get("sentiment", "none")
         result["competitors"] = result.get("competitors", [])
         result["strengths"] = result.get("strengths", [])
+        result["remediation"] = result.get("remediation", [])
 
         return result
 
