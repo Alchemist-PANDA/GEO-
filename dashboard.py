@@ -411,9 +411,15 @@ with tab1:
                         business_context['facebook_followers'] = int(float(facebook_match.group(1)) * 1000)
 
                     # Extract location
-                    if 'f-9' in text or 'park' in text:
+                    if 'f-9' in text or 'park' in text or 'megazone' in text:
                         business_context['is_central_location'] = True
-                        business_context['location_description'] = business_context_text.strip()
+
+                        # Extract only location part (around park/megazone)
+                        loc_match = re.search(r'([^,.]+?(?:f-9|park|megazone)[^,.]*)', text)
+                        if loc_match:
+                            business_context['location_description'] = loc_match.group(1).strip().title()
+                        else:
+                            business_context['location_description'] = "F-9 Park / Megazone, Islamabad"
 
                 # Send both brand and brand_name for backward compatibility
                 inputs = {
@@ -1002,10 +1008,12 @@ with tab4:
                 }
 
                 # Show appropriate message based on lift
-                if lift_amount < 0:
-                    st.warning("⚠️ No lift detected — visibility decreased in this simulation.")
+                if baseline_score >= 0.85 and abs(lift_amount) <= 0.05:
+                    st.info("ℹ️ Already strong visibility — no meaningful lift detected.")
                 elif baseline_score >= 0.85:
                     st.info("ℹ️ Already strong visibility — focus on maintenance and monitoring.")
+                elif lift_amount < 0:
+                    st.warning("⚠️ No lift detected — visibility decreased in this simulation.")
                 else:
                     st.success("✅ Lift simulation completed!")
             except Exception as e:
@@ -1091,7 +1099,7 @@ with tab4:
 
         # Lift status message
         if lift_status == "already_strong":
-            st.info(f"ℹ️ **{lift_message}** (baseline {baseline_score:.2f}). Capital Arena already appears strongly in the baseline response. Improvements may focus on maintaining accuracy and closing platform-specific gaps rather than large score gains.")
+            st.info(f"ℹ️ **{lift_message}** (baseline {baseline_score:.2f}). This brand already appears strongly in the baseline response. Improvements should focus on maintaining accuracy, closing platform-specific gaps, and monitoring AI visibility over time.")
         elif lift_status == "negative":
             st.warning(f"⚠️ **{lift_message}**: This simulation shows a decline of {abs(lift_pct):.1f}%. The brand may already have strong baseline visibility, or the simulated improvements were not effective.")
         elif lift_status == "significant":
