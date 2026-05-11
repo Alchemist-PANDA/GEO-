@@ -426,6 +426,84 @@ with tab1:
                         else:
                             business_context['location_description'] = "F-9 Park / Megazone, Islamabad"
 
+                    # --- E-commerce specific extraction ---
+                    # Extract platform
+                    if 'shopify' in text:
+                        business_context['platform'] = 'Shopify'
+                        business_context['has_product_catalog'] = True  # Shopify stores typically have catalogs
+
+                    # Extract return/exchange policy
+                    if 'return' in text or 'exchange' in text or '14 day' in text or '14-day' in text:
+                        business_context['has_return_policy'] = True
+                        policy_match = re.search(r'(\d+)\s*[- ]?\s*day\s*(?:return|exchange)', text)
+                        if policy_match:
+                            business_context['return_policy_description'] = f"{policy_match.group(1)}-day exchange window"
+
+                    # Extract payment options
+                    payment_keywords = ['visa', 'mastercard', 'american express', 'amex', 'cod', 'cash on delivery']
+                    found_payments = [kw for kw in payment_keywords if kw in text]
+                    if found_payments:
+                        business_context['has_payment_options'] = True
+                        business_context['payment_options_description'] = ', '.join([p.title() for p in found_payments])
+
+                    # Extract Instagram/social presence
+                    if '@memeretail' in text or 'instagram' in text:
+                        business_context['has_social_presence'] = True
+                        # Try to extract follower count if present
+                        instagram_ctx = re.search(r'(@\w+).*?(\d+\.?\d*)\s*k?\s*followers?', business_context_text, re.IGNORECASE)
+                        if instagram_ctx:
+                            business_context['instagram_followers'] = int(float(instagram_ctx.group(2)) * 1000)
+
+                    # Extract market
+                    market_match = re.search(r'market[:\s]+(\w+)', text)
+                    if market_match:
+                        business_context['market'] = market_match.group(1).title()
+
+                    # Store original category for e-commerce detection
+                    business_context['category'] = category
+
+                    # Mark schema as not present by default (will be checked by template)
+                    # Let the template decide based on business_context
+
+                    # --- E-commerce specific extraction ---
+                    # Extract platform
+                    if 'shopify' in text:
+                        business_context['platform'] = 'Shopify'
+                        business_context['has_product_catalog'] = True  # Shopify stores typically have catalogs
+
+                    # Extract return/exchange policy
+                    if 'return' in text or 'exchange' in text or '14 day' in text or '14-day' in text:
+                        business_context['has_return_policy'] = True
+                        policy_match = re.search(r'(\d+)\s*[- ]?\s*day\s*(?:return|exchange)', text)
+                        if policy_match:
+                            business_context['return_policy_description'] = f"{policy_match.group(1)}-day exchange window"
+
+                    # Extract payment options
+                    payment_keywords = ['visa', 'mastercard', 'american express', 'amex', 'cod', 'cash on delivery']
+                    found_payments = [kw for kw in payment_keywords if kw in text]
+                    if found_payments:
+                        business_context['has_payment_options'] = True
+                        business_context['payment_options_description'] = ', '.join([p.title() for p in found_payments])
+
+                    # Extract Instagram/social presence
+                    if '@memeretail' in text or 'instagram' in text:
+                        business_context['has_social_presence'] = True
+                        # Try to extract follower count if present
+                        instagram_ctx = re.search(r'(@\w+).*?(\d+\.?\d*)\s*k?\s*followers?', business_context_text, re.IGNORECASE)
+                        if instagram_ctx:
+                            business_context['instagram_followers'] = int(float(instagram_ctx.group(2)) * 1000)
+
+                    # Extract market
+                    market_match = re.search(r'market[:\s]+(\w+)', text)
+                    if market_match:
+                        business_context['market'] = market_match.group(1).title()
+
+                    # Store original category for e-commerce detection
+                    business_context['category'] = category
+
+                    # Mark schema as not present by default (will be checked by template)
+                    # Let the template decide based on business_context
+
                 # Send both brand and brand_name for backward compatibility
                 inputs = {
                     "brand": brand_name,
@@ -512,6 +590,16 @@ with tab1:
                 <div class="metric-label">Gaps Identified</div>
             </div>
             """, unsafe_allow_html=True)
+
+        # Template used display
+        template_used = res.get("template_used", "Generic")
+        if template_used != "Generic":
+            st.success(f"📋 Using **{template_used}** for industry-specific recommendations")
+
+        # Template used display
+        template_used = res.get("template_used", "Generic")
+        if template_used != "Generic":
+            st.success(f"📋 Using **{template_used}** for industry-specific recommendations")
 
         st.markdown("<br>", unsafe_allow_html=True)
 

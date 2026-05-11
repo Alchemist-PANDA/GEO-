@@ -52,6 +52,7 @@ class AgentState(TypedDict):
     remediation: List[Dict]  # New industry-aware remediation
     remediation_results: List[Dict]  # Legacy format
     business_context: Optional[Dict]
+    template_used: Optional[str]  # Industry template used
     # Advanced features state
     enable_prediction: Optional[bool]
     enable_anomalies: Optional[bool]
@@ -290,7 +291,8 @@ def gap_analyst(state: AgentState) -> AgentState:
 
     state["gaps"] = normalized_gaps
     state["strengths"] = strengths
-    logger.info(f"Finished Node: gap_analyst (Gaps: {len(normalized_gaps)}, Strengths: {len(strengths)})")
+    state["template_used"] = template.__class__.__name__ if template else "Generic"
+    logger.info(f"Finished Node: gap_analyst (Gaps: {len(normalized_gaps)}, Strengths: {len(strengths)}, Template: {state['template_used']})")
     return state
 
 def planner(state: AgentState) -> AgentState:
@@ -455,6 +457,8 @@ class GeoAuditAgent:
         result["competitors"] = result.get("competitors", [])
         result["strengths"] = result.get("strengths", [])
         result["remediation"] = result.get("remediation", [])
+        result["template_used"] = result.get("template_used", "Generic")
+        result["template_used"] = result.get("template_used", "Generic")
 
         return result
 
