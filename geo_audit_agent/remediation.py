@@ -24,6 +24,7 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
     template = get_template(category)
     is_ecommerce = template and template.__class__.__name__ == 'EcommerceTemplate'
     is_dental = template and template.__class__.__name__ == 'DentalClinicTemplate'
+    is_restaurant = template and template.__class__.__name__ == 'RestaurantTemplate'
 
     for gap in gaps:
         gap_type = gap.get('type', 'generic')
@@ -59,6 +60,18 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     'impact': 'high',
                     'quick_win': True,
                 })
+            elif is_restaurant:
+                remediation.append({
+                    'priority': priority,
+                    'type': 'schema',
+                    'title': 'Add Restaurant and Menu schema',
+                    'reason': title,
+                    'why_this_works': 'Structured data helps search engines understand your cuisine, menu items, and opening hours, improving visibility in food and local search results.',
+                    'action': 'Implement Restaurant, Menu, LocalBusiness, AggregateRating, and Review schema on your website.',
+                    'effort': 'medium',
+                    'impact': 'high',
+                    'quick_win': True,
+                })
             else:
                 remediation.append({
                     'priority': priority,
@@ -74,6 +87,7 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
 
         elif gap_type == 'content':
             if is_ecommerce:
+                # ... existing ecommerce content gaps ...
                 if 'shipping' in title.lower() or 'return' in title.lower():
                     remediation.append({
                         'priority': priority,
@@ -122,83 +136,168 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                         'impact': 'medium',
                         'quick_win': True,
                     })
+            elif is_restaurant:
+                if 'menu' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Create or optimize menu page',
+                        'reason': title,
+                        'why_this_works': 'A clear, digital menu helps customers decide and improves search relevance for specific dishes.',
+                        'action': 'Create a mobile-friendly menu page with clear categories, descriptions, and pricing. Use structured text instead of just PDF/images.',
+                        'effort': 'medium',
+                        'impact': 'high',
+                        'quick_win': False,
+                    })
+                elif 'signature' in title.lower() or 'dish' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add signature dish sections',
+                        'reason': title,
+                        'why_this_works': 'Signature dishes differentiate your brand and target "best [dish]" search queries.',
+                        'action': 'Create sections or pages for your signature dishes with high-quality photos, ingredients, and story.',
+                        'effort': 'medium',
+                        'impact': 'high',
+                        'quick_win': True,
+                    })
+                elif 'hour' in title.lower() or 'price' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add hours and price range',
+                        'reason': title,
+                        'why_this_works': 'Basic info like hours and price range are critical for conversion and local search ranking.',
+                        'action': 'Add clear opening hours and price range ($/$$/$$$) to your website footer and contact page.',
+                        'effort': 'low',
+                        'impact': 'medium',
+                        'quick_win': True,
+                    })
+                elif 'delivery' in title.lower() or 'reservation' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add delivery and reservation info',
+                        'reason': title,
+                        'why_this_works': 'Clear transactional info reduces friction for hungry customers ready to book or order.',
+                        'action': 'Add "Order Delivery" and "Book a Table" buttons/info clearly on the homepage and menu page.',
+                        'effort': 'low',
+                        'impact': 'high',
+                        'quick_win': True,
+                    })
+                elif 'photo' in title.lower() or 'ambience' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add high-quality food/ambience photos',
+                        'reason': title,
+                        'why_this_works': 'Visuals are the primary driver for restaurant selection online.',
+                        'action': 'Upload high-quality photos of signature dishes, interior decor, and outdoor seating to your website and Google profile.',
+                        'effort': 'medium',
+                        'impact': 'high',
+                        'quick_win': False,
+                    })
+                elif 'faq' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add restaurant FAQ sections',
+                        'reason': title,
+                        'why_this_works': 'FAQs address customer questions about parking, payment, family seating, and dietary options.',
+                        'action': 'Add an FAQ section covering common customer queries to reduce support overhead and improve search visibility.',
+                        'effort': 'low',
+                        'impact': 'medium',
+                        'quick_win': True,
+                    })
+                else:
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add treatment FAQ sections', # Fallback but maybe generic?
+                        'reason': title,
+                        'why_this_works': 'FAQs address customer objections directly.',
+                        'action': 'Add FAQ sections covering common questions.',
+                        'effort': 'low',
+                        'impact': 'medium',
+                        'quick_win': True,
+                    })
+            elif is_dental:
+                # Dental-specific content remediation
+                if 'treatment' in title.lower() or 'braces' in title.lower() or 'implants' in title.lower() or 'whitening' in title.lower() or 'root canal' in title.lower() or 'emergency' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Create treatment-specific pages',
+                        'reason': title,
+                        'why_this_works': 'Treatment-specific pages target high-intent dental queries like "braces in Islamabad" and build topical authority.',
+                        'action': 'Create dedicated pages for: braces, dental implants, teeth whitening, root canal, and emergency dentistry. Include procedure details, benefits, pricing range, and booking CTAs.',
+                        'effort': 'high',
+                        'impact': 'high',
+                        'quick_win': False,
+                    })
+                elif 'credential' in title.lower() or 'bio' in title.lower() or 'dentist' in title.lower():
+                    remediation.append({
+                        'priority': priority,
+                        'type': 'content',
+                        'title': 'Add dentist bio and credential pages',
+                        'reason': title,
+                        'why_this_works': 'Dentist credentials build patient trust and target "best dentist in Islamabad" queries.',
+                        'action': 'Add dentist bios with credentials, specializations, experience, certifications, and photos. Include professional affiliations and patient testimonials.',
+                        'effort': 'low',
+                        'impact': 'high',
+                        'quick_win': True,
+                    })
+            elif 'insurance' in title.lower() or 'payment' in title.lower():
+                remediation.append({
+                    'priority': priority,
+                    'type': 'content',
+                    'title': 'Add insurance and payment information',
+                    'reason': title,
+                    'why_this_works': 'Insurance and payment info reduces patient friction and targets "affordable dentist in Islamabad" queries.',
+                    'action': 'Create an insurance and payment page. List accepted insurance providers, payment plans, and financing options.',
+                    'effort': 'low',
+                    'impact': 'medium',
+                    'quick_win': True,
+                })
+            elif 'hygiene' in title.lower() or 'safety' in title.lower() or 'steril' in title.lower():
+                remediation.append({
+                    'priority': priority,
+                    'type': 'content',
+                    'title': 'Add hygiene and safety section',
+                    'reason': title,
+                    'why_this_works': 'Hygiene information builds patient confidence and addresses common dental anxiety concerns.',
+                    'action': 'Create a hygiene and safety page describing sterilization protocols, equipment standards, and safety measures.',
+                    'effort': 'low',
+                    'impact': 'medium',
+                    'quick_win': True,
+                })
+            elif 'faq' in title.lower():
+                remediation.append({
+                    'priority': priority,
+                    'type': 'content',
+                    'title': 'Add treatment FAQ sections',
+                    'reason': title,
+                    'why_this_works': 'FAQs address patient objections and target long-tail dental queries.',
+                    'action': 'Add FAQ sections to treatment pages covering common questions about procedures, recovery, costs, and pain management.',
+                    'effort': 'low',
+                    'impact': 'medium',
+                    'quick_win': True,
+                })
+            elif 'emergency' in title.lower():
+                remediation.append({
+                    'priority': priority,
+                    'type': 'content',
+                    'title': 'Add emergency dental information',
+                    'reason': title,
+                    'why_this_works': 'Emergency dental info targets urgent-care searches and sets your clinic apart.',
+                    'action': 'Add emergency dental care information including contact numbers, hours, what to do in a dental emergency, and common emergency procedures.',
+                    'effort': 'low',
+                    'impact': 'high',
+                    'quick_win': True,
+                })
             else:
                 # Non-ecommerce content gaps
-                if is_dental:
-                    # Dental-specific content remediation
-                    if 'treatment' in title.lower() or 'braces' in title.lower() or 'implants' in title.lower() or 'whitening' in title.lower() or 'root canal' in title.lower() or 'emergency' in title.lower():
-                        remediation.append({
-                            'priority': priority,
-                            'type': 'content',
-                            'title': 'Create treatment-specific pages',
-                            'reason': title,
-                            'why_this_works': 'Treatment-specific pages target high-intent dental queries like "braces in Islamabad" and build topical authority.',
-                            'action': 'Create dedicated pages for: braces, dental implants, teeth whitening, root canal, and emergency dentistry. Include procedure details, benefits, pricing range, and booking CTAs.',
-                            'effort': 'high',
-                            'impact': 'high',
-                            'quick_win': False,
-                        })
-                    elif 'credential' in title.lower() or 'bio' in title.lower() or 'dentist' in title.lower():
-                        remediation.append({
-                            'priority': priority,
-                            'type': 'content',
-                            'title': 'Add dentist bio and credential pages',
-                            'reason': title,
-                            'why_this_works': 'Dentist credentials build patient trust and target "best dentist in Islamabad" queries.',
-                            'action': 'Add dentist bios with credentials, specializations, experience, certifications, and photos. Include professional affiliations and patient testimonials.',
-                            'effort': 'low',
-                            'impact': 'high',
-                            'quick_win': True,
-                        })
-                    elif 'insurance' in title.lower() or 'payment' in title.lower():
-                        remediation.append({
-                            'priority': priority,
-                            'type': 'content',
-                            'title': 'Add insurance and payment information',
-                            'reason': title,
-                            'why_this_works': 'Insurance and payment info reduces patient friction and targets "affordable dentist in Islamabad" queries.',
-                            'action': 'Create an insurance and payment page. List accepted insurance providers, payment plans, and financing options.',
-                            'effort': 'low',
-                            'impact': 'medium',
-                            'quick_win': True,
-                        })
-                    elif 'hygiene' in title.lower() or 'safety' in title.lower() or 'steril' in title.lower():
-                        remediation.append({
-                            'priority': priority,
-                            'type': 'content',
-                            'title': 'Add hygiene and safety section',
-                            'reason': title,
-                            'why_this_works': 'Hygiene information builds patient confidence and addresses common dental anxiety concerns.',
-                            'action': 'Create a hygiene and safety page describing sterilization protocols, equipment standards, and safety measures.',
-                            'effort': 'low',
-                            'impact': 'medium',
-                            'quick_win': True,
-                        })
-                    elif 'faq' in title.lower():
-                        remediation.append({
-                            'priority': priority,
-                            'type': 'content',
-                            'title': 'Add treatment FAQ sections',
-                            'reason': title,
-                            'why_this_works': 'FAQs address patient objections and target long-tail dental queries.',
-                            'action': 'Add FAQ sections to treatment pages covering common questions about procedures, recovery, costs, and pain management.',
-                            'effort': 'low',
-                            'impact': 'medium',
-                            'quick_win': True,
-                        })
-                    elif 'emergency' in title.lower():
-                        remediation.append({
-                            'priority': priority,
-                            'type': 'content',
-                            'title': 'Add emergency dental information',
-                            'reason': title,
-                            'why_this_works': 'Emergency dental info targets urgent-care searches and sets your clinic apart.',
-                            'action': 'Add emergency dental care information including contact numbers, hours, what to do in a dental emergency, and common emergency procedures.',
-                            'effort': 'low',
-                            'impact': 'high',
-                            'quick_win': True,
-                        })
-                elif 'service' in title.lower():
+                if 'service' in title.lower():
                     remediation.append({
                         'priority': priority,
                         'type': 'content',
@@ -262,6 +361,18 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     'impact': 'high',
                     'quick_win': False,
                 })
+            elif is_restaurant:
+                remediation.append({
+                    'priority': priority,
+                    'type': 'local_seo',
+                    'title': f'Create local intent content for {city}',
+                    'reason': title,
+                    'why_this_works': f'Local intent content targets "best restaurant in {city}" queries and establishes local authority.',
+                    'action': f'Create pages for: "best burger restaurant in {city}", "best family restaurant in {city}", "best takeaway in {city}". Include menu highlights, food photos, and location details.',
+                    'effort': 'medium',
+                    'impact': 'high',
+                    'quick_win': False,
+                })
             else:
                 remediation.append({
                     'priority': priority,
@@ -300,6 +411,18 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     'impact': 'high',
                     'quick_win': True,
                 })
+            elif is_restaurant:
+                remediation.append({
+                    'priority': priority,
+                    'type': 'reviews',
+                    'title': 'Collect customer reviews',
+                    'reason': title,
+                    'why_this_works': 'Customer reviews mentioning taste, service, and ambience improve relevance for food-related search queries.',
+                    'action': 'Request reviews from satisfied diners. Ask them to mention specific aspects: taste, food quality, service, ambience, and value.',
+                    'effort': 'low',
+                    'impact': 'high',
+                    'quick_win': True,
+                })
             else:
                 remediation.append({
                     'priority': priority,
@@ -331,6 +454,8 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
     if template and remediation and not is_ecommerce:
         if is_dental:
             action_text = 'Add clinic photos, post oral health tips weekly, update service list with all treatments, respond to all reviews, add Q&A section about common dental procedures.'
+        elif is_restaurant:
+            action_text = 'Add high-quality food and interior photos, post weekly specials/offers, update menu on profile, respond to all reviews with keywords, add Q&A section about reservations and parking.'
         else:
             action_text = 'Add facility photos, post class updates weekly, update service list, respond to all reviews, add Q&A section.'
         remediation.append({

@@ -3,11 +3,13 @@
 from .fitness_gym import FitnessGymTemplate
 from .ecommerce import EcommerceTemplate
 from .dental_clinic import DentalClinicTemplate
+from .restaurant import RestaurantTemplate
 
 TEMPLATES = {
     'fitness_gym': FitnessGymTemplate,
     'ecommerce': EcommerceTemplate,
     'dental_clinic': DentalClinicTemplate,
+    'restaurant': RestaurantTemplate,
 }
 
 def get_template(category: str):
@@ -33,6 +35,17 @@ def get_template(category: str):
     if any(keyword in category_lower for keyword in dental_keywords):
         return TEMPLATES['dental_clinic']()
 
+    # Check for restaurant keywords
+    restaurant_keywords = [
+        'restaurant', 'cafe', 'coffee shop', 'bakery', 'fast food',
+        'burger restaurant', 'pizza restaurant', 'fine dining',
+        'casual dining', 'food', 'takeaway', 'delivery restaurant',
+        'desi restaurant', 'chinese restaurant', 'italian restaurant',
+        'bbq restaurant', 'steakhouse'
+    ]
+    if any(keyword in category_lower for keyword in restaurant_keywords):
+        return TEMPLATES['restaurant']()
+
     return None
 
-__all__ = ['get_template', 'FitnessGymTemplate', 'EcommerceTemplate', 'DentalClinicTemplate', 'TEMPLATES']
+__all__ = ['get_template', 'FitnessGymTemplate', 'EcommerceTemplate', 'DentalClinicTemplate', 'RestaurantTemplate', 'TEMPLATES']

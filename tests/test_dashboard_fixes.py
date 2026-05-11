@@ -117,6 +117,49 @@ class TestIndustryRemediationRouting:
         assert len(r["gaps"]) > 0
         assert len(r["remediation"]) > 0
 
+    def test_restaurant_template_detection(self):
+        """Test that restaurant category detection works."""
+        from geo_audit_agent.industry_templates import get_template
+        template = get_template("burger restaurant")
+        assert template.__class__.__name__ == "RestaurantTemplate"
+
+    def test_production_path_restaurant(self):
+        """Test restaurant template with the exact dict structure dashboard.py sends."""
+        raw_text = "Burger Lab Islamabad is a burger restaurant in Islamabad. It offers gourmet burgers, fries, shakes, chicken burgers, beef burgers, and takeaway/delivery. Customers mention delicious burgers, fresh ingredients, good service, family-friendly ambience, clean environment, and good value. The restaurant has online ordering, delivery availability, opening hours, food photos, and active Instagram presence."
+
+        r = run_lift_simulation(
+            "Burger Lab Islamabad",
+            "burger restaurant",
+            "Islamabad",
+            {
+                "business_context": {
+                    "raw_text": raw_text,
+                    "business_context_text": raw_text,
+                    "category": "burger restaurant"
+                },
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        assert len(r["strengths"]) >= 4
+        assert len(r["gaps"]) > 0
+        assert len(r["remediation"]) > 0
+
+        # Check for restaurant-specific remediation
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+        assert any(kw in rem_text for kw in ["restaurant", "menu", "dish", "delivery", "reservation", "opening hours"])
+
+        # Contamination checks
+        negative_keywords = [
+            "healthclub", "trainer", "class schedule", "product schema",
+            "offer schema", "shipping", "size guide", "dentist", "medicalclinic"
+        ]
+        for kw in negative_keywords:
+            assert kw not in rem_text, f"Found contamination: '{kw}' in restaurant remediation"
+
     def test_fitness_remediation_routing(self):
         """Test that fitness gym still gets fitness remediation."""
         r = run_lift_simulation(
