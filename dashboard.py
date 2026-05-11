@@ -370,8 +370,6 @@ with tab1:
     if run_audit:
         with st.spinner(f"Running GEO Audit for {brand_name}..."):
             try:
-                agent = build_geo_audit_agent()
-
                 # Parse business context
                 business_context = {}
                 if business_context_text.strip():
