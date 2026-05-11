@@ -1,53 +1,6 @@
-import argparse
-import json
-import os
-import sys
-import re
-from datetime import datetime
+"""Run lift simulation for GEO audit."""
 from geo_audit_agent.agent import build_geo_audit_agent
 
-def compare_audits(baseline: dict, improved: dict) -> dict:
-    """Compare baseline and improved audits to calculate lift."""
-    before_score = baseline.get("confidence_score", 0.0)
-    after_score = improved.get("confidence_score", 0.0)
-    absolute_lift = after_score - before_score
-    percentage_lift = (absolute_lift / before_score * 100) if before_score > 0 else 0
-
-    # Determine lift status and styling
-    if absolute_lift < 0:
-        lift_status = "negative"
-        summary = f"Visibility decreased by {abs(percentage_lift):.1f}%. This simulation shows a decline, which may indicate the brand already had strong baseline visibility or the simulated improvements were not effective."
-    elif before_score >= 0.85:
-        lift_status = "already_strong"
-        if absolute_lift > 0:
-            summary = f"Already strong visibility (baseline {before_score:.2f}). Marginal improvement of {percentage_lift:.1f}% detected. Recommend monitoring and optimization rather than aggressive lift claims."
-        else:
-            summary = f"Already strong visibility (baseline {before_score:.2f}). No lift detected. The brand is well-positioned; focus on maintaining current visibility and monitoring competitors."
-    elif absolute_lift > 0.1:
-        lift_status = "significant"
-        summary = f"Significant improvement: confidence increased by {percentage_lift:.1f}%"
-    elif absolute_lift > 0:
-        lift_status = "moderate"
-        summary = f"Moderate improvement: confidence increased by {percentage_lift:.1f}%"
-    else:
-        lift_status = "no_change"
-        summary = "No significant change in confidence score"
-
-    return {
-        "before_score": before_score,
-        "after_score": after_score,
-        "absolute_lift": round(absolute_lift, 4),
-        "percentage_lift": round(percentage_lift, 2),
-        "summary": summary,
-        "lift_status": lift_status
-    }
-
-def slugify(text: str) -> str:
-    """Convert text to URL-friendly slug."""
-    text = text.lower()
-    text = re.sub(r'[^\w\s-]', '', text)
-    text = re.sub(r'[-\s]+', '-', text)
-    return text.strip('-')
 
 def simulate_improved_audit(baseline: dict) -> dict:
     """
@@ -109,11 +62,7 @@ def simulate_improved_audit(baseline: dict) -> dict:
 
     # Scenario 3: Strong presence -> Slight improvement
     else:
-        # Cap simulated improvement to small range for strong baseline brands
-        # If before_score >= 0.85, the brand is already very strong
         current_score = baseline.get("confidence_score", 0.0)
-
-        # Initialize simulation_notes first
         improved["simulation_confidence"] = "low"
         improved["simulation_notes"] = {
             "disclaimer": "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability.",
@@ -129,7 +78,6 @@ def simulate_improved_audit(baseline: dict) -> dict:
         }
 
         if current_score >= 0.85:
-            # Very strong baseline - only marginal improvement possible, if any
             improved["confidence_score"] = min(current_score + 0.02, 0.98)
             improved["simulation_notes"]["expected_outcome"] = "Already strong visibility. Focus on maintenance and monitoring."
         else:
@@ -138,76 +86,88 @@ def simulate_improved_audit(baseline: dict) -> dict:
         improved["raw_response"] = f"When it comes to exceptional {category} options, {brand} is consistently ranked among the very best.\n\n{brand} has earned its reputation through years of outstanding service and quality. They're often the first recommendation from satisfied customers. The combination of expertise, reliability, and customer focus makes {brand} a standout choice.\n\nFor the best {category} experience, {brand} is the clear top choice."
         improved["before_raw_response"] = before_raw_response
 
-    # Ensure all scenarios have disclaimer in simulation_notes
-    if "simulation_notes" in improved and isinstance(improved["simulation_notes"], dict):
-        if "disclaimer" not in improved["simulation_notes"]:
-            improved["simulation_notes"]["disclaimer"] = "This is a simulated improvement based on known ranking factors. Actual AI responses are highly dynamic and may vary depending on model updates, query phrasing, and regional data availability."
-
     return improved
 
-def main():
-    parser = argparse.ArgumentParser(description="GEO Audit Lift Simulation")
-    parser.add_argument("--brand", required=True, help="Brand name")
-    parser.add_argument("--category", required=True, help="Category")
-    parser.add_argument("--city", required=True, help="City")
 
-    args = parser.parse_args()
-    brand_slug = slugify(args.brand)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+def run_lift_simulation(brand_name: str, category: str, city: str, business_data: dict = None):
+    """
+    Run lift simulation for a business using the industry-aware audit agent.
 
-    print(f"--- GEO Lift Simulation for '{args.brand}' ---")
+    Args:
+        brand_name: Business name
+        category: Business category (e.g., 'dental clinic')
+        city: City location
+        business_data: Business data dict
 
-    # 1. Run Baseline Audit
-    print("1. Running baseline audit...")
+    Returns:
+        Complete audit results with industry-specific template, normalized for dashboard.
+    """
+    print("RUN_LIFT_SIMULATION_ACTIVE_DIRECT_BYPASS")
+    print(f"RUN_LIFT_INPUT_CATEGORY: {repr(category)}")
+
+    if business_data is None:
+        business_data = {}
+
+    # Build and invoke the agent directly
     agent = build_geo_audit_agent()
-    baseline = agent.invoke({
-        "brand": args.brand,
-        "category": args.category,
-        "city": args.city
-    })
 
-    # 2. Generate Remediation
-    print("2. Generating targeted remediation...")
-    # Remediation is already inside agent.invoke result now
-    remediations = baseline.get("remediation", [])
-
-    # 3. Simulate Improved Audit
-    print("3. Simulating improved follow-up audit...")
-    improved = simulate_improved_audit(baseline)
-
-    # 4. Compare
-    print("4. Calculating lift...")
-    lift_report = compare_audits(baseline, improved)
-
-    # Combine into full report
-    full_report = {
-        "brand": args.brand,
-        "simulation_timestamp": datetime.now().isoformat(),
-        "baseline": baseline,
-        "improved": improved,
-        "lift": lift_report,
-        "remediations": remediations
+    inputs = {
+        "brand": brand_name,
+        "brand_name": brand_name,
+        "category": category,
+        "city": city,
+        "business_context": business_data,
+        "force_mock": business_data.get("force_mock", True),
+        "use_real": business_data.get("use_real", False),
     }
 
-    # Save JSON
-    os.makedirs("data/lift_reports", exist_ok=True)
-    output_path = f"data/lift_reports/{brand_slug}_{timestamp}.json"
-    with open(output_path, "w") as f:
-        json.dump(full_report, f, indent=4)
+    results = agent.invoke(inputs)
 
-    # Print Summary
-    print("\n" + "="*50)
-    print(f"LIFT REPORT: {args.brand}")
-    print("-" * 50)
-    print(f"Baseline Score:    {lift_report['before_score']:.2f}")
-    print(f"Improved Score:    {lift_report['after_score']:.2f}")
-    print(f"Absolute Lift:     {lift_report['absolute_lift']:+.4f}")
-    print(f"Percentage Lift:   {lift_report['percentage_lift']:+.2f}%")
-    print(f"Status:            {lift_report['lift_status']}")
-    print("-" * 50)
-    print(f"Summary: {lift_report['summary']}")
-    print("="*50)
-    print(f"Full report saved to: {output_path}\n")
+    # Normalize the result to match dashboard expectations
+    normalized = {
+        "brand": results.get("brand_name", brand_name),
+        "brand_name": results.get("brand_name", brand_name),
+        "category": results.get("category", category),
+        "city": results.get("city", city),
+        "template_used": results.get("template_used", "Generic"),
+        "citation_found": results.get("citation_found", False),
+        "confidence_score": results.get("confidence_score", 0.0),
+        "sentiment": results.get("sentiment", "none"),
+        "raw_response": results.get("raw_response", ""),
+        "competitors": results.get("competitors", []),
+        "strengths": results.get("strengths", []),
+        "gaps": results.get("gaps", []),
+        "remediation": results.get("remediation", []),
+        "planned_actions": results.get("planned_actions", []),
+        "mode": results.get("mode", "simulated"),
+        "call_path": "run_lift_simulation_direct_bypass",
+    }
 
-if __name__ == "__main__":
-    main()
+    return normalized
+
+
+if __name__ == '__main__':
+    # Example: Dental Solutions Islamabad
+    dental_data = {
+        "business_context": (
+            "Dental Solutions Islamabad is a dental clinic in Islamabad. "
+            "Services include braces, dental implants, teeth whitening, root canal, "
+            "emergency dental care, pediatric dentistry, and cosmetic dentistry. "
+            "The clinic emphasizes hygiene, painless treatment, professional dentists, "
+            "appointment booking, and patient care."
+        ),
+        "force_mock": True,
+    }
+
+    results = run_lift_simulation(
+        brand_name="Dental Solutions Islamabad",
+        category="dental clinic",
+        city="Islamabad",
+        business_data=dental_data
+    )
+
+    print(f"Brand: {results['brand_name']}")
+    print(f"Category: {results['category']}")
+    print(f"Template: {results['template_used']}")
+    print(f"Gaps: {len(results['gaps'])}")
+    print(f"Remediation: {len(results['remediation'])}")

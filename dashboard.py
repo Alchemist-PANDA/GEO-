@@ -10,10 +10,7 @@ import json
 import logging
 from typing import List, Dict, Optional
 from datetime import datetime
-from geo_audit_agent.agent import build_geo_audit_agent
-from multi_model import run_multi_model_audit
-from compare import compare_brands
-from run_lift_simulation import simulate_improved_audit
+from run_lift_simulation import run_lift_simulation, simulate_improved_audit
 from report_generator import generate_markdown_report
 
 # Configure logging
@@ -520,7 +517,13 @@ with tab1:
                     st.write("DEBUG payload keys:", list(inputs.keys()))
                     st.write("DEBUG payload:", inputs)
 
-                results = agent.invoke(inputs)
+                st.info("BRAND_AUDIT_CALL_PATH: dashboard.py -> run_lift_simulation direct bypass")
+                results = run_lift_simulation(
+                    brand_name,
+                    category,
+                    city,
+                    inputs
+                )
                 st.session_state.audit_results = results
 
                 # Initialize remediations state safely
@@ -539,6 +542,11 @@ with tab1:
                             "content": res.get("output_preview", "No preview available"),
                             "status": "Pending"
                         })
+
+                # Display call path and template info immediately
+                st.caption(f"Call path: {results.get('call_path', 'MISSING')}")
+                st.caption(f"Template used: {results.get('template_used', 'MISSING')}")
+
                 st.success("✅ Audit Completed!")
             except Exception as e:
                 st.error(f"❌ Audit failed: {e}")
@@ -595,11 +603,10 @@ with tab1:
         template_used = res.get("template_used", "Generic")
         if template_used != "Generic":
             st.success(f"📋 Using **{template_used}** for industry-specific recommendations")
+        else:
+            st.warning(f"⚠️ Using Generic template - no industry match for category: {res.get('category', 'unknown')}")
 
-        # Template used display
-        template_used = res.get("template_used", "Generic")
-        if template_used != "Generic":
-            st.success(f"📋 Using **{template_used}** for industry-specific recommendations")
+        st.caption(f"Call path: {res.get('call_path', 'MISSING')}")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1076,15 +1083,13 @@ with tab4:
     if run_lift:
         with st.spinner(f"Generating lift simulation for {lift_brand}..."):
             try:
-                # Run baseline audit
-                agent = build_geo_audit_agent()
-                baseline = agent.invoke({
-                    "brand": lift_brand,
-                    "brand_name": lift_brand,
-                    "category": lift_category,
-                    "city": lift_city,
-                    "force_mock": True
-                })
+                # Run baseline audit via direct path
+                baseline = run_lift_simulation(
+                    lift_brand,
+                    lift_category,
+                    lift_city,
+                    {"force_mock": True}
+                )
 
                 # Simulate improvement
                 improved = simulate_improved_audit(baseline)

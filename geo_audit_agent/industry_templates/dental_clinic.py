@@ -1,0 +1,262 @@
+"""Dental clinic industry template for GEO audit recommendations."""
+
+class DentalClinicTemplate:
+    """Industry-specific template for dental clinics and dental practices."""
+
+    def __init__(self):
+        self.category_triggers = [
+            'dental', 'dentist', 'dental clinic', 'dental practice',
+            'tooth', 'oral health', 'dental care', 'orthodontist'
+        ]
+
+        self.recommendation_signals = [
+            'google_rating',
+            'review_count',
+            'dental_credibility',
+            'treatment_options',
+            'hygiene_safety',
+            'emergency_care',
+            'insurance_payment',
+            'appointment_booking',
+            'before_after_cases',
+            'faq_content',
+            'treatment_specific_pages',
+        ]
+
+        self.schema_recommendations = [
+            'Dentist',
+            'MedicalClinic',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'LocalBusiness',
+            'Review',
+            'FAQPage',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+            'Dentist',
+        ]
+
+        self.review_keywords = [
+            'clean',
+            'professional',
+            'gentle',
+            'painless',
+            'hygiene',
+            'sterilization',
+            'friendly',
+            'expert',
+            'results',
+            'teeth',
+            'smile',
+            'treatment',
+            'appointment',
+        ]
+
+        self.remediation_playbook = {
+            'schema': {
+                'priority': 'high',
+                'actions': [
+                    'Add Dentist schema',
+                    'Add MedicalClinic schema',
+                    'Add LocalBusiness schema with specialized medical fields',
+                ],
+            },
+            'content': {
+                'priority': 'high',
+                'actions': [
+                    'Add treatment pages for braces',
+                    'Add treatment pages for implants',
+                    'Add treatment pages for whitening',
+                    'Add treatment pages for root canal',
+                    'Add treatment pages for emergency dentistry',
+                    'Add dentist bio/credential pages',
+                    'Add hygiene/safety section',
+                    'Add insurance/payment info',
+                    'Add emergency appointment info',
+                    'Add treatment FAQs',
+                    'Add before/after cases where compliant',
+                ],
+            },
+            'reviews': {
+                'priority': 'medium',
+                'actions': [
+                    'Collect reviews mentioning cleanliness and hygiene',
+                    'Collect reviews mentioning professional dentists',
+                    'Collect reviews mentioning painless treatment',
+                    'Collect reviews mentioning appointment ease',
+                    'Collect reviews mentioning treatment results',
+                ],
+            },
+            'local_seo': {
+                'priority': 'high',
+                'actions': [
+                    'Improve Google Business Profile with clinic photos',
+                    'Update service list on Google Business Profile',
+                    'Create "Best dental clinic in [city]" content',
+                    'Create local comparison content',
+                    'Add emergency dental care info',
+                ],
+            },
+        }
+
+    def get_gaps(self, business_data: dict) -> list:
+        """Generate dental-specific gaps based on business data."""
+        gaps = []
+
+        context = business_data.get('business_context', '').lower() if isinstance(business_data.get('business_context'), str) else ''
+
+        # Check for schema
+        if not business_data.get('has_schema'):
+            gaps.append({
+                'type': 'schema',
+                'severity': 'high',
+                'title': 'Missing structured data',
+                'description': 'No Dentist or MedicalClinic schema detected',
+            })
+
+        # Check for treatment-specific pages
+        services = business_data.get('services', [])
+        expected_treatments = ['braces', 'implants', 'whitening', 'root canal', 'emergency dentistry']
+        missing_treatments = []
+
+        for treatment in expected_treatments:
+            if treatment not in context and not any(treatment in str(srv).lower() for srv in services):
+                missing_treatments.append(treatment)
+
+        if missing_treatments:
+            gaps.append({
+                'type': 'content',
+                'severity': 'medium',
+                'title': 'Missing treatment-specific pages',
+                'description': f'No dedicated pages for: {", ".join(missing_treatments)}',
+            })
+
+        # Check for dentist credentials
+        if not business_data.get('has_credentials') and not any(kw in context for kw in ['professional dentist', 'credential', 'expert', 'experienced']):
+            gaps.append({
+                'type': 'content',
+                'severity': 'medium',
+                'title': 'Missing dentist credentials',
+                'description': 'No dentist bio or credential pages found',
+            })
+
+        # Check for emergency availability
+        if not business_data.get('has_emergency_info') and 'emergency' not in context:
+            gaps.append({
+                'type': 'content',
+                'severity': 'high',
+                'title': 'Missing emergency availability',
+                'description': 'No information about emergency dentistry or availability',
+            })
+
+        # Check for insurance/payment info
+        if not business_data.get('has_insurance_info') and 'insurance' not in context and 'payment' not in context:
+            gaps.append({
+                'type': 'content',
+                'severity': 'medium',
+                'title': 'Missing insurance/payment info',
+                'description': 'No insurance or payment option details found',
+            })
+
+        # Check for hygiene/safety information
+        if not business_data.get('has_hygiene_info') and not any(kw in context for kw in ['hygiene', 'safety', 'sterilization', 'clean', 'painless']):
+            gaps.append({
+                'type': 'content',
+                'severity': 'medium',
+                'title': 'Missing hygiene/safety information',
+                'description': 'No information about clinic hygiene or safety protocols',
+            })
+
+        # Check for FAQ content
+        if not business_data.get('has_faq') and 'faq' not in context:
+            gaps.append({
+                'type': 'content',
+                'severity': 'low',
+                'title': 'Missing FAQ content',
+                'description': 'No treatment FAQs found on the website',
+            })
+
+        # Check for local comparison content
+        city = business_data.get('city', '')
+        if city and not business_data.get('has_local_comparison'):
+            gaps.append({
+                'type': 'local_seo',
+                'severity': 'high',
+                'title': 'Missing local comparison content',
+                'description': f'No "best dental clinic in {city}" style content found',
+            })
+
+        return gaps
+
+    def get_strengths(self, business_data: dict) -> list:
+        """Identify dental-specific strengths."""
+        strengths = []
+
+        context = business_data.get('business_context', '').lower() if isinstance(business_data.get('business_context'), str) else ''
+
+        # Strong review base
+        review_count = business_data.get('review_count', 0)
+        rating = business_data.get('rating', 0)
+
+        if review_count > 0 or rating > 0:
+            if review_count >= 30 or rating >= 4.0:
+                strengths.append({
+                    'type': 'social_proof',
+                    'title': 'Strong review base',
+                    'description': f'{rating} rating with {review_count} reviews' if review_count > 0 and rating > 0 else (f'{rating} rating' if rating > 0 else f'{review_count} reviews'),
+                })
+
+        # Professional credentials
+        if business_data.get('has_credentials') or any(kw in context for kw in ['professional dentist', 'credential', 'expert', 'experienced', 'iso']):
+            strengths.append({
+                'type': 'credentials',
+                'title': 'Professional credentials',
+                'description': 'Dentists with verified credentials and expertise',
+            })
+
+        # Emergency care availability
+        if business_data.get('has_emergency_info') or 'emergency' in context:
+            strengths.append({
+                'type': 'emergency_care',
+                'title': 'Emergency care available',
+                'description': 'Emergency dental services available',
+            })
+
+        # Hygiene and safety
+        if business_data.get('has_hygiene_info') or any(kw in context for kw in ['hygiene', 'safety', 'sterilization', 'iso', 'clean']):
+            strengths.append({
+                'type': 'hygiene_safety',
+                'title': 'High hygiene standards',
+                'description': 'Clinic maintains high hygiene and safety standards',
+            })
+
+        # Appointment booking
+        if business_data.get('has_appointment_info') or 'appointment' in context or 'booking' in context:
+            strengths.append({
+                'type': 'appointment_booking',
+                'title': 'Easy appointment booking',
+                'description': 'Online booking or easy appointment scheduling available',
+            })
+
+        # Comprehensive services
+        services = business_data.get('services', [])
+        if len(services) >= 3:
+            strengths.append({
+                'type': 'comprehensive_services',
+                'title': 'Comprehensive services',
+                'description': f'Offers {len(services)} services including: {", ".join(services[:5])}',
+            })
+
+        return strengths
