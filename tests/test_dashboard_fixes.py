@@ -49,6 +49,37 @@ class TestIndustryRemediationRouting:
         for kw in ecommerce_keywords:
             assert kw not in rem_text, f"Found ecommerce contamination: '{kw}' in dental remediation"
 
+    def test_dental_strengths_detection(self):
+        """Test that dental strengths are correctly detected from business context."""
+        r = run_lift_simulation(
+            "Dental Solutions Islamabad",
+            "dental clinic",
+            "Islamabad",
+            {
+                "business_context": "Dental Solutions Islamabad is a dental clinic in Islamabad. Services include braces, dental implants, teeth whitening, root canal, emergency dental care, pediatric dentistry, and cosmetic dentistry. The clinic emphasizes hygiene, painless treatment, professional dentists, appointment booking, and patient care.",
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "DentalClinicTemplate"
+        strengths = r["strengths"]
+        strength_titles = [s["title"] for s in strengths]
+
+        # Should detect at least 4 strengths
+        assert len(strengths) >= 4
+
+        # Specific strength titles (updated to match new implementation)
+        assert "Broad treatment range" in strength_titles
+        assert "Hygiene and patient comfort" in strength_titles
+        assert "Professional dentist positioning" in strength_titles
+        assert "Appointment booking clarity" in strength_titles
+        assert "Emergency care available" in strength_titles
+
+        # Descriptions should be populated
+        for s in strengths:
+            assert len(s["description"]) > 10
+
     def test_fitness_remediation_routing(self):
         """Test that fitness gym still gets fitness remediation."""
         r = run_lift_simulation(

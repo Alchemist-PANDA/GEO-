@@ -218,12 +218,12 @@ class DentalClinicTemplate:
                     'description': f'{rating} rating with {review_count} reviews' if review_count > 0 and rating > 0 else (f'{rating} rating' if rating > 0 else f'{review_count} reviews'),
                 })
 
-        # Professional credentials
-        if business_data.get('has_credentials') or any(kw in context for kw in ['professional dentist', 'credential', 'expert', 'experienced', 'iso']):
+        # Professional credentials/dentists
+        if business_data.get('has_credentials') or any(kw in context for kw in ['professional dentist', 'credential', 'expert', 'experienced', 'iso', 'specialist']):
             strengths.append({
                 'type': 'credentials',
-                'title': 'Professional credentials',
-                'description': 'Dentists with verified credentials and expertise',
+                'title': 'Professional dentist positioning',
+                'description': 'Dentists with verified credentials and expertise' if business_data.get('has_credentials') else 'Positioned as professional dental experts with specialized skills',
             })
 
         # Emergency care availability
@@ -231,32 +231,37 @@ class DentalClinicTemplate:
             strengths.append({
                 'type': 'emergency_care',
                 'title': 'Emergency care available',
-                'description': 'Emergency dental services available',
+                'description': 'Emergency dental services and urgent care availability',
             })
 
         # Hygiene and safety
-        if business_data.get('has_hygiene_info') or any(kw in context for kw in ['hygiene', 'safety', 'sterilization', 'iso', 'clean']):
+        if business_data.get('has_hygiene_info') or any(kw in context for kw in ['hygiene', 'safety', 'sterilization', 'iso', 'clean', 'painless', 'patient care', 'comfort']):
             strengths.append({
                 'type': 'hygiene_safety',
-                'title': 'High hygiene standards',
-                'description': 'Clinic maintains high hygiene and safety standards',
+                'title': 'Hygiene and patient comfort',
+                'description': 'Clinic maintains high hygiene standards and focuses on patient comfort',
             })
 
         # Appointment booking
         if business_data.get('has_appointment_info') or 'appointment' in context or 'booking' in context:
             strengths.append({
                 'type': 'appointment_booking',
-                'title': 'Easy appointment booking',
-                'description': 'Online booking or easy appointment scheduling available',
+                'title': 'Appointment booking clarity',
+                'description': 'Clear information about appointment booking and scheduling',
             })
 
-        # Comprehensive services
+        # Comprehensive services / Broad treatment range
         services = business_data.get('services', [])
-        if len(services) >= 3:
+        # Also check context for treatment variety
+        treatments = ['braces', 'implants', 'whitening', 'root canal', 'crowns', 'veneers', 'pediatric', 'cosmetic']
+        context_treatments = [t for t in treatments if t in context]
+
+        if len(services) >= 3 or len(context_treatments) >= 3:
+            service_list = services if services else context_treatments
             strengths.append({
                 'type': 'comprehensive_services',
-                'title': 'Comprehensive services',
-                'description': f'Offers {len(services)} services including: {", ".join(services[:5])}',
+                'title': 'Broad treatment range',
+                'description': f'Offers a wide variety of dental treatments including: {", ".join(service_list[:5])}',
             })
 
         return strengths
