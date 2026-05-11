@@ -219,7 +219,7 @@ class DentalClinicTemplate:
                 })
 
         # Professional credentials/dentists
-        if business_data.get('has_credentials') or any(kw in context for kw in ['professional dentist', 'credential', 'expert', 'experienced', 'iso', 'specialist']):
+        if business_data.get('has_credentials') or any(kw in context for kw in ['professional dentist', 'experienced dentist', 'qualified dentist', 'dentist credentials', 'orthodontist', 'implant specialist', 'credential', 'expert', 'experienced', 'iso', 'specialist']):
             strengths.append({
                 'type': 'credentials',
                 'title': 'Professional dentist positioning',
@@ -227,23 +227,23 @@ class DentalClinicTemplate:
             })
 
         # Emergency care availability
-        if business_data.get('has_emergency_info') or 'emergency' in context:
+        if business_data.get('has_emergency_info') or any(kw in context for kw in ['emergency dental', 'emergency dentist', 'emergency care']):
             strengths.append({
                 'type': 'emergency_care',
-                'title': 'Emergency care available',
+                'title': 'Emergency care availability',
                 'description': 'Emergency dental services and urgent care availability',
             })
 
         # Hygiene and safety
-        if business_data.get('has_hygiene_info') or any(kw in context for kw in ['hygiene', 'safety', 'sterilization', 'iso', 'clean', 'painless', 'patient care', 'comfort']):
+        if business_data.get('has_hygiene_info') or any(kw in context for kw in ['hygiene', 'hygienic', 'clean', 'painless', 'patient care', 'comfort']):
             strengths.append({
                 'type': 'hygiene_safety',
-                'title': 'Hygiene and patient comfort',
+                'title': 'Hygiene and patient comfort positioning',
                 'description': 'Clinic maintains high hygiene standards and focuses on patient comfort',
             })
 
         # Appointment booking
-        if business_data.get('has_appointment_info') or 'appointment' in context or 'booking' in context:
+        if business_data.get('has_appointment_info') or any(kw in context for kw in ['appointment', 'booking', 'online booking', 'phone booking']):
             strengths.append({
                 'type': 'appointment_booking',
                 'title': 'Appointment booking clarity',

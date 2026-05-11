@@ -71,10 +71,10 @@ class TestIndustryRemediationRouting:
 
         # Specific strength titles (updated to match new implementation)
         assert "Broad treatment range" in strength_titles
-        assert "Hygiene and patient comfort" in strength_titles
+        assert "Hygiene and patient comfort positioning" in strength_titles
         assert "Professional dentist positioning" in strength_titles
         assert "Appointment booking clarity" in strength_titles
-        assert "Emergency care available" in strength_titles
+        assert "Emergency care availability" in strength_titles
 
         # Descriptions should be populated
         for s in strengths:
