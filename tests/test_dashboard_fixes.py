@@ -160,16 +160,21 @@ class TestIndustryRemediationRouting:
         for kw in negative_keywords:
             assert kw not in rem_text, f"Found contamination: '{kw}' in restaurant remediation"
 
-    def test_turkish_restaurant_subtype(self):
-        """Test Turkish restaurant subtype detection and wording."""
-        raw_text = "Istanbul Kitchen is a Turkish restaurant in London. Famous for authentic kebab, shawarma, pide, and lahmacun. Fresh ingredients and traditional recipes."
+    def test_turkish_restaurant_subtype_polish(self):
+        """Test Turkish restaurant subtype remediation copy polish."""
+        # Silent on hours/price to trigger content gaps
+        raw_text = "Istanbul Kitchen is a Turkish restaurant in Islamabad. Famous for authentic kebab, shawarma, pide, and lahmacun. Fresh ingredients and traditional recipes."
 
         r = run_lift_simulation(
             "Istanbul Kitchen",
             "turkish restaurant",
-            "London",
+            "Islamabad",
             {
-                "business_context": raw_text,
+                "business_context": {
+                    "raw_text": raw_text,
+                    "city": "Islamabad",
+                    "has_local_comparison": False
+                },
                 "raw_business_context": raw_text,
                 "force_mock": True,
                 "use_real": False,
@@ -177,13 +182,39 @@ class TestIndustryRemediationRouting:
         )
 
         assert r["template_used"] == "RestaurantTemplate"
-        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
 
-        # Turkish-specific language
-        assert any(kw in rem_text for kw in ["turkish", "kebab", "shawarma", "pide"])
-        # Should NOT contain other cuisine contamination
-        assert "desi" not in rem_text
-        assert "chinese" not in rem_text
+        # Check Local SEO remediation
+        local_seo_rem = next((rem for rem in r["remediation"] if rem["type"] == "local_seo" and "local intent content" in rem["title"].lower()), None)
+        assert local_seo_rem is not None
+
+        # Bug 1 Fix: Should contain Turkish/kebab/shawarma, NOT burger
+        action_text = local_seo_rem["action"].lower()
+        assert "turkish restaurant" in action_text
+        assert "kebab" in action_text
+        assert "shawarma" in action_text
+        assert "turkish family restaurant" in action_text
+        assert "burger" not in action_text
+
+        # Check Hours/Price remediation (filtering by title only to be type-agnostic)
+        hours_rem = next((rem for rem in r["remediation"] if "hours and price range" in rem["title"].lower()), None)
+        assert hours_rem is not None
+
+        # Bug 2 Fix: Action should be about hours/price, NOT signature dishes
+        hours_action = hours_rem["action"].lower()
+        assert "opening hours" in hours_action
+        assert "price range" in hours_action
+        assert "delivery availability" in hours_action
+        assert "signature dishes" not in hours_action
+        assert "story" not in hours_action
+
+        # Contamination check (Bug 3 requirement)
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+        assert "dentist" not in rem_text
+        assert "medicalclinic" not in rem_text
+        assert "shipping" not in rem_text
+        assert "size guide" not in rem_text
+        assert "healthclub" not in rem_text
+        assert "trainer" not in rem_text
 
     def test_chinese_restaurant_subtype(self):
         """Test Chinese restaurant subtype detection and wording."""
@@ -322,16 +353,21 @@ class TestIndustryRemediationRouting:
         assert "class schedule" not in rem_text
         assert "membership" not in rem_text
 
-    def test_turkish_restaurant_subtype(self):
-        """Test Turkish restaurant subtype detection and wording."""
-        raw_text = "Istanbul Kitchen is a Turkish restaurant in London. Famous for authentic kebab, shawarma, pide, and lahmacun. Fresh ingredients and traditional recipes."
+    def test_turkish_restaurant_subtype_polish(self):
+        """Test Turkish restaurant subtype remediation copy polish."""
+        # Silent on hours/price to trigger content gaps
+        raw_text = "Istanbul Kitchen is a Turkish restaurant in Islamabad. Famous for authentic kebab, shawarma, pide, and lahmacun. Fresh ingredients and traditional recipes."
 
         r = run_lift_simulation(
             "Istanbul Kitchen",
             "turkish restaurant",
-            "London",
+            "Islamabad",
             {
-                "business_context": raw_text,
+                "business_context": {
+                    "raw_text": raw_text,
+                    "city": "Islamabad",
+                    "has_local_comparison": False
+                },
                 "raw_business_context": raw_text,
                 "force_mock": True,
                 "use_real": False,
@@ -339,13 +375,39 @@ class TestIndustryRemediationRouting:
         )
 
         assert r["template_used"] == "RestaurantTemplate"
-        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
 
-        # Turkish-specific language
-        assert any(kw in rem_text for kw in ["turkish", "kebab", "shawarma", "pide"])
-        # Should NOT contain other cuisine contamination
-        assert "desi" not in rem_text
-        assert "chinese" not in rem_text
+        # Check Local SEO remediation
+        local_seo_rem = next((rem for rem in r["remediation"] if rem["type"] == "local_seo" and "local intent content" in rem["title"].lower()), None)
+        assert local_seo_rem is not None
+
+        # Bug 1 Fix: Should contain Turkish/kebab/shawarma, NOT burger
+        action_text = local_seo_rem["action"].lower()
+        assert "turkish restaurant" in action_text
+        assert "kebab" in action_text
+        assert "shawarma" in action_text
+        assert "turkish family restaurant" in action_text
+        assert "burger" not in action_text
+
+        # Check Hours/Price remediation (filtering by title only to be type-agnostic)
+        hours_rem = next((rem for rem in r["remediation"] if "hours and price range" in rem["title"].lower()), None)
+        assert hours_rem is not None
+
+        # Bug 2 Fix: Action should be about hours/price, NOT signature dishes
+        hours_action = hours_rem["action"].lower()
+        assert "opening hours" in hours_action
+        assert "price range" in hours_action
+        assert "delivery availability" in hours_action
+        assert "signature dishes" not in hours_action
+        assert "story" not in hours_action
+
+        # Contamination check (Bug 3 requirement)
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+        assert "dentist" not in rem_text
+        assert "medicalclinic" not in rem_text
+        assert "shipping" not in rem_text
+        assert "size guide" not in rem_text
+        assert "healthclub" not in rem_text
+        assert "trainer" not in rem_text
 
     def test_chinese_restaurant_subtype(self):
         """Test Chinese restaurant subtype detection and wording."""

@@ -60,60 +60,70 @@ class RestaurantTemplate:
                 'label': 'Turkish',
                 'local_content': 'Best Turkish restaurant in {city}',
                 'signature': ['kebab', 'shawarma', 'pide', 'doner'],
+                'local_intent_keywords': ['kebab', 'shawarma', 'pide', 'Turkish family restaurant', 'takeaway', 'delivery'],
             },
             'chinese': {
                 'keywords': ['chinese', 'noodles', 'dumplings', 'dim sum', 'hotpot', 'manchurian', 'chow mein', 'fried rice', 'wonton'],
                 'label': 'Chinese',
                 'local_content': 'Best Chinese restaurant in {city}',
                 'signature': ['noodles', 'dumplings', 'hotpot', 'chow mein'],
+                'local_intent_keywords': ['noodles', 'dumplings', 'hotpot', 'Chinese family restaurant', 'takeaway', 'delivery'],
             },
             'desi': {
                 'keywords': ['desi', 'pakistani', 'biryani', 'karahi', 'nihari', 'handi', 'paratha', 'haleem', 'chapli', 'seekh kabab', 'tandoor', 'tikka'],
                 'label': 'Desi/Pakistani',
                 'local_content': 'Best desi restaurant in {city}',
                 'signature': ['biryani', 'karahi', 'nihari', 'tandoor'],
+                'local_intent_keywords': ['biryani', 'karahi', 'nihari', 'Desi family restaurant', 'takeaway', 'delivery'],
             },
             'fast_food': {
                 'keywords': ['fast food', 'burger', 'fries', 'fried chicken', 'wraps', 'pizza', 'deals', 'combos', 'kids meal', 'drive thru'],
                 'label': 'Fast food',
                 'local_content': 'Best fast food in {city}',
                 'signature': ['burgers', 'fries', 'combos', 'deals'],
+                'local_intent_keywords': ['burger', 'fried chicken', 'deals', 'Fast food takeaway', 'delivery'],
             },
             'pizza': {
                 'keywords': ['pizza', 'pizzeria', 'pepperoni', 'margherita', 'wood fired', 'thin crust', 'deep dish'],
                 'label': 'Pizza',
                 'local_content': 'Best pizza in {city}',
                 'signature': ['pizza varieties', 'crusts', 'toppings'],
+                'local_intent_keywords': ['pizza', 'pizzeria', 'thin crust', 'Pizza delivery', 'takeaway'],
             },
             'bbq': {
                 'keywords': ['bbq', 'barbecue', 'grill', 'smoked', 'ribs', 'brisket', 'grilled'],
                 'label': 'BBQ',
                 'local_content': 'Best BBQ restaurant in {city}',
                 'signature': ['smoked meats', 'BBQ sauce', 'grilled specialties'],
+                'local_intent_keywords': ['bbq', 'barbecue', 'grill', 'BBQ takeaway', 'delivery'],
             },
             'cafe': {
                 'keywords': ['cafe', 'coffee shop', 'espresso', 'latte', 'cappuccino', 'pastries', 'brunch', 'tea house', 'coffehouse'],
                 'label': 'Cafe',
                 'local_content': 'Best cafe in {city}',
                 'signature': ['coffee', 'pastries', 'brunch'],
+                'local_intent_keywords': ['coffee shop', 'brunch', 'espresso', 'Cafe takeaway'],
             },
             'bakery': {
                 'keywords': ['bakery', 'cakes', 'pastries', 'breads', 'desserts', 'custom cakes', 'cupcakes', 'cookies', 'artisan bread'],
                 'label': 'Bakery',
                 'local_content': 'Best bakery in {city}',
                 'signature': ['custom cakes', 'pastries', 'artisan breads'],
+                'local_intent_keywords': ['custom cakes', 'bakery', 'pastries', 'artisan bread'],
             },
             'fine_dining': {
                 'keywords': ['fine dining', 'gourmet', 'michelin', 'prix fixe', 'tasting menu', 'chef table', 'upscale'],
                 'label': 'Fine dining',
                 'local_content': 'Best fine dining restaurant in {city}',
                 'signature': ['tasting menu', 'gourmet dishes', 'wine pairing'],
+                'local_intent_keywords': ['fine dining', 'gourmet restaurant', 'tasting menu', 'upscale dining'],
             },
             'casual_dining': {
                 'keywords': ['casual dining', 'family restaurant', 'buffet', 'all day dining', 'relaxed atmosphere'],
                 'label': 'Casual dining',
                 'local_content': 'Best casual dining in {city}',
                 'signature': ['family-friendly', 'variety', 'buffet'],
+                'local_intent_keywords': ['casual dining', 'family restaurant', 'buffet', 'variety'],
             },
         }
 
@@ -158,6 +168,7 @@ class RestaurantTemplate:
                 'label': self.cuisine_subtypes[best_subtype]['label'],
                 'local_content': self.cuisine_subtypes[best_subtype]['local_content'],
                 'signature': self.cuisine_subtypes[best_subtype]['signature'],
+                'local_intent_keywords': self.cuisine_subtypes[best_subtype].get('local_intent_keywords', []),
             }
 
         return {
@@ -165,6 +176,7 @@ class RestaurantTemplate:
             'label': 'Restaurant',
             'local_content': 'Best restaurant in {city}',
             'signature': ['signature dishes'],
+            'local_intent_keywords': ['family restaurant', 'takeaway', 'delivery'],
         }
 
     def get_gaps(self, business_data: dict) -> list:
@@ -254,9 +266,25 @@ class RestaurantTemplate:
             })
 
         # Check for local comparison (subtype-specific)
+        # Check both the dictionary root and the business_context field
         city = business_data.get('city', '')
+        if not city:
+            # Fallback for some callers
+            city = business_data.get('business_context', {}).get('city', '') if isinstance(business_data.get('business_context'), dict) else ''
+
         local_content_formatted = subtype['local_content'].format(city=city)
-        if city and not business_data.get('has_local_comparison'):
+
+        has_comparison = business_data.get('has_local_comparison')
+        if has_comparison is None:
+            # Try to get from nested if it exists
+            if isinstance(business_data.get('business_context'), dict):
+                has_comparison = business_data['business_context'].get('has_local_comparison')
+
+        if has_comparison is None:
+            # Check context if not explicitly provided
+            has_comparison = city.lower() in context if city else False
+
+        if city and not has_comparison:
             gaps.append({
                 'type': 'local_seo',
                 'severity': 'high',

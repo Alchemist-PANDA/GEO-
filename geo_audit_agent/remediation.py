@@ -178,7 +178,7 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                         'title': 'Add hours and price range',
                         'reason': title,
                         'why_this_works': 'Basic info like hours and price range are critical for conversion and local search ranking.',
-                        'action': 'Add clear opening hours and price range ($/$$/$$$) to your website footer and contact page.',
+                        'action': 'Add opening hours, price range, dine-in/takeaway/delivery availability, and reservation info clearly on the homepage, menu page, and Google Business Profile.',
                         'effort': 'low',
                         'impact': 'medium',
                         'quick_win': True,
@@ -375,13 +375,22 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                 subtype = template.get_subtype(business_data) if hasattr(template, 'get_subtype') else {'label': 'Restaurant', 'local_content': 'Best restaurant in {city}'}
                 cuisine_label = subtype.get('label', 'Restaurant')
                 local_content = subtype.get('local_content', 'Best restaurant in {city}').format(city=city)
+
+                # Get custom local intent keywords or fall back to generic restaurant ones
+                intent_keywords = subtype.get('local_intent_keywords', ['family restaurant', 'takeaway', 'delivery'])
+                keyword_list = [f"best {kw} in {city}" for kw in intent_keywords[:4]]
+                if f"best {cuisine_label.lower()} in {city}" not in [k.lower() for k in keyword_list]:
+                    keyword_list.insert(0, local_content)
+
+                action_copy = f'Create pages for: {", ".join([f"\"{k}\"" for k in keyword_list])}. Include menu highlights, food photos, and location details.'
+
                 remediation.append({
                     'priority': priority,
                     'type': 'local_seo',
                     'title': f'Create local intent content for {city}',
                     'reason': title,
                     'why_this_works': f'Local intent content targets "{local_content}" queries and establishes local authority.',
-                    'action': f'Create pages for: "{local_content}", "best {cuisine_label.lower()} near me", "where to eat {cuisine_label.lower()} in {city}". Include menu highlights, food photos, and location details.',
+                    'action': action_copy,
                     'effort': 'medium',
                     'impact': 'high',
                     'quick_win': False,
