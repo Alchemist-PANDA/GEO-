@@ -7,7 +7,93 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from run_lift_simulation import simulate_improved_audit
+from run_lift_simulation import simulate_improved_audit, run_lift_simulation
+
+
+class TestIndustryRemediationRouting:
+    """Test industry-specific remediation routing."""
+
+    def test_dental_remediation_routing(self):
+        """Test that dental clinic gets dental remediation, not fitness."""
+        r = run_lift_simulation(
+            "Dental Solutions Islamabad",
+            "dental clinic",
+            "Islamabad",
+            {
+                "business_context": "Dental Solutions Islamabad is a dental clinic in Islamabad. Services include braces, dental implants, teeth whitening, root canal, emergency dental care, pediatric dentistry, and cosmetic dentistry. The clinic emphasizes hygiene, painless treatment, professional dentists, appointment booking, and patient care.",
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        # Basic assertions
+        assert r["template_used"] == "DentalClinicTemplate"
+        assert len(r["remediation"]) > 0
+
+        # Collect all remediation text for checking
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Dental positive assertions
+        assert any(kw in rem_text for kw in ["dentist", "medicalclinic", "treatment", "braces", "implants", "insurance", "emergency"])
+
+        # Fitness negative assertions (contamination check)
+        fitness_keywords = [
+            "sportsactivitylocation", "healthclub", "gym", "pool", "trainer",
+            "class schedule", "class updates", "personal training", "membership"
+        ]
+        for kw in fitness_keywords:
+            assert kw not in rem_text, f"Found fitness contamination: '{kw}' in dental remediation"
+
+        # Ecommerce negative assertions
+        ecommerce_keywords = ["product schema", "offer schema", "shipping", "size guide"]
+        for kw in ecommerce_keywords:
+            assert kw not in rem_text, f"Found ecommerce contamination: '{kw}' in dental remediation"
+
+    def test_fitness_remediation_routing(self):
+        """Test that fitness gym still gets fitness remediation."""
+        r = run_lift_simulation(
+            "Oxygen Fitness Gym",
+            "fitness gym",
+            "Islamabad",
+            {
+                "business_context": "Oxygen Fitness Gym is a premium health club in Islamabad with swimming pool and sauna.",
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "FitnessGymTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Fitness positive assertions
+        assert any(kw in rem_text for kw in ["healthclub", "sportsactivitylocation", "gym", "pool", "trainer", "class updates"])
+
+        # Dental negative assertions
+        assert "dentist" not in rem_text
+        assert "medicalclinic" not in rem_text
+
+    def test_ecommerce_remediation_routing(self):
+        """Test that ecommerce still gets ecommerce remediation."""
+        r = run_lift_simulation(
+            "StyleHub Fashion",
+            "ecommerce fashion store",
+            "London",
+            {
+                "business_context": "StyleHub is an online fashion store selling clothing and accessories.",
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "EcommerceTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Ecommerce positive assertions
+        assert any(kw in rem_text for kw in ["product", "offer", "shipping", "size guide", "return"])
+
+        # Dental negative assertions
+        assert "dentist" not in rem_text
+        assert "medicalclinic" not in rem_text
 
 
 class TestRemediationTextCleaning:
