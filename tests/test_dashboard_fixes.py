@@ -160,6 +160,330 @@ class TestIndustryRemediationRouting:
         for kw in negative_keywords:
             assert kw not in rem_text, f"Found contamination: '{kw}' in restaurant remediation"
 
+    def test_turkish_restaurant_subtype(self):
+        """Test Turkish restaurant subtype detection and wording."""
+        raw_text = "Istanbul Kitchen is a Turkish restaurant in London. Famous for authentic kebab, shawarma, pide, and lahmacun. Fresh ingredients and traditional recipes."
+
+        r = run_lift_simulation(
+            "Istanbul Kitchen",
+            "turkish restaurant",
+            "London",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Turkish-specific language
+        assert any(kw in rem_text for kw in ["turkish", "kebab", "shawarma", "pide"])
+        # Should NOT contain other cuisine contamination
+        assert "desi" not in rem_text
+        assert "chinese" not in rem_text
+
+    def test_chinese_restaurant_subtype(self):
+        """Test Chinese restaurant subtype detection and wording."""
+        raw_text = "Dragon Palace is a Chinese restaurant in Manchester. Specializes in dim sum, noodles, hotpot, and Manchurian. Authentic Chinese recipes."
+
+        r = run_lift_simulation(
+            "Dragon Palace",
+            "chinese restaurant",
+            "Manchester",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Chinese-specific language
+        assert any(kw in rem_text for kw in ["chinese", "noodles", "dim sum", "hotpot"])
+        # Should NOT contain other cuisine contamination
+        assert "turkish" not in rem_text
+        assert "desi" not in rem_text
+
+    def test_desi_restaurant_subtype(self):
+        """Test Desi/Pakistani restaurant subtype detection and wording."""
+        raw_text = "Punjab Grill is a desi restaurant in Birmingham. Famous for biryani, karahi, nihari, and tandoor dishes. Authentic Pakistani cuisine."
+
+        r = run_lift_simulation(
+            "Punjab Grill",
+            "desi restaurant",
+            "Birmingham",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Desi-specific language
+        assert any(kw in rem_text for kw in ["desi", "biryani", "karahi", "nihari"])
+        # Should NOT contain other cuisine contamination
+        assert "turkish" not in rem_text
+        assert "chinese" not in rem_text
+
+    def test_fast_food_subtype(self):
+        """Test fast food restaurant subtype detection."""
+        raw_text = "Burger King is a fast food restaurant in Dubai. Known for burgers, fries, fried chicken, wraps, and combo deals."
+
+        r = run_lift_simulation(
+            "Burger King Dubai",
+            "fast food",
+            "Dubai",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Fast food-specific language
+        assert any(kw in rem_text for kw in ["fast food", "burger", "fries", "combos", "deals"])
+        # Should NOT contain other cuisine contamination
+        assert "desi" not in rem_text
+        assert "turkish" not in rem_text
+
+    def test_cafe_subtype(self):
+        """Test cafe subtype detection and wording."""
+        raw_text = "The Coffee House is a cafe in Edinburgh. Specializes in espresso, latte, cappuccino, pastries, and brunch."
+
+        r = run_lift_simulation(
+            "The Coffee House",
+            "cafe",
+            "Edinburgh",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Cafe-specific language
+        assert any(kw in rem_text for kw in ["cafe", "coffee", "espresso", "pastries", "brunch"])
+        # Should NOT contain other cuisine contamination
+        assert "desi" not in rem_text
+        assert "turkish" not in rem_text
+
+    def test_restaurant_no_contamination(self):
+        """Test that restaurant template does not output dental/ecommerce/fitness keywords."""
+        raw_text = "Pizza Palace is a pizza restaurant in Rome. Best pizza in town with authentic Italian recipes."
+
+        r = run_lift_simulation(
+            "Pizza Palace",
+            "pizza restaurant",
+            "Rome",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Dental contamination check
+        assert "dentist" not in rem_text
+        assert "medicalclinic" not in rem_text
+        assert "braces" not in rem_text
+        assert "implants" not in rem_text
+
+        # Ecommerce contamination check
+        assert "product schema" not in rem_text
+        assert "offer schema" not in rem_text
+        assert "shipping" not in rem_text
+        assert "size guide" not in rem_text
+
+        # Fitness contamination check
+        assert "healthclub" not in rem_text
+        assert "trainer" not in rem_text
+        assert "class schedule" not in rem_text
+        assert "membership" not in rem_text
+
+    def test_turkish_restaurant_subtype(self):
+        """Test Turkish restaurant subtype detection and wording."""
+        raw_text = "Istanbul Kitchen is a Turkish restaurant in London. Famous for authentic kebab, shawarma, pide, and lahmacun. Fresh ingredients and traditional recipes."
+
+        r = run_lift_simulation(
+            "Istanbul Kitchen",
+            "turkish restaurant",
+            "London",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Turkish-specific language
+        assert any(kw in rem_text for kw in ["turkish", "kebab", "shawarma", "pide"])
+        # Should NOT contain other cuisine contamination
+        assert "desi" not in rem_text
+        assert "chinese" not in rem_text
+
+    def test_chinese_restaurant_subtype(self):
+        """Test Chinese restaurant subtype detection and wording."""
+        raw_text = "Dragon Palace is a Chinese restaurant in Manchester. Specializes in dim sum, noodles, hotpot, and Manchurian. Authentic Chinese recipes."
+
+        r = run_lift_simulation(
+            "Dragon Palace",
+            "chinese restaurant",
+            "Manchester",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Chinese-specific language
+        assert any(kw in rem_text for kw in ["chinese", "noodles", "dim sum", "hotpot"])
+        # Should NOT contain other cuisine contamination
+        assert "turkish" not in rem_text
+        assert "desi" not in rem_text
+
+    def test_desi_restaurant_subtype(self):
+        """Test Desi/Pakistani restaurant subtype detection and wording."""
+        raw_text = "Punjab Grill is a desi restaurant in Birmingham. Famous for biryani, karahi, nihari, and tandoor dishes. Authentic Pakistani cuisine."
+
+        r = run_lift_simulation(
+            "Punjab Grill",
+            "desi restaurant",
+            "Birmingham",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Desi-specific language
+        assert any(kw in rem_text for kw in ["desi", "biryani", "karahi", "nihari"])
+        # Should NOT contain other cuisine contamination
+        assert "turkish" not in rem_text
+        assert "chinese" not in rem_text
+
+    def test_fast_food_subtype(self):
+        """Test fast food restaurant subtype detection."""
+        raw_text = "Burger King is a fast food restaurant in Dubai. Known for burgers, fries, fried chicken, wraps, and combo deals."
+
+        r = run_lift_simulation(
+            "Burger King Dubai",
+            "fast food",
+            "Dubai",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Fast food-specific language
+        assert any(kw in rem_text for kw in ["fast food", "burger", "fries", "combos", "deals"])
+        # Should NOT contain other cuisine contamination
+        assert "desi" not in rem_text
+        assert "turkish" not in rem_text
+
+    def test_cafe_subtype(self):
+        """Test cafe subtype detection and wording."""
+        raw_text = "The Coffee House is a cafe in Edinburgh. Specializes in espresso, latte, cappuccino, pastries, and brunch."
+
+        r = run_lift_simulation(
+            "The Coffee House",
+            "cafe",
+            "Edinburgh",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Cafe-specific language
+        assert any(kw in rem_text for kw in ["cafe", "coffee", "espresso", "pastries", "brunch"])
+        # Should NOT contain other cuisine contamination
+        assert "desi" not in rem_text
+        assert "turkish" not in rem_text
+
+    def test_restaurant_no_contamination(self):
+        """Test that restaurant template does not output dental/ecommerce/fitness keywords."""
+        raw_text = "Pizza Palace is a pizza restaurant in Rome. Best pizza in town with authentic Italian recipes."
+
+        r = run_lift_simulation(
+            "Pizza Palace",
+            "pizza restaurant",
+            "Rome",
+            {
+                "business_context": raw_text,
+                "raw_business_context": raw_text,
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "RestaurantTemplate"
+        rem_text = " ".join([str(rem.values()) for rem in r["remediation"]]).lower()
+
+        # Dental contamination check
+        assert "dentist" not in rem_text
+        assert "medicalclinic" not in rem_text
+        assert "braces" not in rem_text
+        assert "implants" not in rem_text
+
+        # Ecommerce contamination check
+        assert "product schema" not in rem_text
+        assert "offer schema" not in rem_text
+        assert "shipping" not in rem_text
+        assert "size guide" not in rem_text
+
+        # Fitness contamination check
+        assert "healthclub" not in rem_text
+        assert "trainer" not in rem_text
+        assert "class schedule" not in rem_text
+        assert "membership" not in rem_text
+
     def test_fitness_remediation_routing(self):
         """Test that fitness gym still gets fitness remediation."""
         r = run_lift_simulation(

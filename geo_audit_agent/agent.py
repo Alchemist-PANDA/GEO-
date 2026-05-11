@@ -365,7 +365,7 @@ def remediation_handler(state: AgentState) -> AgentState:
     city = state.get("city", "the area")
 
     # Generate remediation from gaps
-    remediation = generate_remediation(gaps, category, city, brand)
+    remediation = generate_remediation(gaps, category, city, brand, state.get("business_context", {}))
 
     # Store in both new and legacy fields
     state["remediation"] = remediation

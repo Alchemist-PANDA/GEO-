@@ -53,45 +53,67 @@ class RestaurantTemplate:
             'portion size', 'spicy', 'authentic'
         ]
 
-        self.remediation_playbook = {
-            'schema': {
-                'priority': 'high',
-                'actions': [
-                    'Add Restaurant schema',
-                    'Add Menu schema',
-                    'Add LocalBusiness schema with food establishment fields',
-                    'Add AggregateRating and Review schema',
-                    'Add OpeningHoursSpecification schema',
-                ],
+        # Cuisine subtype detection
+        self.cuisine_subtypes = {
+            'turkish': {
+                'keywords': ['turkish', 'kebab', 'shawarma', 'doner', 'pide', 'lahmacun', 'baklava', 'kofta', 'mezze'],
+                'label': 'Turkish',
+                'local_content': 'Best Turkish restaurant in {city}',
+                'signature': ['kebab', 'shawarma', 'pide', 'doner'],
             },
-            'content': {
-                'priority': 'high',
-                'actions': [
-                    'Create or optimize menu page with structured items',
-                    'Add signature dish sections/pages with descriptions and photos',
-                    'Add delivery and reservation information clearly',
-                    'Add opening hours and price range',
-                    'Add high-quality food and ambience photos',
-                    'Add treatment FAQs' # Reusing generic label if needed or specific below
-                ],
+            'chinese': {
+                'keywords': ['chinese', 'noodles', 'dumplings', 'dim sum', 'hotpot', 'manchurian', 'chow mein', 'fried rice', 'wonton'],
+                'label': 'Chinese',
+                'local_content': 'Best Chinese restaurant in {city}',
+                'signature': ['noodles', 'dumplings', 'hotpot', 'chow mein'],
             },
-            'reviews': {
-                'priority': 'medium',
-                'actions': [
-                    'Collect reviews mentioning taste and food quality',
-                    'Collect reviews mentioning service and staff',
-                    'Collect reviews mentioning ambience and cleanliness',
-                    'Collect reviews mentioning value for money',
-                ],
+            'desi': {
+                'keywords': ['desi', 'pakistani', 'biryani', 'karahi', 'nihari', 'handi', 'paratha', 'haleem', 'chapli', 'seekh kabab', 'tandoor', 'tikka'],
+                'label': 'Desi/Pakistani',
+                'local_content': 'Best desi restaurant in {city}',
+                'signature': ['biryani', 'karahi', 'nihari', 'tandoor'],
             },
-            'local_seo': {
-                'priority': 'high',
-                'actions': [
-                    'Improve Google Business Profile with menu and food photos',
-                    'Update service list on Google Business Profile',
-                    'Create "Best [cuisine] restaurant in [city]" content',
-                    'Create local comparison content',
-                ],
+            'fast_food': {
+                'keywords': ['fast food', 'burger', 'fries', 'fried chicken', 'wraps', 'pizza', 'deals', 'combos', 'kids meal', 'drive thru'],
+                'label': 'Fast food',
+                'local_content': 'Best fast food in {city}',
+                'signature': ['burgers', 'fries', 'combos', 'deals'],
+            },
+            'pizza': {
+                'keywords': ['pizza', 'pizzeria', 'pepperoni', 'margherita', 'wood fired', 'thin crust', 'deep dish'],
+                'label': 'Pizza',
+                'local_content': 'Best pizza in {city}',
+                'signature': ['pizza varieties', 'crusts', 'toppings'],
+            },
+            'bbq': {
+                'keywords': ['bbq', 'barbecue', 'grill', 'smoked', 'ribs', 'brisket', 'grilled'],
+                'label': 'BBQ',
+                'local_content': 'Best BBQ restaurant in {city}',
+                'signature': ['smoked meats', 'BBQ sauce', 'grilled specialties'],
+            },
+            'cafe': {
+                'keywords': ['cafe', 'coffee shop', 'espresso', 'latte', 'cappuccino', 'pastries', 'brunch', 'tea house', 'coffehouse'],
+                'label': 'Cafe',
+                'local_content': 'Best cafe in {city}',
+                'signature': ['coffee', 'pastries', 'brunch'],
+            },
+            'bakery': {
+                'keywords': ['bakery', 'cakes', 'pastries', 'breads', 'desserts', 'custom cakes', 'cupcakes', 'cookies', 'artisan bread'],
+                'label': 'Bakery',
+                'local_content': 'Best bakery in {city}',
+                'signature': ['custom cakes', 'pastries', 'artisan breads'],
+            },
+            'fine_dining': {
+                'keywords': ['fine dining', 'gourmet', 'michelin', 'prix fixe', 'tasting menu', 'chef table', 'upscale'],
+                'label': 'Fine dining',
+                'local_content': 'Best fine dining restaurant in {city}',
+                'signature': ['tasting menu', 'gourmet dishes', 'wine pairing'],
+            },
+            'casual_dining': {
+                'keywords': ['casual dining', 'family restaurant', 'buffet', 'all day dining', 'relaxed atmosphere'],
+                'label': 'Casual dining',
+                'local_content': 'Best casual dining in {city}',
+                'signature': ['family-friendly', 'variety', 'buffet'],
             },
         }
 
@@ -112,10 +134,44 @@ class RestaurantTemplate:
 
         return " ".join([p for p in parts if p]).lower()
 
+    def get_subtype(self, business_data: dict) -> dict:
+        """Detect cuisine subtype from category and business context."""
+        context = self.get_context_text(business_data)
+        category = business_data.get("category", "").lower()
+        combined = f"{category} {context}"
+
+        # Score each subtype
+        scores = {}
+        for subtype_key, subtype_data in self.cuisine_subtypes.items():
+            score = 0
+            for keyword in subtype_data['keywords']:
+                if keyword in combined:
+                    score += 1
+            if score > 0:
+                scores[subtype_key] = score
+
+        # Return highest scoring subtype or default
+        if scores:
+            best_subtype = max(scores, key=scores.get)
+            return {
+                'key': best_subtype,
+                'label': self.cuisine_subtypes[best_subtype]['label'],
+                'local_content': self.cuisine_subtypes[best_subtype]['local_content'],
+                'signature': self.cuisine_subtypes[best_subtype]['signature'],
+            }
+
+        return {
+            'key': 'generic',
+            'label': 'Restaurant',
+            'local_content': 'Best restaurant in {city}',
+            'signature': ['signature dishes'],
+        }
+
     def get_gaps(self, business_data: dict) -> list:
         """Generate restaurant-specific gaps based on business data."""
         gaps = []
         context = self.get_context_text(business_data)
+        subtype = self.get_subtype(business_data)
 
         # Check for schema
         if not business_data.get('has_schema') and not any(kw in context for kw in ['schema', 'structured data', 'json-ld']):
@@ -135,13 +191,14 @@ class RestaurantTemplate:
                 'description': 'No clear digital menu or structured food list found',
             })
 
-        # Check for signature dishes
-        if not any(kw in context for kw in ['signature', 'famous for', 'best seller', 'chef special']):
+        # Check for signature dishes (subtype-specific)
+        signature_keywords = ['signature', 'famous for', 'best seller', 'chef special'] + subtype.get('signature', [])
+        if not any(kw in context for kw in signature_keywords):
             gaps.append({
                 'type': 'content',
                 'severity': 'medium',
                 'title': 'Missing signature dish content',
-                'description': 'No information about signature or recommended dishes found',
+                'description': f'No information about signature or recommended {subtype["label"].lower()} dishes found',
             })
 
         # Check for opening hours and price range
@@ -196,14 +253,15 @@ class RestaurantTemplate:
                 'description': 'No restaurant FAQs found covering reservations, parking, or payment',
             })
 
-        # Check for local comparison
+        # Check for local comparison (subtype-specific)
         city = business_data.get('city', '')
+        local_content_formatted = subtype['local_content'].format(city=city)
         if city and not business_data.get('has_local_comparison'):
             gaps.append({
                 'type': 'local_seo',
                 'severity': 'high',
                 'title': 'Missing local comparison content',
-                'description': f'No "best restaurant in {city}" style content found',
+                'description': f'No "{local_content_formatted}" style content found',
             })
 
         return gaps
@@ -212,6 +270,7 @@ class RestaurantTemplate:
         """Identify restaurant-specific strengths."""
         strengths = []
         context = self.get_context_text(business_data)
+        subtype = self.get_subtype(business_data)
 
         # Review base
         review_count = business_data.get('review_count', 0)
@@ -223,22 +282,32 @@ class RestaurantTemplate:
                 'description': f'{rating} rating with {review_count} reviews' if review_count and rating else 'Highly rated with significant review volume',
             })
 
-        # Cuisine positioning
-        cuisines = ['burger', 'pizza', 'chinese', 'desi', 'italian', 'bbq', 'steakhouse', 'bakery', 'cafe']
-        found_cuisines = [c for c in cuisines if c in context]
-        if found_cuisines:
+        # Cuisine subtype positioning (subtype-specific)
+        subtype_label = subtype.get('label', 'Restaurant')
+        if subtype.get('key') != 'generic':
             strengths.append({
                 'type': 'positioning',
-                'title': 'Clear cuisine positioning',
-                'description': f'Strongly positioned as a {", ".join(found_cuisines[:2])} specialist',
+                'title': f'Authentic {subtype_label} cuisine positioning',
+                'description': f'Strongly positioned as an authentic {subtype_label.lower()} restaurant with traditional recipes and flavors',
             })
+        else:
+            # Generic restaurant cuisine positioning
+            cuisines = ['burger', 'pizza', 'chinese', 'desi', 'italian', 'bbq', 'steakhouse', 'bakery', 'cafe']
+            found_cuisines = [c for c in cuisines if c in context]
+            if found_cuisines:
+                strengths.append({
+                    'type': 'positioning',
+                    'title': 'Clear cuisine positioning',
+                    'description': f'Strongly positioned as a {", ".join(found_cuisines[:2])} specialist',
+                })
 
-        # Signature dishes/Menu depth
+        # Signature dishes/Menu depth (subtype-specific)
         if any(kw in context for kw in ['gourmet', 'signature', 'specialty', 'variety', 'wide range', 'menu depth']):
+            signature_dishes = subtype.get('signature', ['signature dishes'])
             strengths.append({
                 'type': 'content',
                 'title': 'Signature dishes/Menu depth',
-                'description': 'Clear information about specialty dishes and menu variety',
+                'description': f'Clear information about specialty {subtype_label.lower()} dishes including {", ".join(signature_dishes[:2])}',
             })
 
         # Ambience

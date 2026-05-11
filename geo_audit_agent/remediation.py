@@ -4,7 +4,7 @@ from typing import List, Dict
 from .industry_templates import get_template
 
 
-def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name: str) -> List[Dict]:
+def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name: str, business_data: dict = None) -> List[Dict]:
     """
     Generate remediation recommendations for identified gaps.
 
@@ -13,10 +13,14 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
         category: Business category
         city: City location
         brand_name: Business name
+        business_data: Business data dict for subtype detection
 
     Returns:
         List of remediation recommendations
     """
+    if business_data is None:
+        business_data = {}
+
     if not gaps:
         return []
 
@@ -61,12 +65,14 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     'quick_win': True,
                 })
             elif is_restaurant:
+                subtype = template.get_subtype(business_data) if hasattr(template, 'get_subtype') else {'label': 'Restaurant'}
+                cuisine_label = subtype.get('label', 'Restaurant')
                 remediation.append({
                     'priority': priority,
                     'type': 'schema',
-                    'title': 'Add Restaurant and Menu schema',
+                    'title': f'Add {cuisine_label} Restaurant and Menu schema',
                     'reason': title,
-                    'why_this_works': 'Structured data helps search engines understand your cuisine, menu items, and opening hours, improving visibility in food and local search results.',
+                    'why_this_works': f'Structured data helps search engines understand your {cuisine_label.lower()} cuisine, menu items, and opening hours, improving visibility in food and local search results.',
                     'action': 'Implement Restaurant, Menu, LocalBusiness, AggregateRating, and Review schema on your website.',
                     'effort': 'medium',
                     'impact': 'high',
@@ -137,13 +143,17 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                         'quick_win': True,
                     })
             elif is_restaurant:
+                subtype = template.get_subtype(business_data) if hasattr(template, 'get_subtype') else {'label': 'Restaurant', 'local_content': 'Best restaurant in {city}'}
+                cuisine_label = subtype.get('label', 'Restaurant')
+                local_content = subtype.get('local_content', 'Best restaurant in {city}')
+
                 if 'menu' in title.lower():
                     remediation.append({
                         'priority': priority,
                         'type': 'content',
-                        'title': 'Create or optimize menu page',
+                        'title': f'Create or optimize {cuisine_label} menu page',
                         'reason': title,
-                        'why_this_works': 'A clear, digital menu helps customers decide and improves search relevance for specific dishes.',
+                        'why_this_works': f'A clear, digital menu helps customers decide and improves search relevance for {cuisine_label.lower()} dishes.',
                         'action': 'Create a mobile-friendly menu page with clear categories, descriptions, and pricing. Use structured text instead of just PDF/images.',
                         'effort': 'medium',
                         'impact': 'high',
@@ -153,10 +163,10 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     remediation.append({
                         'priority': priority,
                         'type': 'content',
-                        'title': 'Add signature dish sections',
+                        'title': f'Add {cuisine_label} signature dish sections',
                         'reason': title,
-                        'why_this_works': 'Signature dishes differentiate your brand and target "best [dish]" search queries.',
-                        'action': 'Create sections or pages for your signature dishes with high-quality photos, ingredients, and story.',
+                        'why_this_works': f'Signature {cuisine_label.lower()} dishes differentiate your brand and target "best {cuisine_label.lower()} in city" search queries.',
+                        'action': f'Create sections or pages for your signature {cuisine_label.lower()} dishes with high-quality photos, ingredients, and story.',
                         'effort': 'medium',
                         'impact': 'high',
                         'quick_win': True,
@@ -189,10 +199,10 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     remediation.append({
                         'priority': priority,
                         'type': 'content',
-                        'title': 'Add high-quality food/ambience photos',
+                        'title': f'Add high-quality {cuisine_label} food/ambience photos',
                         'reason': title,
                         'why_this_works': 'Visuals are the primary driver for restaurant selection online.',
-                        'action': 'Upload high-quality photos of signature dishes, interior decor, and outdoor seating to your website and Google profile.',
+                        'action': f'Upload high-quality photos of signature {cuisine_label.lower()} dishes, interior decor, and outdoor seating to your website and Google profile.',
                         'effort': 'medium',
                         'impact': 'high',
                         'quick_win': False,
@@ -201,7 +211,7 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     remediation.append({
                         'priority': priority,
                         'type': 'content',
-                        'title': 'Add restaurant FAQ sections',
+                        'title': f'Add {cuisine_label} FAQ sections',
                         'reason': title,
                         'why_this_works': 'FAQs address customer questions about parking, payment, family seating, and dietary options.',
                         'action': 'Add an FAQ section covering common customer queries to reduce support overhead and improve search visibility.',
@@ -213,7 +223,7 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     remediation.append({
                         'priority': priority,
                         'type': 'content',
-                        'title': 'Add treatment FAQ sections', # Fallback but maybe generic?
+                        'title': 'Add restaurant FAQ sections',
                         'reason': title,
                         'why_this_works': 'FAQs address customer objections directly.',
                         'action': 'Add FAQ sections covering common questions.',
@@ -362,13 +372,16 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     'quick_win': False,
                 })
             elif is_restaurant:
+                subtype = template.get_subtype(business_data) if hasattr(template, 'get_subtype') else {'label': 'Restaurant', 'local_content': 'Best restaurant in {city}'}
+                cuisine_label = subtype.get('label', 'Restaurant')
+                local_content = subtype.get('local_content', 'Best restaurant in {city}').format(city=city)
                 remediation.append({
                     'priority': priority,
                     'type': 'local_seo',
                     'title': f'Create local intent content for {city}',
                     'reason': title,
-                    'why_this_works': f'Local intent content targets "best restaurant in {city}" queries and establishes local authority.',
-                    'action': f'Create pages for: "best burger restaurant in {city}", "best family restaurant in {city}", "best takeaway in {city}". Include menu highlights, food photos, and location details.',
+                    'why_this_works': f'Local intent content targets "{local_content}" queries and establishes local authority.',
+                    'action': f'Create pages for: "{local_content}", "best {cuisine_label.lower()} near me", "where to eat {cuisine_label.lower()} in {city}". Include menu highlights, food photos, and location details.',
                     'effort': 'medium',
                     'impact': 'high',
                     'quick_win': False,
@@ -412,13 +425,15 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                     'quick_win': True,
                 })
             elif is_restaurant:
+                subtype = template.get_subtype(business_data) if hasattr(template, 'get_subtype') else {'label': 'Restaurant'}
+                cuisine_label = subtype.get('label', 'Restaurant')
                 remediation.append({
                     'priority': priority,
                     'type': 'reviews',
-                    'title': 'Collect customer reviews',
+                    'title': f'Collect {cuisine_label} restaurant reviews',
                     'reason': title,
-                    'why_this_works': 'Customer reviews mentioning taste, service, and ambience improve relevance for food-related search queries.',
-                    'action': 'Request reviews from satisfied diners. Ask them to mention specific aspects: taste, food quality, service, ambience, and value.',
+                    'why_this_works': f'Customer reviews mentioning {cuisine_label.lower()} dishes, taste, service, and ambience improve relevance for {cuisine_label.lower()} search queries.',
+                    'action': f'Request reviews from satisfied diners. Ask them to mention specific aspects: {cuisine_label.lower()} dishes, taste, service, ambience, and value.',
                     'effort': 'low',
                     'impact': 'high',
                     'quick_win': True,
