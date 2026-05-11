@@ -80,6 +80,43 @@ class TestIndustryRemediationRouting:
         for s in strengths:
             assert len(s["description"]) > 10
 
+    def test_production_path_dental_strengths(self):
+        """Test dental strengths with the exact dict structure dashboard.py sends."""
+        raw_text = "Dental Solutions Islamabad is a dental clinic in Islamabad. Services include braces, dental implants, teeth whitening, root canal, emergency dental care, pediatric dentistry, and cosmetic dentistry. The clinic emphasizes hygiene, painless treatment, professional dentists, appointment booking, and patient care."
+
+        business_context = {
+            "raw_text": raw_text,
+            "business_context_text": raw_text,
+            "category": "dental clinic"
+        }
+
+        r = run_lift_simulation(
+            "Dental Solutions Islamabad",
+            "dental clinic",
+            "Islamabad",
+            {
+                "business_context": business_context,
+                "raw_business_context": business_context["raw_text"],
+                "force_mock": True,
+                "use_real": False,
+            }
+        )
+
+        assert r["template_used"] == "DentalClinicTemplate"
+        assert len(r["strengths"]) >= 4
+
+        strength_titles = [s["title"].lower() for s in r["strengths"]]
+
+        # Check for expected strength categories in titles
+        assert any("treatment range" in t for t in strength_titles)
+        assert any("hygiene" in t or "patient comfort" in t for t in strength_titles)
+        assert any("professional dentist" in t for t in strength_titles)
+        assert any("appointment booking" in t for t in strength_titles)
+        assert any("emergency care" in t for t in strength_titles)
+
+        assert len(r["gaps"]) > 0
+        assert len(r["remediation"]) > 0
+
     def test_fitness_remediation_routing(self):
         """Test that fitness gym still gets fitness remediation."""
         r = run_lift_simulation(

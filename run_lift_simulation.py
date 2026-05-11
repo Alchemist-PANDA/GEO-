@@ -139,9 +139,14 @@ def run_lift_simulation(brand_name: str, category: str, city: str, business_data
         "gaps": results.get("gaps", []),
         "remediation": results.get("remediation", []),
         "planned_actions": results.get("planned_actions", []),
+        "raw_business_context": results.get("raw_business_context", business_data.get("raw_business_context", "")),
         "mode": results.get("mode", "simulated"),
         "call_path": "run_lift_simulation_direct_bypass",
     }
+
+    # Debug print for dental context
+    if "dental" in category.lower():
+        print("DENTAL_CONTEXT_DEBUG:", normalized.get("raw_business_context") or normalized.get("business_context"))
 
     return normalized
 

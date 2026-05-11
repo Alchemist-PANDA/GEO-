@@ -200,15 +200,38 @@ class DentalClinicTemplate:
 
         return gaps
 
+    def get_context_text(self, business_data: dict) -> str:
+        """Helper to extract raw text from various possible business_data shapes."""
+        parts = []
+
+        if isinstance(business_data.get("business_context"), str):
+            parts.append(business_data.get("business_context"))
+
+        if isinstance(business_data.get("business_context"), dict):
+            ctx = business_data["business_context"]
+            parts.append(ctx.get("raw_text", ""))
+            parts.append(ctx.get("business_context_text", ""))
+
+        parts.append(business_data.get("raw_business_context", ""))
+        parts.append(business_data.get("business_context_text", ""))
+
+        return " ".join([p for p in parts if p]).lower()
+
     def get_strengths(self, business_data: dict) -> list:
         """Identify dental-specific strengths."""
         strengths = []
 
-        context = business_data.get('business_context', '').lower() if isinstance(business_data.get('business_context'), str) else ''
+        context = self.get_context_text(business_data)
 
         # Strong review base
         review_count = business_data.get('review_count', 0)
         rating = business_data.get('rating', 0)
+
+        # Also check structured business_context if present
+        if isinstance(business_data.get("business_context"), dict):
+            ctx = business_data["business_context"]
+            if not review_count: review_count = ctx.get('review_count', 0)
+            if not rating: rating = ctx.get('rating', 0.0)
 
         if review_count > 0 or rating > 0:
             if review_count >= 30 or rating >= 4.0:
@@ -219,15 +242,23 @@ class DentalClinicTemplate:
                 })
 
         # Professional credentials/dentists
-        if business_data.get('has_credentials') or any(kw in context for kw in ['professional dentist', 'experienced dentist', 'qualified dentist', 'dentist credentials', 'orthodontist', 'implant specialist', 'credential', 'expert', 'experienced', 'iso', 'specialist']):
+        has_credentials = business_data.get('has_credentials')
+        if isinstance(business_data.get("business_context"), dict):
+            if has_credentials is None: has_credentials = business_data["business_context"].get("has_credentials")
+
+        if has_credentials or any(kw in context for kw in ['professional dentist', 'experienced dentist', 'qualified dentist', 'dentist credentials', 'orthodontist', 'implant specialist', 'credential', 'expert', 'experienced', 'iso', 'specialist']):
             strengths.append({
                 'type': 'credentials',
                 'title': 'Professional dentist positioning',
-                'description': 'Dentists with verified credentials and expertise' if business_data.get('has_credentials') else 'Positioned as professional dental experts with specialized skills',
+                'description': 'Dentists with verified credentials and expertise' if has_credentials else 'Positioned as professional dental experts with specialized skills',
             })
 
         # Emergency care availability
-        if business_data.get('has_emergency_info') or any(kw in context for kw in ['emergency dental', 'emergency dentist', 'emergency care']):
+        has_emergency = business_data.get('has_emergency_info')
+        if isinstance(business_data.get("business_context"), dict):
+            if has_emergency is None: has_emergency = business_data["business_context"].get("has_emergency_info")
+
+        if has_emergency or any(kw in context for kw in ['emergency dental', 'emergency dentist', 'emergency care']):
             strengths.append({
                 'type': 'emergency_care',
                 'title': 'Emergency care availability',
@@ -235,7 +266,11 @@ class DentalClinicTemplate:
             })
 
         # Hygiene and safety
-        if business_data.get('has_hygiene_info') or any(kw in context for kw in ['hygiene', 'hygienic', 'clean', 'painless', 'patient care', 'comfort']):
+        has_hygiene = business_data.get('has_hygiene_info')
+        if isinstance(business_data.get("business_context"), dict):
+            if has_hygiene is None: has_hygiene = business_data["business_context"].get("has_hygiene_info")
+
+        if has_hygiene or any(kw in context for kw in ['hygiene', 'hygienic', 'clean', 'painless', 'patient care', 'comfort']):
             strengths.append({
                 'type': 'hygiene_safety',
                 'title': 'Hygiene and patient comfort positioning',
@@ -243,7 +278,11 @@ class DentalClinicTemplate:
             })
 
         # Appointment booking
-        if business_data.get('has_appointment_info') or any(kw in context for kw in ['appointment', 'booking', 'online booking', 'phone booking']):
+        has_appointment = business_data.get('has_appointment_info')
+        if isinstance(business_data.get("business_context"), dict):
+            if has_appointment is None: has_appointment = business_data["business_context"].get("has_appointment_info")
+
+        if has_appointment or any(kw in context for kw in ['appointment', 'booking', 'online booking', 'phone booking']):
             strengths.append({
                 'type': 'appointment_booking',
                 'title': 'Appointment booking clarity',
@@ -252,6 +291,9 @@ class DentalClinicTemplate:
 
         # Comprehensive services / Broad treatment range
         services = business_data.get('services', [])
+        if isinstance(business_data.get("business_context"), dict):
+            if not services: services = business_data["business_context"].get("services", [])
+
         # Also check context for treatment variety
         treatments = ['braces', 'implants', 'whitening', 'root canal', 'crowns', 'veneers', 'pediatric', 'cosmetic']
         context_treatments = [t for t in treatments if t in context]

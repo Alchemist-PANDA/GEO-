@@ -496,6 +496,10 @@ with tab1:
                     # Store original category for e-commerce detection
                     business_context['category'] = category
 
+                    # Preserve raw text for industry-specific strength detection
+                    business_context["raw_text"] = business_context_text
+                    business_context["business_context_text"] = business_context_text
+
                     # Mark schema as not present by default (will be checked by template)
                     # Let the template decide based on business_context
 
@@ -506,6 +510,7 @@ with tab1:
                     "category": category,
                     "city": city,
                     "business_context": business_context,
+                    "raw_business_context": business_context_text,
                     "force_mock": not use_live_api,
                     "use_real": use_live_api
                 }
