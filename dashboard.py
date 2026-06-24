@@ -442,46 +442,71 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         x=chatgpt_scores,
         name="ChatGPT",
         orientation='h',
-        marker_color=colors["ChatGPT"],
-        opacity=0.85
+        marker=dict(
+            color=chatgpt_scores,
+            colorscale=[[0, "rgba(255, 159, 67, 0.45)"], [1, colors["ChatGPT"]]],
+            line=dict(color="rgba(255, 255, 255, 0.25)", width=1)
+        ),
+        opacity=0.9,
+        hovertemplate="<b>%{y}</b><br>ChatGPT: %{x:.1f}<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=brands,
         x=gemini_scores,
         name="Gemini",
         orientation='h',
-        marker_color=colors["Gemini"],
-        opacity=0.85
+        marker=dict(
+            color=gemini_scores,
+            colorscale=[[0, "rgba(236, 72, 153, 0.45)"], [1, colors["Gemini"]]],
+            line=dict(color="rgba(255, 255, 255, 0.25)", width=1)
+        ),
+        opacity=0.9,
+        hovertemplate="<b>%{y}</b><br>Gemini: %{x:.1f}<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=brands,
         x=meta_scores,
         name="Meta.ai",
         orientation='h',
-        marker_color=colors["Meta.ai"],
-        opacity=0.85
+        marker=dict(
+            color=meta_scores,
+            colorscale=[[0, "rgba(59, 130, 246, 0.45)"], [1, colors["Meta.ai"]]],
+            line=dict(color="rgba(255, 255, 255, 0.25)", width=1)
+        ),
+        opacity=0.9,
+        hovertemplate="<b>%{y}</b><br>Meta.ai: %{x:.1f}<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=brands,
         x=claude_scores,
         name="Claude.ai",
         orientation='h',
-        marker_color=colors["Claude.ai"],
-        opacity=0.85
+        marker=dict(
+            color=claude_scores,
+            colorscale=[[0, "rgba(96, 165, 250, 0.45)"], [1, colors["Claude.ai"]]],
+            line=dict(color="rgba(255, 255, 255, 0.25)", width=1)
+        ),
+        opacity=0.9,
+        hovertemplate="<b>%{y}</b><br>Claude.ai: %{x:.1f}<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=brands,
         x=deepseek_scores,
         name="DeepSeek",
         orientation='h',
-        marker_color=colors["DeepSeek"],
-        opacity=0.85
+        marker=dict(
+            color=deepseek_scores,
+            colorscale=[[0, "rgba(13, 148, 136, 0.45)"], [1, colors["DeepSeek"]]],
+            line=dict(color="rgba(255, 255, 255, 0.25)", width=1)
+        ),
+        opacity=0.9,
+        hovertemplate="<b>%{y}</b><br>DeepSeek: %{x:.1f}<extra></extra>"
     ))
-    
+
     # Add Average line chart overlay
     fig.add_trace(go.Scatter(
         y=brands,
@@ -489,7 +514,8 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         name="Average",
         mode='lines+markers',
         line=dict(color='#FFFFFF' if is_dark else '#0A0A0F', width=2, dash='dash'),
-        marker=dict(color='#7C3AED', size=8, line=dict(color='#FFFFFF' if is_dark else '#0A0A0F', width=1.5))
+        marker=dict(color='#7C3AED', size=8, line=dict(color='#FFFFFF' if is_dark else '#0A0A0F', width=1.5)),
+        hovertemplate="<b>%{y}</b><br>Average: %{x:.1f}<extra></extra>"
     ))
     
     # Highlight the selected brand row
@@ -516,6 +542,11 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         margin=dict(l=100, r=20, t=30, b=40),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
+        hoverlabel=dict(
+            bgcolor='rgba(26, 26, 46, 0.95)' if is_dark else 'rgba(255, 255, 255, 0.95)',
+            bordercolor='rgba(124, 58, 237, 0.6)',
+            font=dict(color='#FFFFFF' if is_dark else '#0A0A0F', family='Inter', size=12)
+        ),
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -525,8 +556,10 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             font=dict(color='#94A3B8' if is_dark else '#4A5568')
         ),
         xaxis=dict(
-            title="AI Score",
-            titlefont=dict(color='#94A3B8' if is_dark else '#4A5568'),
+            title=dict(
+                text="AI Score",
+                font=dict(color='#94A3B8' if is_dark else '#4A5568'),
+            ),
             tickfont=dict(color='#94A3B8' if is_dark else '#4A5568'),
             gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(0, 0, 0, 0.05)',
             range=[0, 105]
