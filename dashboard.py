@@ -42,14 +42,12 @@ def apply_theme():
         text_color = "#e2e8f0"
         border_color = "#2d3748"
         accent_color = "#3b82f6"
-        sub_text = "#a0aec0"
     else:
         bg_color = "#f7fafc"
         card_color = "#ffffff"
         text_color = "#2d3748"
         border_color = "#e2e8f0"
         accent_color = "#3182ce"
-        sub_text = "#718096"
 
     st.markdown(f"""
     <style>
@@ -695,7 +693,7 @@ else:
 
 # Footer
 st.sidebar.divider()
-st.sidebar.markdown(f"""
+st.sidebar.markdown("""
     <div style='font-size: 0.75rem; color: #718096;'>
         <b>BrandSight GEO v1.2</b><br>
         Engine: LangGraph Orchestrator<br>

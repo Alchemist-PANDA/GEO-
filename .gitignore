@@ -26,3 +26,7 @@ jsonld_deploy_instructions.md
 # IDE
 .vscode/
 .idea/
+
+# Database
+*.db
+

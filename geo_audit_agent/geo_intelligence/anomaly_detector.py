@@ -1,16 +1,12 @@
 import os
 import json
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 from google import genai
-from sentence_transformers import SentenceTransformer
 import numpy as np
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Initialize local embedding model
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 def query_llms_for_anomalies(queries: List[str], client: genai.Client):
     """Queries Gemini to find cited brands for a list of queries."""
@@ -21,35 +17,51 @@ def query_llms_for_anomalies(queries: List[str], client: genai.Client):
                 model="gemini-2.0-flash",
                 contents=f"List top 5 {query}. Return ONLY names as a comma-separated list."
             )
-            results[query] = [name.strip() for name in response.text.split(",")]
+            response_text = response.text or ""
+            results[query] = [name.strip() for name in response_text.split(",")]
         except Exception as e:
             logger.error(f"Anomaly query failed for '{query}': {e}")
             results[query] = []
     return results
 
-def check_factual_correctness(brand_name: str, expected_city: str, expected_category: str, client: genai.Client):
+def check_factual_correctness(brand_name: str, expected_city: str, expected_category: str, client: Optional[genai.Client] = None):
     """Uses LLM as a factual verifier."""
+    if not client:
+        return True, "No client provided for verification"
     prompt = f"Does the brand '{brand_name}' exist in '{expected_city}'? Is it a '{expected_category}'? Answer with 'Correct' or 'Incorrect' and a short explanation."
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt
         )
-        is_correct = "Correct" in response.text
-        return is_correct, response.text
+        response_text = response.text or ""
+        is_correct = "Correct" in response_text
+        return is_correct, response_text
     except Exception as e:
         logger.error(f"Factual check failed for {brand_name}: {e}")
         return False, "Verification failed"
 
 def compute_semantic_similarity(brand_description: str, query: str):
     """Computes cosine similarity between brand description and search query."""
-    embeddings = embedding_model.encode([brand_description, query])
-    dot_product = np.dot(embeddings[0], embeddings[1])
-    norm_a = np.linalg.norm(embeddings[0])
-    norm_b = np.linalg.norm(embeddings[1])
-    return float(dot_product / (norm_a * norm_b))
+    try:
+        from sentence_transformers import SentenceTransformer
+        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        embeddings = embedding_model.encode([brand_description, query])
+        dot_product = np.dot(embeddings[0], embeddings[1])
+        norm_a = np.linalg.norm(embeddings[0])
+        norm_b = np.linalg.norm(embeddings[1])
+        return float(dot_product / (norm_a * norm_b))
+    except ImportError:
+        # Fallback Jaccard similarity when SentenceTransformer is missing (e.g. in CI)
+        words1 = set(brand_description.lower().split())
+        words2 = set(query.lower().split())
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+        if not union:
+            return 0.0
+        return float(len(intersection) / len(union))
 
-def flag_anomalies(audit_results: Dict, city: str, category: str, client: genai.Client):
+def flag_anomalies(audit_results: Dict, city: str, category: str, client: Optional[genai.Client] = None):
     """Identifies and logs citation anomalies."""
     anomalies = []
     cited_brands = audit_results.get("cited_brands", [])

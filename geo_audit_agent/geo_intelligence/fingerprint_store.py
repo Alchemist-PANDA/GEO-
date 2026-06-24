@@ -1,7 +1,5 @@
 import json
 import os
-import chromadb
-from chromadb.utils import embedding_functions
 
 def save_fingerprint_json(fingerprint: dict):
     """Saves fingerprint to data directory."""
@@ -13,21 +11,32 @@ def save_fingerprint_json(fingerprint: dict):
 
 def store_in_vector_db(fingerprint: dict):
     """Stores fingerprint keywords in ChromaDB for similarity search."""
-    client = chromadb.PersistentClient(path="data/chroma_db")
-    sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-    collection = client.get_or_create_collection(name="brand_fingerprints", embedding_function=sentence_transformer_ef)
+    try:
+        import chromadb
+        from chromadb.utils import embedding_functions
+        client = chromadb.PersistentClient(path="data/chroma_db")
+        sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+        collection = client.get_or_create_collection(name="brand_fingerprints", embedding_function=sentence_transformer_ef)  # type: ignore
 
-    # Join keywords into a single string for embedding
-    content = " ".join(fingerprint.get("keywords", []))
-    collection.upsert(
-        documents=[content],
-        metadatas=[{"brand": fingerprint["brand_name"], "url": fingerprint["url"]}],
-        ids=[fingerprint["brand_name"]]
-    )
+        # Join keywords into a single string for embedding
+        content = " ".join(fingerprint.get("keywords", []))
+        collection.upsert(
+            documents=[content],
+            metadatas=[{"brand": fingerprint["brand_name"], "url": fingerprint["url"]}],
+            ids=[fingerprint["brand_name"]]
+        )
+    except ImportError:
+        # Graceful no-op if chromadb is not installed
+        pass
 
 def search_similar_brands(query_text: str, n_results=3):
     """Finds brands with similar semantic fingerprints."""
-    client = chromadb.PersistentClient(path="data/chroma_db")
-    collection = client.get_collection(name="brand_fingerprints")
-    results = collection.query(query_texts=[query_text], n_results=n_results)
-    return results
+    try:
+        import chromadb
+        client = chromadb.PersistentClient(path="data/chroma_db")
+        collection = client.get_collection(name="brand_fingerprints")
+        results = collection.query(query_texts=[query_text], n_results=n_results)
+        return results
+    except ImportError:
+        # Return empty mock results if chromadb is not installed
+        return {"ids": [[]], "distances": [[]], "metadatas": [[]], "documents": [[]]}

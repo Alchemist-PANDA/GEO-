@@ -1,10 +1,10 @@
 """Remediation generation for GEO audit gaps."""
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from .industry_templates import get_template
 
 
-def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name: str, business_data: dict = None) -> List[Dict]:
+def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name: str, business_data: Optional[dict] = None) -> List[Dict]:
     """
     Generate remediation recommendations for identified gaps.
 
@@ -314,7 +314,7 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                         'title': 'Create dedicated service pages',
                         'reason': title,
                         'why_this_works': 'Individual service pages target specific search queries and help Google understand your full service offering.',
-                        'action': f'Create pages for: personal training, swimming pool, sauna, weight loss programs. Include pricing, benefits, and booking CTAs.',
+                        'action': 'Create pages for: personal training, swimming pool, sauna, weight loss programs. Include pricing, benefits, and booking CTAs.',
                         'effort': 'high',
                         'impact': 'high',
                         'quick_win': False,
@@ -382,7 +382,8 @@ def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name:
                 if f"best {cuisine_label.lower()} in {city}" not in [k.lower() for k in keyword_list]:
                     keyword_list.insert(0, local_content)
 
-                action_copy = f'Create pages for: {", ".join([f"\"{k}\"" for k in keyword_list])}. Include menu highlights, food photos, and location details.'
+                quoted_keywords = [f'"{k}"' for k in keyword_list]
+                action_copy = f'Create pages for: {", ".join(quoted_keywords)}. Include menu highlights, food photos, and location details.'
 
                 remediation.append({
                     'priority': priority,

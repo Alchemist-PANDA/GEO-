@@ -14,8 +14,8 @@ try:
 except Exception as e:
     error_str = str(e)
     if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-        print(f"Quota Error: API quota exceeded. Check billing at https://ai.google.dev/gemini-api/docs/rate-limits")
+        print("Quota Error: API quota exceeded. Check billing at https://ai.google.dev/gemini-api/docs/rate-limits")
     elif "401" in error_str or "403" in error_str or "PERMISSION_DENIED" in error_str:
-        print(f"Auth Error: Invalid API key or permissions issue")
+        print("Auth Error: Invalid API key or permissions issue")
     else:
         print(f"Error: {e}")

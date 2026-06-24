@@ -1,0 +1,602 @@
+[
+    {
+        "timestamp": 0,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324066.5013342,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324070.0224555,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324078.7063248,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324123.3630495,
+        "city": "London",
+        "category": "ecommerce fashion store",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324132.7610786,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324290.6783998,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324294.3624928,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324306.1141481,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324354.386372,
+        "city": "London",
+        "category": "ecommerce fashion store",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324360.6515265,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324431.5505066,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324438.2996862,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324450.8418765,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324457.8603444,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324462.8775704,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324468.2919836,
+        "city": "Islamabad",
+        "category": "burger restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324475.4832833,
+        "city": "Islamabad",
+        "category": "turkish restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324480.006668,
+        "city": "Manchester",
+        "category": "chinese restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324485.9363198,
+        "city": "Birmingham",
+        "category": "desi restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324490.3991666,
+        "city": "Dubai",
+        "category": "fast food",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324494.476758,
+        "city": "Edinburgh",
+        "category": "cafe",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324499.0852416,
+        "city": "Rome",
+        "category": "pizza restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324503.0234392,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324506.8960867,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324507.87203,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324511.7874563,
+        "city": "London",
+        "category": "ecommerce fashion store",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324512.7669618,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324522.6588905,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324587.78333,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324590.5644078,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324593.4870503,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324600.831019,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324604.1436458,
+        "city": "Islamabad",
+        "category": "business",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324607.7450964,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324684.6897378,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324688.662496,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324691.7905426,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324699.5168478,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324702.9102268,
+        "city": "Islamabad",
+        "category": "business",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324706.2899044,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324710.2484643,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324714.120072,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324717.7780204,
+        "city": "Islamabad",
+        "category": "burger restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324721.847368,
+        "city": "Islamabad",
+        "category": "turkish restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324726.0445838,
+        "city": "Manchester",
+        "category": "chinese restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324730.0820866,
+        "city": "Birmingham",
+        "category": "desi restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324733.4968278,
+        "city": "Dubai",
+        "category": "fast food",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324736.8959758,
+        "city": "Edinburgh",
+        "category": "cafe",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324740.6758916,
+        "city": "Rome",
+        "category": "pizza restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324744.2894392,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324747.802735,
+        "city": "London",
+        "category": "ecommerce fashion store",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324751.879343,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324761.5172255,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324767.7476578,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324773.5596676,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324780.0823953,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324854.3899941,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324857.647621,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324861.0122528,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324868.3158002,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324872.739742,
+        "city": "Islamabad",
+        "category": "business",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324878.6910636,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324883.042136,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324886.9964235,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324890.3790708,
+        "city": "Islamabad",
+        "category": "burger restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324895.138985,
+        "city": "Islamabad",
+        "category": "turkish restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324898.9652152,
+        "city": "Manchester",
+        "category": "chinese restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324902.559723,
+        "city": "Birmingham",
+        "category": "desi restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324907.0522206,
+        "city": "Dubai",
+        "category": "fast food",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324910.968719,
+        "city": "Edinburgh",
+        "category": "cafe",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324915.3932836,
+        "city": "Rome",
+        "category": "pizza restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324918.92759,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324923.0702388,
+        "city": "London",
+        "category": "ecommerce fashion store",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324927.056779,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324935.725818,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324942.0238307,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782324948.4800696,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782326999.0577726,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327924.7876637,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327930.8367562,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327937.219611,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327947.7007318,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327953.8335688,
+        "city": "Islamabad",
+        "category": "business",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327958.9835496,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327965.247174,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327972.4951313,
+        "city": "Islamabad",
+        "category": "dental clinic",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327980.2667391,
+        "city": "Islamabad",
+        "category": "burger restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327986.2098446,
+        "city": "Islamabad",
+        "category": "turkish restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327993.228043,
+        "city": "Manchester",
+        "category": "chinese restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782327999.2982824,
+        "city": "Birmingham",
+        "category": "desi restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328005.3325548,
+        "city": "Dubai",
+        "category": "fast food",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328010.9393475,
+        "city": "Edinburgh",
+        "category": "cafe",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328016.182878,
+        "city": "Rome",
+        "category": "pizza restaurant",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328022.6980546,
+        "city": "Islamabad",
+        "category": "fitness gym",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328029.9554038,
+        "city": "London",
+        "category": "ecommerce fashion store",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328037.3060708,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328083.9033177,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328096.768314,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782328107.4500604,
+        "city": "Test City",
+        "category": "test",
+        "anomalies": []
+    }
+]

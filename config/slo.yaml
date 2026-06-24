@@ -1,0 +1,23 @@
+service: BrandSight_GEO_Engine
+
+objectives:
+  availability:
+    target: 0.999  # 99.9%
+    sli: "rate(http_requests_total{status=~'2..|3..'}[5m]) / rate(http_requests_total[5m])"
+    error_budget_monthly: 43.2  # minutes
+
+  latency:
+    express:
+      p95_target_ms: 300
+      p99_target_ms: 500
+    balanced:
+      p95_target_ms: 5000
+      p99_target_ms: 10000
+    deep:
+      p95_target_ms: 60000
+      p99_target_ms: 120000
+
+  correctness:
+    citation_accuracy_target: 0.95
+    guardrail_false_positive_rate_max: 0.02
+    guardrail_false_negative_rate_max: 0.00  # zero tolerance

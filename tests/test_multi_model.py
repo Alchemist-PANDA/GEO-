@@ -1,5 +1,4 @@
-import pytest
-from multi_model import run_multi_model_audit, _calculate_position, _generate_summary, _get_deterministic_seed
+from multi_model import run_multi_model_audit, _calculate_position, _generate_summary
 
 
 def test_run_multi_model_audit_returns_results():

@@ -1,6 +1,5 @@
 """Tests for GEO audit agent."""
 
-import pytest
 from geo_audit_agent.audit import run_audit, detect_sentiment, extract_competitors
 from geo_audit_agent.measurement import measure_lift, calculate_visibility_score
 from geo_audit_agent.remediation import generate_remediation
@@ -364,7 +363,5 @@ class TestRemediation:
         # Should generate remediation for schema gap
         assert len(remediation) > 0
 
-        # Check titles are unique (deduplication happens in dashboard display logic)
-        titles = [rem['title'] for rem in remediation]
         # Note: deduplication is handled in dashboard.py, not remediation.py
         # This test verifies remediation.py generates consistent titles
