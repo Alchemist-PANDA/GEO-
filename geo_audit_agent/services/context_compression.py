@@ -1,7 +1,6 @@
 # context_compression.py
 import logging
 import torch
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,7 @@ class LLMLinguaCompressor:
         
         try:
             # Run compression
+            assert self.compressor is not None
             result = self.compressor.compress_prompt(
                 prompt=raw_context,
                 rate=target_rate,

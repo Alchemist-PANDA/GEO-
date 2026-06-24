@@ -2,7 +2,6 @@
 import os
 import json
 import tempfile
-import pytest
 from geo_audit_agent.agent import gap_analyst
 
 

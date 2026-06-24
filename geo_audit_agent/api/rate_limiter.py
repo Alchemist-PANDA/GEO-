@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 import redis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -16,11 +16,11 @@ class RedisRateLimiter:
                  db: int = 1, limit: int = 100, window: int = 3600):
         self.limit = limit
         self.window = window
+        self.redis: Optional[redis.Redis] = None
         try:
             self.redis = redis.Redis(host=host, port=port, db=db, socket_timeout=3)
         except Exception as e:
             logger.error(f"Redis rate limiter connection failed: {e}")
-            self.redis = None
 
     def is_allowed(self, client_key: str) -> Tuple[bool, Dict[str, str]]:
         now = int(time.time())
@@ -63,7 +63,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         user_id = request.headers.get("X-User-ID")
-        client_key = user_id or request.client.host
+        client_key = user_id or (request.client.host if request.client else "127.0.0.1")
 
         allowed, headers = self.limiter.is_allowed(client_key)
         if not allowed:

@@ -28,10 +28,15 @@ class JSONLDTool(BaseTool):
     description = "Generates Schema.org LocalBusiness JSON-LD markup"
     requires_llm = False
 
-    def run(self, brand_name: str, category: str, city: str, **kwargs) -> ToolResult:
+    def run(self, brand_name: str, category: str, city: str, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         from geo_audit_agent.geo_remediation_tools import generate_json_ld
         try:
-            output = generate_json_ld(brand_name, category, city)
+            product_info = {
+                "name": brand_name,
+                "description": f"A local {category} in {city}",
+                "address": city
+            }
+            output = generate_json_ld(brand_name, product_info)
             return ToolResult(success=True, output=output)
         except Exception as e:
             return ToolResult(success=False, output=None, error=str(e))
@@ -42,7 +47,7 @@ class WhitepaperTool(BaseTool):
     description = "Generates authority-building technical content"
     requires_llm = True
 
-    def run(self, brand_name: str, category: str, gaps: list, **kwargs) -> ToolResult:
+    def run(self, brand_name: str, category: str, gaps: list, **kwargs: Any) -> ToolResult:  # type: ignore[override]
         from geo_audit_agent.geo_remediation_tools import draft_technical_whitepaper
         try:
             output = draft_technical_whitepaper(brand_name, category, gaps)

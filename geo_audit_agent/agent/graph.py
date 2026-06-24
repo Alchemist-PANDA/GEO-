@@ -1,3 +1,4 @@
+from typing import Any
 from langgraph.graph import StateGraph, END
 from geo_audit_agent.agent.state import AuditState
 from geo_audit_agent.agent.nodes import (
@@ -24,7 +25,7 @@ def should_repair(state: AuditState) -> str:
     return "generate_report"
 
 
-def build_audit_graph() -> StateGraph:
+def build_audit_graph() -> Any:
     graph = StateGraph(AuditState)
 
     graph.add_node("guardrail", guardrail_node)

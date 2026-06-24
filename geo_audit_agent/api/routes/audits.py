@@ -1,8 +1,7 @@
 import uuid
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
-from sqlmodel import Session, select
+from sqlmodel import Session, select, desc
 
 from geo_audit_agent.api.auth import get_current_user
 from geo_audit_agent.api.schemas import AuditCreate, AuditResponse, AuditSummary
@@ -74,7 +73,7 @@ async def list_brand_audits(
     statement = (
         select(Audit)
         .where(Audit.brand_id == brand_id)
-        .order_by(Audit.created_at.desc())
+        .order_by(desc(Audit.created_at))
         .limit(50)
     )
     audits = session.exec(statement).all()

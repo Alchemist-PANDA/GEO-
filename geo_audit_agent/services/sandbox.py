@@ -4,7 +4,6 @@ Addresses: Audit 3 §2.A (Host Isolation), PE-OS Law 3
 Fixes: geo_remediation_tools.py:42 direct host filesystem writes
 """
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

@@ -44,9 +44,9 @@ def extract_tfidf_keywords(text: str, top_n=20):
         return []
     vectorizer = TfidfVectorizer(stop_words='english', max_features=top_n)
     try:
-        tfidf_matrix = vectorizer.fit_transform([text])
+        vectorizer.fit_transform([text])
         return vectorizer.get_feature_names_out().tolist()
-    except:
+    except Exception:
         return []
 
 def extract_schema_types(structured_data: dict):

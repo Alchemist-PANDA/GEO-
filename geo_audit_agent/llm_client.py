@@ -7,7 +7,7 @@ import json
 import logging
 import hashlib
 import requests
-from typing import List, Dict, Optional
+from typing import List, Dict
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential
 

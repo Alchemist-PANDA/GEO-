@@ -1,6 +1,6 @@
 # tasks.py
 import logging
-from sqlmodel import Session, select
+from sqlmodel import Session
 from geo_audit_agent.workers.celery_app import celery_app
 from geo_audit_agent.db.session import engine
 from geo_audit_agent.db.models import Audit, Brand, AuditStatus

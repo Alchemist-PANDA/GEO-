@@ -1,5 +1,4 @@
 # guardrail_golden_tests.py
-import json
 import unittest
 from unittest.mock import MagicMock
 # Import the guardrail definition from the security module (mocked or imported)

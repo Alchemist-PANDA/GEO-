@@ -1,5 +1,4 @@
 """Tests for the check_citation node logic."""
-import pytest
 from geo_audit_agent.agent import check_citation
 
 

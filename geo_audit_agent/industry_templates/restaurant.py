@@ -162,7 +162,7 @@ class RestaurantTemplate:
 
         # Return highest scoring subtype or default
         if scores:
-            best_subtype = max(scores, key=scores.get)
+            best_subtype = max(scores, key=lambda k: scores[k])
             return {
                 'key': best_subtype,
                 'label': self.cuisine_subtypes[best_subtype]['label'],

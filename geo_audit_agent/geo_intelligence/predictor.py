@@ -37,7 +37,7 @@ def train_model():
         mse = mean_squared_error(y, predictions)
         rmse = np.sqrt(mse)
         
-        print(f"Model Performance:")
+        print("Model Performance:")
         print(f"R-squared: {r2:.4f}")
         print(f"MAE: {mae:.4f}")
         print(f"RMSE: {rmse:.4f}")

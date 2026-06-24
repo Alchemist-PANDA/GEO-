@@ -12,8 +12,6 @@ from .llm_client import call_proxy_llm
 
 # Import remediation tools
 from .geo_remediation_tools import (
-    generate_json_ld,
-    draft_technical_whitepaper,
     generate_review_template
 )
 # Backward compatibility alias
@@ -144,7 +142,7 @@ def check_citation(state: AgentState) -> AgentState:
         state["is_cited"] = True
         state["confidence_score"] = 1.0
         state["sentiment"] = detect_sentiment_from_response(response, brand)
-        logger.info(f"Finished Node: check_citation (Exact match, Cited: True)")
+        logger.info("Finished Node: check_citation (Exact match, Cited: True)")
         return state
 
     # 2. Partial match of individual words (case-insensitive, ignoring short/common words)
@@ -249,7 +247,6 @@ def gap_analyst(state: AgentState) -> AgentState:
 
     brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
     category = state.get("category", "business")
-    city = state.get("city", "the area")
     business_context = state.get("business_context", {})
 
     # Check for external JSON configuration (Issue #4)

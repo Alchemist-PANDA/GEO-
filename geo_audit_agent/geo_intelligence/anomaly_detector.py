@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 from google import genai
 from sentence_transformers import SentenceTransformer
 import numpy as np
@@ -21,22 +21,26 @@ def query_llms_for_anomalies(queries: List[str], client: genai.Client):
                 model="gemini-2.0-flash",
                 contents=f"List top 5 {query}. Return ONLY names as a comma-separated list."
             )
-            results[query] = [name.strip() for name in response.text.split(",")]
+            response_text = response.text or ""
+            results[query] = [name.strip() for name in response_text.split(",")]
         except Exception as e:
             logger.error(f"Anomaly query failed for '{query}': {e}")
             results[query] = []
     return results
 
-def check_factual_correctness(brand_name: str, expected_city: str, expected_category: str, client: genai.Client):
+def check_factual_correctness(brand_name: str, expected_city: str, expected_category: str, client: Optional[genai.Client] = None):
     """Uses LLM as a factual verifier."""
+    if not client:
+        return True, "No client provided for verification"
     prompt = f"Does the brand '{brand_name}' exist in '{expected_city}'? Is it a '{expected_category}'? Answer with 'Correct' or 'Incorrect' and a short explanation."
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=prompt
         )
-        is_correct = "Correct" in response.text
-        return is_correct, response.text
+        response_text = response.text or ""
+        is_correct = "Correct" in response_text
+        return is_correct, response_text
     except Exception as e:
         logger.error(f"Factual check failed for {brand_name}: {e}")
         return False, "Verification failed"
@@ -49,7 +53,7 @@ def compute_semantic_similarity(brand_description: str, query: str):
     norm_b = np.linalg.norm(embeddings[1])
     return float(dot_product / (norm_a * norm_b))
 
-def flag_anomalies(audit_results: Dict, city: str, category: str, client: genai.Client):
+def flag_anomalies(audit_results: Dict, city: str, category: str, client: Optional[genai.Client] = None):
     """Identifies and logs citation anomalies."""
     anomalies = []
     cited_brands = audit_results.get("cited_brands", [])

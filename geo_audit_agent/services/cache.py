@@ -8,7 +8,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Fallback in-memory cache to support local testing without a live Redis container
-IN_MEMORY_CACHE = {}
+IN_MEMORY_CACHE: dict[str, str] = {}
 
 try:
     # Attempt to initialize Redis connection pool
@@ -29,9 +29,9 @@ def get_cached_response(tier: str, prompt: str) -> Optional[str]:
     key = get_cache_key(tier, prompt)
     if REDIS_AVAILABLE:
         try:
-            val = r.get(key)
+            val = r.get(key)  # type: ignore
             if val:
-                return val.decode("utf-8")
+                return val.decode("utf-8")  # type: ignore
         except Exception as e:
             logger.warning(f"Failed to read from Redis cache: {e}")
     return IN_MEMORY_CACHE.get(key)

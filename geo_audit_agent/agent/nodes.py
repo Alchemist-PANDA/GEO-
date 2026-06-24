@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import os
+from typing import Any
 from datetime import datetime
 from google import genai
 from geo_audit_agent.agent.state import AuditState
@@ -215,7 +216,7 @@ def gap_analyst_node(state: AuditState) -> AuditState:
                 brand_config["review_count"] = 10 if brand_config["recent_reviews"] else 0
                 
             business_data.update(brand_config)
-        except Exception as e:
+        except Exception:
             pass
     elif brand == "Burger Hub":
         business_data.update({
@@ -371,7 +372,7 @@ def remediation_handler_node(state: AuditState) -> AuditState:
     )
     from geo_audit_agent.remediation import generate_remediation
 
-    results = {}
+    results: dict[str, Any] = {}
     for action in state.planned_actions:
         tool_name = action.get("tool", "")
         try:

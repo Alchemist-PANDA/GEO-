@@ -2,8 +2,8 @@ import uuid
 from datetime import datetime
 from enum import Enum
 from typing import List, Dict, Any, Optional
-from sqlmodel import Field, SQLModel, Relationship, Column
-from sqlalchemy import Column as SAColumn, DateTime, text, Index, Enum as SAEnum, JSON
+from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import Column as SAColumn, DateTime, text, Index, JSON
 JSONB = JSON
 
 

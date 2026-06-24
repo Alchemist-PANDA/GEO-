@@ -1,11 +1,7 @@
 # continuous_retraining.py
 import os
 import pandas as pd
-import numpy as np
-import redis
-import json
 import logging
-from datetime import datetime
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
@@ -73,7 +69,7 @@ class ModelRetrainingPipeline:
         # Test-train split
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        with mlflow.start_run() as run:
+        with mlflow.start_run():
             mlflow.sklearn.autolog()
             
             # Train RandomForest Model

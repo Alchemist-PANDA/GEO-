@@ -1,8 +1,7 @@
 # feedback_collection.py
-import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional, cast, List
 import redis
 
 logger = logging.getLogger(__name__)
@@ -55,7 +54,7 @@ class FeedbackPersistenceManager:
         - Thumbs approval rate: thumbs_up / total count
         """
         try:
-            run_ids = self.r.lrange("geo:feedback:index", 0, -1)
+            run_ids = cast(List[Any], self.r.lrange("geo:feedback:index", 0, -1))
             if not run_ids:
                 return {"nps": 0.0, "total_feedback": 0, "approval_rate": 0.0}
                 
@@ -65,7 +64,7 @@ class FeedbackPersistenceManager:
             thumbs_up = 0
             
             for rid in run_ids:
-                data = self.r.hgetall(f"geo:feedback:{rid.decode('utf-8')}")
+                data = cast(Dict[Any, Any], self.r.hgetall(f"geo:feedback:{rid.decode('utf-8')}"))
                 if not data:
                     continue
                     

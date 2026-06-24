@@ -15,7 +15,7 @@ def store_in_vector_db(fingerprint: dict):
     """Stores fingerprint keywords in ChromaDB for similarity search."""
     client = chromadb.PersistentClient(path="data/chroma_db")
     sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-    collection = client.get_or_create_collection(name="brand_fingerprints", embedding_function=sentence_transformer_ef)
+    collection = client.get_or_create_collection(name="brand_fingerprints", embedding_function=sentence_transformer_ef)  # type: ignore
 
     # Join keywords into a single string for embedding
     content = " ".join(fingerprint.get("keywords", []))

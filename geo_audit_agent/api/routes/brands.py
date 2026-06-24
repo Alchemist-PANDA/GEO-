@@ -58,7 +58,7 @@ async def list_brands(
     # Calculate audit counts for each brand
     response_brands = []
     for brand in brands:
-        audit_count_stmt = select(func.count(Audit.id)).where(Audit.brand_id == brand.id)
+        audit_count_stmt = select(func.count(1)).where(Audit.brand_id == brand.id)
         count = session.exec(audit_count_stmt).one()
         
         brand_data = brand.model_dump()
@@ -81,7 +81,7 @@ async def get_brand(
             detail="Brand not found"
         )
         
-    audit_count_stmt = select(func.count(Audit.id)).where(Audit.brand_id == brand.id)
+    audit_count_stmt = select(func.count(1)).where(Audit.brand_id == brand.id)
     count = session.exec(audit_count_stmt).one()
     
     brand_data = brand.model_dump()
