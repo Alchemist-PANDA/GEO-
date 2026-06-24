@@ -1,20 +1,12 @@
 import json
 import logging
-import sys
-import os
+import argparse
 from geo_audit_agent.agent import build_geo_audit_agent
-
-# Add current dir to path for imports
-sys.path.append(os.getcwd())
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def run_baseline():
-    brand = "Burger Hub"
-    category = "fast food"
-    city = "Islamabad"
-
+def run_baseline(brand: str, category: str, city: str):
     logger.info(f"Running baseline audit for {brand} in {city}...")
     agent = build_geo_audit_agent()
 
@@ -24,7 +16,8 @@ def run_baseline():
         "city": city,
         "gaps": [],
         "planned_actions": [],
-        "remediation_results": []
+        "remediation_results": [],
+        "error": None
     }
 
     try:
@@ -39,14 +32,22 @@ def run_baseline():
             "brand": brand,
             "remediation_results": results.get("remediation_results", [])
         }
-        with open("geo_remediation_burger_hub.json", "w") as f:
+        safe_name = brand.lower().replace(" ", "_")
+        with open(f"geo_remediation_{safe_name}.json", "w") as f:
             json.dump(remediation_data, f, indent=4)
 
         logger.info("Baseline audit completed and results saved.")
         return results
     except Exception as e:
-        logger.error(f"Baseline audit failed: {e}")
+        logger.exception(f"Baseline audit failed: {e}")
         return None
 
 if __name__ == "__main__":
-    run_baseline()
+    # Issue #27: accept CLI arguments with backward-compatible defaults
+    parser = argparse.ArgumentParser(description="Run a baseline GEO audit.")
+    parser.add_argument("--brand", default="Burger Hub", help="Brand name to audit (default: Burger Hub)")
+    parser.add_argument("--category", default="fast food", help="Business category (default: fast food)")
+    parser.add_argument("--city", default="Islamabad", help="City name (default: Islamabad)")
+    args = parser.parse_args()
+
+    run_baseline(args.brand, args.category, args.city)

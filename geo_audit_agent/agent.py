@@ -1,17 +1,23 @@
 import os
 import json
 import logging
+import re
 from typing import TypedDict, Optional, List, Dict
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, END
 from google import genai
 
+# Import shared LLM client (Issue #6: single source of truth)
+from .llm_client import call_proxy_llm
+
 # Import remediation tools
 from .geo_remediation_tools import (
     generate_json_ld,
     draft_technical_whitepaper,
-    create_review_snippet
+    generate_review_template
 )
+# Backward compatibility alias
+create_review_snippet = generate_review_template
 
 # Configure logging
 logging.basicConfig(
@@ -66,7 +72,7 @@ def predictive_node(state: AgentState) -> AgentState:
     logger.info("Starting Node: predictive_node")
     features = {
         "has_json_ld": any(g.get("tool_required") == "generate_json_ld" for g in state.get("gaps", [])),
-        "recent_reviews": any(g.get("tool_required") == "create_review_snippet" for g in state.get("gaps", [])),
+        "recent_reviews": any(g.get("tool_required") in ("create_review_snippet", "generate_review_template") for g in state.get("gaps", [])),
         "high_authority": any(g.get("tool_required") == "draft_technical_whitepaper" for g in state.get("gaps", [])),
         "city_relevance": True # Simplified
     }
@@ -82,6 +88,7 @@ def anomaly_node(state: AgentState) -> AgentState:
     response = state.get("llm_response", "")
     cited_brands = re.findall(r"['\"]([^'\"]+)['\"]", response) if response else []
 
+    client = get_google_client()
     state["anomalies"] = flag_anomalies(
         {"cited_brands": cited_brands},
         state["city"],
@@ -106,35 +113,15 @@ def query_llm(state: AgentState) -> AgentState:
         logger.info("Finished Node: query_llm (mock mode)")
         return state
 
-    client = get_google_client()
-
-    if client is None:
-        logger.warning("Google API key not available - using mock response")
-        brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
-        category = state.get("category", "business")
-        city = state.get("city", "the area")
-        state["llm_response"] = f"For the best {category} in {city}, here are some top recommendations:\n\n1. {brand} - Known for quality and excellent service\n2. Local Favorite - Popular choice in the area\n3. Established Brand - Consistent quality\n\n{brand} stands out for its commitment to customer satisfaction."
-        logger.info("Finished Node: query_llm (fallback mode)")
-        return state
-
-    prompt = f"What is the best {state.get('category', 'business')} in {state.get('city', 'the area')}? Return a concise answer with specific names."
+    prompt = f"What is the best {category} in {city}? Return a concise answer with specific names."
+    messages = [{"role": "user", "content": prompt}]
 
     try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config={
-                "temperature": 0.2,
-                "max_output_tokens": 1000
-            }
-        )
-        state["llm_response"] = response.text
+        content = call_proxy_llm("gc/gemini-3-flash-preview", messages, max_tokens=1000)
+        state["llm_response"] = content
     except Exception as e:
         logger.error(f"query_llm failed: {e}")
         # Fallback to mock response on error
-        brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
-        category = state.get("category", "business")
-        city = state.get("city", "the area")
         state["llm_response"] = f"For the best {category} in {city}, here are some top recommendations:\n\n1. {brand} - Known for quality and excellent service\n2. Local Favorite - Popular choice in the area\n3. Established Brand - Consistent quality\n\n{brand} stands out for its commitment to customer satisfaction."
 
     logger.info("Finished Node: query_llm")
@@ -142,29 +129,51 @@ def query_llm(state: AgentState) -> AgentState:
 
 def check_citation(state: AgentState) -> AgentState:
     logger.info("Starting Node: check_citation")
-    brand = (state.get("brand_name") or state.get("brand", "")).lower()
-    response = state.get("llm_response", "").lower() if state.get("llm_response") else ""
+    brand = (state.get("brand_name") or state.get("brand", "")).strip()
+    response = state.get("llm_response", "") or ""
 
-    if not response or "error:" in response:
+    if not response or "error:" in response.lower():
         state["is_cited"] = False
         state["confidence_score"] = 0.0
         state["sentiment"] = "none"
-    elif brand in response:
+        logger.info("Finished Node: check_citation (empty or error response)")
+        return state
+
+    # 1. Exact match (case-insensitive) -> 1.0 confidence
+    if brand.lower() in response.lower():
         state["is_cited"] = True
         state["confidence_score"] = 1.0
-        # Detect sentiment
-        state["sentiment"] = detect_sentiment_from_response(state.get("llm_response", ""), state.get("brand_name", ""))
+        state["sentiment"] = detect_sentiment_from_response(response, brand)
+        logger.info(f"Finished Node: check_citation (Exact match, Cited: True)")
+        return state
+
+    # 2. Partial match of individual words (case-insensitive, ignoring short/common words)
+    brand_words = [w.lower() for w in re.findall(r"\w+", brand)]
+    stop_words = {"the", "and", "for", "with", "best"}
+    filtered_words = [w for w in brand_words if len(w) > 2 and w not in stop_words]
+
+    if not filtered_words:
+        # Fallback to unfiltered words if everything was a stop word
+        filtered_words = [w for w in brand_words if len(w) > 1]
+
+    response_lower = response.lower()
+    matches = [word for word in filtered_words if word in response_lower]
+
+    if matches and len(filtered_words) > 0:
+        match_ratio = len(matches) / len(filtered_words)
+        state["is_cited"] = True
+        # Graduated confidence score based on ratio of matched words
+        state["confidence_score"] = round(match_ratio, 2)
+        state["sentiment"] = "neutral"
     else:
-        brand_words = brand.split()
-        matches = [word for word in brand_words if len(word) > 2 and word in response]
-        state["is_cited"] = bool(matches)
-        state["confidence_score"] = 0.5 if matches else 0.0
-        state["sentiment"] = "neutral" if matches else "none"
+        state["is_cited"] = False
+        state["confidence_score"] = 0.0
+        state["sentiment"] = "none"
 
     # Extract competitors
-    state["competitors"] = extract_competitors_from_response(state.get("llm_response", ""), state.get("brand_name", ""))
+    state["competitors"] = extract_competitors_from_response(response, brand)
 
-    logger.info(f"Finished Node: check_citation (Cited: {state['is_cited']}, Sentiment: {state.get('sentiment')})")
+    logger.info(f"Finished Node: check_citation (Cited: {state['is_cited']}, Confidence: {state['confidence_score']})")
     return state
 
 def detect_sentiment_from_response(raw_response: str, brand_name: str) -> str:
@@ -243,6 +252,35 @@ def gap_analyst(state: AgentState) -> AgentState:
     city = state.get("city", "the area")
     business_context = state.get("business_context", {})
 
+    # Check for external JSON configuration (Issue #4)
+    config_path = os.getenv("GAP_CHECKLIST_PATH") or "gap_checklist.json"
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r") as f:
+                all_checklists = json.load(f)
+            # Override business_context with the configured values for this brand
+            brand_config = all_checklists.get(brand) or all_checklists.get("default") or {}
+            
+            # Map legacy/config keys to business_context expected keys
+            if "has_json_ld" in brand_config:
+                brand_config["has_schema"] = brand_config["has_json_ld"]
+            if "recent_reviews" in brand_config:
+                brand_config["review_count"] = 10 if brand_config["recent_reviews"] else 0
+                
+            business_context = {**business_context, **brand_config}
+            logger.info(f"Loaded gap checklist configuration for {brand}")
+        except Exception as e:
+            logger.error(f"Failed to load gap checklist configuration: {e}")
+
+    # Fallback to hardcoded defaults for Burger Hub if no config file exists
+    elif brand == "Burger Hub":
+        business_context = {
+            "has_schema": False,
+            "review_count": 0,
+            "has_technical_whitepaper": False,
+            **business_context
+        }
+
     # Get industry template
     template = get_template(category)
 
@@ -273,15 +311,27 @@ def gap_analyst(state: AgentState) -> AgentState:
                 "tool_required": "create_review_snippet"
             })
 
+        if not business_context.get('high_authority'):
+            gaps.append({
+                "gap_type": "Authority Signals",
+                "description": "No high-authority backlinks or citations detected.",
+                "severity": "medium",
+                "tool_required": "draft_technical_whitepaper"
+            })
+
     # Normalize gaps to include canonical fields for backward compatibility
+    # AND normalize severity to Title Case (Issue #11)
     normalized_gaps = []
     for gap in gaps:
+        raw_severity = gap.get('severity') or gap.get('priority') or 'medium'
+        severity_title = raw_severity.capitalize()  # "high" -> "High", "medium" -> "Medium", etc.
+        
         normalized_gap = {
             'gap_type': gap.get('gap_type') or gap.get('title') or gap.get('type') or 'Visibility Gap',
             'type': gap.get('type') or gap.get('gap_type') or 'generic',
             'title': gap.get('title') or gap.get('gap_type') or 'Visibility Gap',
             'description': gap.get('description') or gap.get('reason') or '',
-            'severity': gap.get('severity') or gap.get('priority') or 'medium',
+            'severity': severity_title,
         }
         # Preserve original fields like tool_required
         for key, value in gap.items():
@@ -301,18 +351,19 @@ def planner(state: AgentState) -> AgentState:
         state["planned_actions"] = []
         return state
 
-    client = get_google_client()
-
-    if client is None or state.get("force_mock", False):
+    if state.get("force_mock", False):
         # Fallback: deterministic plan based on gaps
-        logger.info("Using fallback planner (no API key or mock mode)")
+        logger.info("Using fallback planner (mock mode)")
         planned_actions = []
         for gap in state["gaps"]:
-            tool = gap.get("tool_required", "generate_json_ld")
+            tool = gap.get("tool_required") or "generate_json_ld"
+            # Backward compat: rename old names to generated names
+            if tool == "create_review_snippet":
+                tool = "generate_review_template"
             planned_actions.append({
                 "action": f"Address {gap['gap_type']}: {gap['description']}",
                 "tool_required": tool,
-                "estimated_effort_days": 7 if gap["severity"] == "high" else 3
+                "estimated_effort_days": 7 if gap["severity"].lower() == "high" else 3
             })
         state["planned_actions"] = planned_actions
         logger.info(f"Finished Node: planner (fallback mode, {len(planned_actions)} actions)")
@@ -322,33 +373,41 @@ def planner(state: AgentState) -> AgentState:
     brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
     prompt = f"""Based on these gaps: {gaps_str}, write a short action plan to improve AI citation for {brand}.
     Output as valid JSON only, containing a list of objects under 'steps'.
-    Each step MUST include a 'tool_required' field corresponding to one of: generate_json_ld, draft_technical_whitepaper, create_review_snippet.
+    Each step MUST include a 'tool_required' field corresponding to one of: generate_json_ld, draft_technical_whitepaper, generate_review_template.
     Each step must have: 'action', 'tool_required', and 'estimated_effort_days'."""
+    messages = [{"role": "user", "content": prompt}]
 
     try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config={
-                "temperature": 0.2,
-                "max_output_tokens": 500
-            }
-        )
-        content = response.text
-        # More robust JSON extraction
+        content = call_proxy_llm("gc/gemini-3-flash-preview", messages, max_tokens=500)
+        # More robust JSON extraction (Issue #10)
         json_start = content.find('{')
         json_end = content.rfind('}') + 1
         if json_start != -1 and json_end != 0:
             clean_json = content[json_start:json_end]
             plan_data = json.loads(clean_json)
-            state["planned_actions"] = plan_data.get("steps", [])
+            # Normalize tool names in plan_data
+            steps = plan_data.get("steps", [])
+            for step in steps:
+                if step.get("tool_required") == "create_review_snippet":
+                    step["tool_required"] = "generate_review_template"
+            state["planned_actions"] = steps
         else:
             logger.error("No JSON found in planner response")
             state["planned_actions"] = []
     except Exception as e:
         logger.error(f"planner failed: {e}")
-        # Fallback to manual review if JSON parsing fails
-        state["planned_actions"] = [{"action": "Manual Review", "tool_required": "None", "estimated_effort_days": 1}]
+        # Fallback to deterministic plan on error
+        planned_actions = []
+        for gap in state["gaps"]:
+            tool = gap.get("tool_required") or "generate_json_ld"
+            if tool == "create_review_snippet":
+                tool = "generate_review_template"
+            planned_actions.append({
+                "action": f"Address {gap['gap_type']}: {gap['description']}",
+                "tool_required": tool,
+                "estimated_effort_days": 7 if gap["severity"].lower() == "high" else 3
+            })
+        state["planned_actions"] = planned_actions
 
     logger.info("Finished Node: planner")
     return state
@@ -371,12 +430,15 @@ def remediation_handler(state: AgentState) -> AgentState:
     state["remediation"] = remediation
 
     # Legacy fallback: convert to old format for backward compatibility
+    # AND add output_full alongside output_preview (Issue #15)
     legacy_results = []
     for rem in remediation:
+        action_text = rem.get("action", "")
         legacy_results.append({
             "tool": rem.get("type", "remediation"),
             "status": "success",
-            "output_preview": rem.get("action", "")[:100] + "..."
+            "output_preview": action_text[:100] + "..." if len(action_text) > 100 else action_text,
+            "output_full": action_text
         })
     state["remediation_results"] = legacy_results
 
@@ -457,7 +519,6 @@ class GeoAuditAgent:
         result["competitors"] = result.get("competitors", [])
         result["strengths"] = result.get("strengths", [])
         result["remediation"] = result.get("remediation", [])
-        result["template_used"] = result.get("template_used", "Generic")
         result["template_used"] = result.get("template_used", "Generic")
 
         return result
