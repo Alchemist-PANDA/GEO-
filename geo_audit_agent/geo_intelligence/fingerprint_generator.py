@@ -16,7 +16,8 @@ def crawl_competitor(url: str):
         meta_desc = ""
         desc_tag = soup.find("meta", attrs={"name": "description"})
         if desc_tag:
-            meta_desc = desc_tag.get("content", "")
+            val = desc_tag.get("content", "")
+            meta_desc = val if isinstance(val, str) else ""
 
         # Extract all text
         for script in soup(["script", "style"]):
