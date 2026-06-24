@@ -45,6 +45,10 @@ if "theme" not in st.session_state:
     st.session_state.theme = "Light"
 if "multi_model_results" not in st.session_state:
     st.session_state.multi_model_results = None
+if "tracked_keywords" not in st.session_state:
+    st.session_state.tracked_keywords = []
+if "keyword_runs" not in st.session_state:
+    st.session_state.keyword_runs = {}
 
 # Pre-populate default data for first-load beauty
 if st.session_state.audit_results is None:
@@ -87,6 +91,21 @@ if st.session_state.audit_results is None:
         }
     ]
     st.session_state.score_history.append(0.68)
+
+if not st.session_state.tracked_keywords:
+    default_keywords = [
+        "best fast food in Islamabad",
+        "top fast food brands",
+        "best burger near me",
+        "fast food for delivery",
+        "best fast food for families"
+    ]
+    st.session_state.tracked_keywords = default_keywords
+    for i, kw in enumerate(default_keywords):
+        st.session_state.keyword_runs[kw] = {
+            "last_run": "2026-06-2" + str(2 + (i % 3)),
+            "num_runs": 1 + (i % 4)
+        }
 
 
 # --- Custom CSS (Modernized) ---
@@ -410,8 +429,52 @@ def get_competitor_data(brand_name, category):
         b_scores["Average"] = int(sum(b_scores[m] for m in model_names) / len(model_names))
         b_scores["brand"] = b
         data.append(b_scores)
-        
+
     return data
+
+def get_keyword_monitoring_data(keyword, brand_name):
+    """Restructure multi-model audit signals by keyword/prompt instead of by brand."""
+    import hashlib
+
+    model_names = ["ChatGPT", "Gemini", "Meta.ai", "Claude.ai", "DeepSeek"]
+    model_breakdown = []
+    brands_mentioned_total = 0
+    sources_total = 0
+
+    for m in model_names:
+        seed_str = f"{keyword}:{m}:{brand_name}"
+        seed = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16) % 100
+
+        mentioned = seed % 100 >= 35
+        n_brands = 2 + (seed % 12)
+        n_sources = 1 + (seed % 9)
+        brands_mentioned_total += n_brands
+        sources_total += n_sources
+
+        model_breakdown.append({
+            "model": m,
+            "brand_mentioned": mentioned,
+            "brands_count": n_brands,
+            "sources_count": n_sources
+        })
+
+    overview_seed = int(hashlib.md5(f"{keyword}:overview".encode()).hexdigest()[:8], 16) % 100
+    ai_overview = overview_seed % 100 >= 55
+
+    # Deterministic trend (last 6 runs) for the sparkline view
+    trend = []
+    for i in range(6):
+        t_seed = int(hashlib.md5(f"{keyword}:trend:{i}".encode()).hexdigest()[:8], 16) % 100
+        trend.append(30 + (t_seed % 60))
+
+    return {
+        "keyword": keyword,
+        "ai_overview": ai_overview,
+        "brands_count": brands_mentioned_total,
+        "sources_count": sources_total,
+        "model_breakdown": model_breakdown,
+        "trend": trend
+    }
 
 def create_multi_model_chart(data, selected_brand, is_dark=True):
     # Sort data by Average score descending
@@ -795,8 +858,8 @@ if st.session_state.audit_results:
     res = st.session_state.audit_results
 
     # Navigation Tabs
-    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare = st.tabs([
-        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark"
+    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare, tab_keywords = st.tabs([
+        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark", "🔍 Keyword Monitoring"
     ])
 
     with tab_overview:
@@ -1176,6 +1239,103 @@ if st.session_state.audit_results:
                         margin=dict(l=40, r=40, t=20, b=20)
                     )
                     st.plotly_chart(fig_radar, use_container_width=True)
+
+    with tab_keywords:
+        kw_is_dark = st.session_state.theme == "Dark"
+        kw_subtitle_color = "#94A3B8" if kw_is_dark else "#64748B"
+
+        st.markdown(f"""
+            <h3 style="margin-bottom: 2px;">🔍 Keyword Monitoring</h3>
+            <p style="color: {kw_subtitle_color}; font-size: 0.95rem; margin-top: 0; margin-bottom: 20px;">
+                Track {brand_name_val}'s visibility across the search queries and prompts AI systems are asked.
+            </p>
+        """, unsafe_allow_html=True)
+
+        # Add Keyword Form
+        with st.form("add_keyword_form", clear_on_submit=True):
+            kw_col1, kw_col2 = st.columns([4, 1])
+            with kw_col1:
+                new_keyword = st.text_input("Add a keyword or prompt to monitor", placeholder="e.g. best fast food delivery in Islamabad", label_visibility="collapsed")
+            with kw_col2:
+                add_kw = st.form_submit_button("➕ Add Keyword", use_container_width=True)
+
+            if add_kw and new_keyword.strip():
+                kw_clean = new_keyword.strip()
+                if kw_clean not in st.session_state.tracked_keywords:
+                    st.session_state.tracked_keywords.append(kw_clean)
+                    st.session_state.keyword_runs[kw_clean] = {
+                        "last_run": datetime.now().strftime("%Y-%m-%d"),
+                        "num_runs": 1
+                    }
+                    st.toast(f"Now monitoring: {kw_clean}")
+                    st.rerun()
+                else:
+                    st.warning("That keyword is already being monitored.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        if not st.session_state.tracked_keywords:
+            st.info("No keywords tracked yet. Add one above to start monitoring AI visibility.")
+        else:
+            for kw in st.session_state.tracked_keywords:
+                kw_meta = st.session_state.keyword_runs.get(kw, {"last_run": "—", "num_runs": 0})
+                kw_data = get_keyword_monitoring_data(kw, brand_name_val)
+
+                overview_color = "#10B981" if kw_data["ai_overview"] else "#EF4444"
+                overview_bg = "rgba(16, 185, 129, 0.12)" if kw_data["ai_overview"] else "rgba(239, 68, 68, 0.12)"
+                overview_label = "YES" if kw_data["ai_overview"] else "NO"
+
+                with st.container(border=True):
+                    row_c1, row_c2, row_c3, row_c4, row_c5 = st.columns([3, 1.4, 1, 1, 1])
+                    with row_c1:
+                        st.markdown(f"**{kw}**")
+                        st.caption(f"Last run: {kw_meta['last_run']} · # runs: {kw_meta['num_runs']}")
+                    with row_c2:
+                        st.markdown(f"""
+                            <div style='text-align:center;'>
+                                <span class='status-pill' style='background-color: {overview_bg}; color: {overview_color};'>AI Overview: {overview_label}</span>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with row_c3:
+                        st.metric("Brands", kw_data["brands_count"])
+                    with row_c4:
+                        st.metric("Sources", kw_data["sources_count"])
+                    with row_c5:
+                        run_now = st.button("🔄 Run", key=f"run_kw_{kw}", use_container_width=True)
+                        if run_now:
+                            kw_meta["num_runs"] += 1
+                            kw_meta["last_run"] = datetime.now().strftime("%Y-%m-%d")
+                            st.session_state.keyword_runs[kw] = kw_meta
+                            st.toast(f"Re-ran monitoring for: {kw}")
+                            st.rerun()
+
+                    with st.expander("📊 View Detail"):
+                        d_col1, d_col2 = st.columns([1, 1])
+                        with d_col1:
+                            st.markdown("**Per-Model Breakdown**")
+                            for mb in kw_data["model_breakdown"]:
+                                mention_icon = "✅" if mb["brand_mentioned"] else "❌"
+                                st.markdown(f"{mention_icon} **{mb['model']}** — {mb['brands_count']} brands, {mb['sources_count']} sources")
+                        with d_col2:
+                            st.markdown("**Trend Over Time**")
+                            fig_kw_trend = go.Figure()
+                            fig_kw_trend.add_trace(go.Scatter(
+                                y=kw_data["trend"],
+                                mode='lines+markers',
+                                line=dict(color='#7C3AED', width=3),
+                                marker=dict(size=7, color='#3B82F6'),
+                                fill='tozeroy',
+                                fillcolor='rgba(124, 58, 237, 0.1)'
+                            ))
+                            fig_kw_trend.update_layout(
+                                height=160,
+                                margin=dict(l=0, r=0, t=10, b=0),
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                xaxis=dict(showgrid=False, showticklabels=False),
+                                yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
+                            )
+                            st.plotly_chart(fig_kw_trend, use_container_width=True, config={'displayModeBar': False})
 
 else:
     # Empty State Content
