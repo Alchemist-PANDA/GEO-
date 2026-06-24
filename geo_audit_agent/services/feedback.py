@@ -28,7 +28,7 @@ class FeedbackPersistenceManager:
         if not (0 <= score_nps <= 10):
             raise ValueError("NPS score must be an integer between 0 and 10.")
             
-        payload = {
+        payload: dict[str, Any] = {
             "run_id": run_id,
             "brand_name": brand_name,
             "score_nps": score_nps,
