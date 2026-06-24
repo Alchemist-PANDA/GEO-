@@ -532,7 +532,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             range=[0, 105]
         ),
         yaxis=dict(
-            tickfont=dict(color='#FFFFFF' if is_dark else '#0A0A0F', size=12, family='Inter', weight='bold'),
+            tickfont=dict(color='#FFFFFF' if is_dark else '#0A0A0F', size=12, family='Inter'),
             gridcolor='rgba(0,0,0,0)'
         )
     )
