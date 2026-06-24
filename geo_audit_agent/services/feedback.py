@@ -39,7 +39,7 @@ class FeedbackPersistenceManager:
         
         try:
             # Store primary record under a hash map
-            self.r.hset(f"geo:feedback:{run_id}", mapping=payload)
+            self.r.hset(f"geo:feedback:{run_id}", mapping=cast(Any, payload))
             # Add run ID to a tracking index list for analytical queries
             self.r.lpush("geo:feedback:index", run_id)
             return True
