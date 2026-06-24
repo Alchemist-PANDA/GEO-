@@ -1,5 +1,4 @@
 import json
-import os
 
 def calculate_lift(pre_file, post_file):
     with open(pre_file, 'r') as f:

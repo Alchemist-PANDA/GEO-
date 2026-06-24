@@ -2,9 +2,6 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 from sqlmodel import SQLModel
-from geo_audit_agent.db.models import (
-    UserProfile, Brand, Audit, AuditFeedback, LLMCallLog, GuardrailEvent
-)
 
 import os
 from dotenv import load_dotenv

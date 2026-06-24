@@ -1,22 +1,37 @@
+# Core
 streamlit>=1.30.0
 plotly>=5.0.0
 requests>=2.28.0
 python-dotenv
+
+# LangGraph
 langgraph>=0.2.0
-pydantic
-tenacity
+pydantic>=2.0.0
+tenacity>=8.0.0
+
+# FastAPI + Backend
 fastapi>=0.100.0
 uvicorn>=0.22.0
 sqlmodel>=0.0.14
 alembic>=1.11.0
 redis>=5.0.0
+
+# LLM
 google-genai>=0.1.0
-sentence-transformers>=2.2.0
-scikit-learn>=1.2.0
-mlflow>=2.3.0
+
+# Celery
 celery>=5.3.0
+
+# Monitoring
 prometheus-client>=0.17.0
+
+# Database
 psycopg2-binary>=2.9.0
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.1.0
+
+# Utils
 numpy
 pandas
-chromadb>=0.4.0

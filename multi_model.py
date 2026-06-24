@@ -8,7 +8,7 @@ IMPORTANT: This module supports both Live API Mode and Simulated Demo Mode.
 Simulated mode uses deterministic sample outputs for demonstration purposes only.
 """
 
-from typing import Dict, List
+from typing import List
 import random
 import hashlib
 

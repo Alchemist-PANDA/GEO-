@@ -113,8 +113,8 @@ def _generate_comparison_insight(
 ) -> str:
     """Generate natural language insight about the comparison."""
 
-    score_a = audit_a.get('confidence_score', 0)
-    score_b = audit_b.get('confidence_score', 0)
+    audit_a.get('confidence_score', 0)
+    audit_b.get('confidence_score', 0)
     position_a = audit_a.get('citation_position_score', 0)
     position_b = audit_b.get('citation_position_score', 0)
     cited_a = audit_a.get("citation_found", False)
