@@ -1,0 +1,37 @@
+disaster_recovery:
+  database:
+    failover_mode: automatic
+    replica_connection: "postgresql://read_replica:postgres@db-replica:5432/geo_saas"
+    heartbeat_interval_seconds: 5
+    max_lag_allowed_seconds: 10
+    backup_schedule: "0 2 * * *"  # Daily at 2 AM UTC
+    backup_retention_days: 30
+
+  llm_fallback:
+    providers:
+      primary:
+        name: google
+        model: "gemini-2.0-flash-lite"
+        timeout_ms: 10000
+      secondary:
+        name: groq
+        model: "llama-3.3-70b-versatile"
+        timeout_ms: 8000
+      tertiary:
+        name: simulated
+        model: "deterministic-fallback"
+    circuit_breaker:
+      max_failures: 5
+      reset_timeout_seconds: 60
+      half_open_attempts: 3
+
+  redis:
+    persistence: aof
+    aof_fsync: everysec
+    failover: sentinel
+    sentinel_quorum: 2
+
+  recovery_procedures:
+    rto_target_minutes: 15
+    rpo_target_minutes: 5
+    runbook_url: "https://docs.brandsightgeo.com/runbook/dr"
