@@ -29,9 +29,10 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
 
     models = [
         {"name": "ChatGPT", "provider": "openai", "style": "structured"},
-        {"name": "Claude", "provider": "anthropic", "style": "verbose"},
         {"name": "Gemini", "provider": "google", "style": "concise"},
-        {"name": "Perplexity", "provider": "perplexity", "style": "citation_heavy"}
+        {"name": "Meta.ai", "provider": "meta", "style": "verbose"},
+        {"name": "Claude.ai", "provider": "anthropic", "style": "structured"},
+        {"name": "DeepSeek", "provider": "deepseek", "style": "citation_heavy"}
     ]
 
     results = []

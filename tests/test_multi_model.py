@@ -7,7 +7,7 @@ def test_run_multi_model_audit_returns_results():
 
     assert "results" in result
     assert "summary" in result
-    assert len(result["results"]) == 4
+    assert len(result["results"]) == 5
 
 
 def test_multi_model_results_structure():
@@ -132,7 +132,7 @@ def test_no_crash_without_api_keys():
     result = run_multi_model_audit("Test Brand", "test", "Test City", use_real=True)
 
     assert "results" in result
-    assert len(result["results"]) == 4
+    assert len(result["results"]) == 5
     for model_result in result["results"]:
         assert model_result["mode"] in ["live_api", "simulated"]
 
@@ -143,7 +143,7 @@ def test_models_differ_in_mock_mode():
 
     mentioned_count = sum(1 for r in result["results"] if r["mentioned"])
 
-    assert mentioned_count != 0 or mentioned_count != 4
+    assert mentioned_count != 0 or mentioned_count != 5
 
 
 def test_sentiment_realism():
