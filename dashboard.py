@@ -42,7 +42,7 @@ if "score_history" not in st.session_state:
 if "comparison_data" not in st.session_state:
     st.session_state.comparison_data = {}
 if "theme" not in st.session_state:
-    st.session_state.theme = "Dark"
+    st.session_state.theme = "Light"
 if "multi_model_results" not in st.session_state:
     st.session_state.multi_model_results = None
 
@@ -111,17 +111,17 @@ def apply_theme():
         shadow_style = "0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05)"
         hover_shadow = "0 20px 40px -10px rgba(124, 58, 237, 0.25), 0 0 0 1px rgba(124, 58, 237, 0.2)"
     else:
-        bg_style = "radial-gradient(circle at 50% 0%, #f5f3ff 0%, #f9fafb 70%, #f3f4f6 100%)"
-        card_bg = "rgba(255, 255, 255, 0.75)"
-        text_color = "#1e293b"
-        border_color = "rgba(0, 0, 0, 0.06)"
-        accent_gradient = "linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)"
-        accent_hover = "linear-gradient(135deg, #6366F1 0%, #22D3EE 100%)"
-        sidebar_bg = "rgba(249, 250, 251, 0.85)"
-        input_bg = "rgba(0, 0, 0, 0.02)"
-        title_gradient = "linear-gradient(135deg, #0f172a 40%, #312e81 100%)"
-        shadow_style = "0 20px 40px -15px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8)"
-        hover_shadow = "0 20px 40px -10px rgba(79, 70, 229, 0.15), 0 0 0 1px rgba(79, 70, 229, 0.2)"
+        bg_style = "#F8FAFC"
+        card_bg = "rgba(255, 255, 255, 0.9)"
+        text_color = "#1E293B"
+        border_color = "rgba(124, 58, 237, 0.08)"
+        accent_gradient = "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)"
+        accent_hover = "linear-gradient(135deg, #8B5CF6 0%, #60A5FA 100%)"
+        sidebar_bg = "linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%)"
+        input_bg = "rgba(255, 255, 255, 0.9)"
+        title_gradient = "linear-gradient(135deg, #7C3AED 0%, #3B82F6 50%, #EC4899 100%)"
+        shadow_style = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 20px 50px -12px rgba(124, 58, 237, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.8) inset"
+        hover_shadow = "0 25px 60px -12px rgba(124, 58, 237, 0.2), 0 0 0 1px rgba(124, 58, 237, 0.15)"
 
     st.markdown(f"""
     <style>
@@ -326,22 +326,21 @@ apply_theme()
 
 # --- Helper Functions ---
 def create_circular_gauge(score, is_dark=True):
-    # score is out of 100
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = score,
         domain = {'x': [0, 1], 'y': [0, 1]},
         number = {
-            'font': {'size': 36, 'color': '#FFFFFF' if is_dark else '#0A0A0F', 'family': 'Inter'},
+            'font': {'size': 36, 'color': '#FFFFFF' if is_dark else '#1E293B', 'family': 'Inter'},
             'suffix': '%'
         },
         gauge = {
             'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "rgba(0,0,0,0)", 'tickfont': {'color': 'rgba(0,0,0,0)'}},
             'bar': {'color': "#7C3AED", 'thickness': 0.15},
-            'bgcolor': "rgba(255, 255, 255, 0.05)",
+            'bgcolor': "rgba(124, 58, 237, 0.05)" if not is_dark else "rgba(255, 255, 255, 0.05)",
             'borderwidth': 0,
             'steps': [
-                {'range': [0, 100], 'color': 'rgba(124, 58, 237, 0.1)'}
+                {'range': [0, 100], 'color': 'rgba(124, 58, 237, 0.08)' if not is_dark else 'rgba(124, 58, 237, 0.1)'}
             ]
         }
     ))
@@ -508,13 +507,15 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
     ))
 
     # Add Average line chart overlay
+    avg_line_color = '#FFFFFF' if is_dark else '#1E293B'
     fig.add_trace(go.Scatter(
         y=brands,
         x=avg_scores,
         name="Average",
         mode='lines+markers',
-        line=dict(color='#FFFFFF' if is_dark else '#0A0A0F', width=2, dash='dash'),
-        marker=dict(color='#7C3AED', size=8, line=dict(color='#FFFFFF' if is_dark else '#0A0A0F', width=1.5)),
+        line=dict(color=avg_line_color, width=2.5, dash='dash'),
+        marker=dict(color='#7C3AED', size=10, line=dict(color=avg_line_color, width=2),
+                    symbol='diamond'),
         hovertemplate="<b>%{y}</b><br>Average: %{x:.1f}<extra></extra>"
     ))
     
@@ -523,6 +524,8 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
     brands_lower = [b.lower() for b in brands]
     if selected_brand_normalized in brands_lower:
         selected_idx = brands_lower.index(selected_brand_normalized)
+        highlight_fill = "rgba(124, 58, 237, 0.08)" if not is_dark else "rgba(124, 58, 237, 0.12)"
+        highlight_border = "rgba(124, 58, 237, 0.3)" if not is_dark else "rgba(124, 58, 237, 0.4)"
         fig.add_shape(
             type="rect",
             xref="paper",
@@ -531,21 +534,21 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             x1=1,
             y0=selected_idx - 0.4,
             y1=selected_idx + 0.4,
-            fillcolor="rgba(124, 58, 237, 0.12)",
-            line=dict(color="rgba(124, 58, 237, 0.4)", width=1),
+            fillcolor=highlight_fill,
+            line=dict(color=highlight_border, width=1.5),
             layer="below"
         )
         
     fig.update_layout(
         barmode='group',
-        height=450,
-        margin=dict(l=100, r=20, t=30, b=40),
+        height=500,
+        margin=dict(l=120, r=30, t=40, b=50),
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         hoverlabel=dict(
-            bgcolor='rgba(26, 26, 46, 0.95)' if is_dark else 'rgba(255, 255, 255, 0.95)',
-            bordercolor='rgba(124, 58, 237, 0.6)',
-            font=dict(color='#FFFFFF' if is_dark else '#0A0A0F', family='Inter', size=12)
+            bgcolor='rgba(255, 255, 255, 0.97)' if not is_dark else 'rgba(26, 26, 46, 0.95)',
+            bordercolor='rgba(124, 58, 237, 0.5)',
+            font=dict(color='#1E293B' if not is_dark else '#FFFFFF', family='Inter', size=13)
         ),
         legend=dict(
             orientation="h",
@@ -553,19 +556,19 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             y=1.02,
             xanchor="center",
             x=0.5,
-            font=dict(color='#94A3B8' if is_dark else '#4A5568')
+            font=dict(color='#94A3B8' if is_dark else '#64748B', size=12)
         ),
         xaxis=dict(
             title=dict(
                 text="AI Score",
-                font=dict(color='#94A3B8' if is_dark else '#4A5568'),
+                font=dict(color='#94A3B8' if is_dark else '#64748B', size=13),
             ),
-            tickfont=dict(color='#94A3B8' if is_dark else '#4A5568'),
-            gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(0, 0, 0, 0.05)',
+            tickfont=dict(color='#94A3B8' if is_dark else '#64748B', size=11),
+            gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(124, 58, 237, 0.06)',
             range=[0, 105]
         ),
         yaxis=dict(
-            tickfont=dict(color='#FFFFFF' if is_dark else '#0A0A0F', size=12, family='Inter'),
+            tickfont=dict(color='#FFFFFF' if is_dark else '#1E293B', size=13, family='Inter'),
             gridcolor='rgba(0,0,0,0)'
         )
     )
@@ -575,15 +578,16 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
 # --- Helper Functions ---
 def create_gauge_chart(score, title="Confidence Score (%)"):
     is_dark = st.session_state.theme == "Dark"
+    text_color = 'white' if is_dark else '#1E293B'
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = score * 100,
         domain = {'x': [0, 1], 'y': [0, 1]},
-        title = {'text': title, 'font': {'size': 18, 'color': 'white' if is_dark else '#2D3748', 'family': 'Inter'}},
-        number = {'font': {'color': 'white' if is_dark else '#2D3748', 'family': 'Inter'}, 'suffix': '%'},
+        title = {'text': title, 'font': {'size': 18, 'color': text_color, 'family': 'Inter'}},
+        number = {'font': {'color': text_color, 'family': 'Inter'}, 'suffix': '%'},
         gauge = {
-            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#4A5568"},
-            'bar': {'color': "#3182ce"},
+            'axis': {'range': [None, 100], 'tickwidth': 1, 'tickcolor': "#64748B" if not is_dark else "#4A5568"},
+            'bar': {'color': "#7C3AED"},
             'bgcolor': "rgba(0,0,0,0)",
             'borderwidth': 0,
             'steps': [
@@ -591,7 +595,7 @@ def create_gauge_chart(score, title="Confidence Score (%)"):
                 {'range': [40, 70], 'color': '#FBD38D'},
                 {'range': [70, 100], 'color': '#9AE6B4'}],
             'threshold': {
-                'line': {'color': "white" if is_dark else "#2D3748", 'width': 3},
+                'line': {'color': "white" if is_dark else "#1E293B", 'width': 3},
                 'thickness': 0.75,
                 'value': score * 100}
         }
@@ -600,7 +604,7 @@ def create_gauge_chart(score, title="Confidence Score (%)"):
         height=220,
         margin=dict(l=30, r=30, t=50, b=20),
         paper_bgcolor='rgba(0,0,0,0)',
-        font={'color': 'white' if is_dark else '#2D3748'}
+        font={'color': 'white' if is_dark else '#1E293B'}
     )
     return fig
 
@@ -632,31 +636,51 @@ def generate_markdown_report(res, approved_items):
 # --- Authentication ---
 def login_screen():
     st.markdown("""
-        <div style='text-align: center; padding-top: 50px;'>
-            <h1 style='font-size: 2.5rem; margin-bottom: 0.5rem;'>🌍 BrandSight GEO</h1>
-            <p style='color: #718096; margin-bottom: 2rem;'>AI-Powered Generative Engine Optimization Dashboard</p>
-        </div>
+        <div class="geo-shape geo-shape-1"></div>
+        <div class="geo-shape geo-shape-2"></div>
+        <div class="geo-shape geo-shape-3"></div>
+        <div class="geo-shape geo-shape-4"></div>
+        <div class="geo-shape geo-shape-5"></div>
+        <style>
+            [data-testid="stSidebar"] { display: none !important; }
+            .main .block-container {
+                max-width: 100% !important;
+                padding: 0 !important;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+            }
+            .stApp {
+                background: linear-gradient(135deg, #F8FAFC 0%, #EDE9FE 30%, #DBEAFE 60%, #FCE7F3 100%) !important;
+            }
+        </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.5, 1])
+    col1, col2, col3 = st.columns([1.2, 1.5, 1.2])
     with col2:
-        with st.container(border=True):
-            st.markdown("### Secure Login")
-            with st.form("login_form"):
-                username = st.text_input("Username", placeholder="admin")
-                password = st.text_input("Password", type="password", placeholder="••••••••")
-                submit = st.form_submit_button("Sign In", use_container_width=True)
+        st.markdown("""
+            <div class="login-card">
+                <div class="login-logo">🌍</div>
+                <div class="login-title">BrandSight GEO</div>
+                <div class="login-subtitle">AI-Powered Generative Engine Optimization</div>
+            </div>
+        """, unsafe_allow_html=True)
 
-                if submit:
-                    # Issue #2: credentials from env vars with backward-compatible defaults
-                    expected_user = os.getenv("DASHBOARD_USER", "admin")
-                    expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
-                    if username == expected_user and password == expected_pass:
-                        st.session_state.authenticated = True
-                        st.success("Welcome back!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials")
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="admin")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            submit = st.form_submit_button("Sign In", use_container_width=True)
+
+            if submit:
+                expected_user = os.getenv("DASHBOARD_USER", "admin")
+                expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
+                if username == expected_user and password == expected_pass:
+                    st.session_state.authenticated = True
+                    st.success("Welcome back!")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
 
 if not st.session_state.authenticated:
     login_screen()
@@ -744,9 +768,11 @@ else:
 
 h_col1, h_col2 = st.columns([3, 1])
 with h_col1:
+    is_dark_header = st.session_state.theme == "Dark"
+    subtitle_color = "#94A3B8" if is_dark_header else "#64748B"
     st.markdown(f"""
         <h1 class='gradient-title' style='margin-bottom: 0;'>AI Brand Index</h1>
-        <p style='color: #94A3B8; font-size: 1.1rem; margin-top: 5px; font-weight: 500;'>
+        <p style='color: {subtitle_color}; font-size: 1.1rem; margin-top: 5px; font-weight: 500;'>
             {brand_name_val} compared to other brands in {category_val}
         </p>
     """, unsafe_allow_html=True)
@@ -755,10 +781,11 @@ with h_col2:
         cov_score = st.session_state.multi_model_results['summary']['geo_coverage_score'] if st.session_state.multi_model_results else int(res.get("confidence_score", 0.0) * 100)
         c_g1, c_g2 = st.columns([1, 1.2])
         with c_g1:
+            score_label_color = "#94A3B8" if st.session_state.theme == "Dark" else "#64748B"
             st.markdown(f"""
                 <div style='text-align: right; padding-top: 25px;'>
-                    <span style='font-size: 0.7rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em;'>AI BRAND SCORE</span>
-                    <h2 style='font-size: 2.2rem; font-weight: 800; margin: 0; background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>{cov_score}</h2>
+                    <span style='font-size: 0.7rem; color: {score_label_color}; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;'>AI BRAND SCORE</span>
+                    <h2 style='font-size: 2.2rem; font-weight: 900; margin: 0; background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>{cov_score}</h2>
                 </div>
             """, unsafe_allow_html=True)
         with c_g2:
@@ -777,7 +804,7 @@ if st.session_state.audit_results:
         m_col1, m_col2, m_col3 = st.columns(3)
         cov_score = st.session_state.multi_model_results['summary']['geo_coverage_score'] if st.session_state.multi_model_results else int(res.get("confidence_score", 0.0) * 100)
         is_dark = st.session_state.theme == "Dark"
-        icon_color = "#a5b4fc" if is_dark else "#4F46E5"
+        icon_color = "#a5b4fc" if is_dark else "#7C3AED"
         
         with m_col1:
             st.markdown(f"""
@@ -845,10 +872,11 @@ if st.session_state.audit_results:
         # Multi-Model Comparison Chart
         st.markdown("<br>", unsafe_allow_html=True)
         with st.container():
+            chart_subtitle_color = "#94A3B8" if is_dark else "#64748B"
             st.markdown(f"""
-                <div class="custom-card" style="padding: 24px; margin-bottom: 24px;">
+                <div class="custom-card" style="padding: 28px; margin-bottom: 24px;">
                     <h3 style="margin-top: 0; margin-bottom: 5px; font-size: 1.25rem;">Multi-Model Benchmark Chart</h3>
-                    <p style="color: #94A3B8; font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;">AI visibility comparison across ChatGPT, Gemini, Meta.ai, Claude.ai, DeepSeek, and Average</p>
+                    <p style="color: {chart_subtitle_color}; font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;">AI visibility comparison across ChatGPT, Gemini, Meta.ai, Claude.ai, DeepSeek, and Average</p>
                 </div>
             """, unsafe_allow_html=True)
             comp_data = get_competitor_data(brand_name_val, category_val)
@@ -870,9 +898,9 @@ if st.session_state.audit_results:
                 flags=re.IGNORECASE
             )
 
-            theme_bg = "#1A202C" if st.session_state.theme == "Dark" else "#FFFFFF"
-            theme_text = "#E2E8F0" if st.session_state.theme == "Dark" else "#2D3748"
-            theme_border = "#2D3748" if st.session_state.theme == "Dark" else "#E2E8F0"
+            theme_bg = "#1A202C" if st.session_state.theme == "Dark" else "rgba(255, 255, 255, 0.9)"
+            theme_text = "#E2E8F0" if st.session_state.theme == "Dark" else "#1E293B"
+            theme_border = "#2D3748" if st.session_state.theme == "Dark" else "rgba(124, 58, 237, 0.08)"
 
             st.markdown(f"""
                 <div style="max-height: 400px; overflow-y: auto; padding: 20px;
@@ -902,7 +930,7 @@ if st.session_state.audit_results:
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     xaxis=dict(showgrid=False, showticklabels=False),
-                    yaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(0, 0, 0, 0.05)', showticklabels=True, range=[0, 105]),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(124, 58, 237, 0.06)', showticklabels=True, range=[0, 105]),
                 )
                 st.plotly_chart(fig_trend, use_container_width=True)
 
@@ -1104,22 +1132,24 @@ if st.session_state.audit_results:
             if len(selected_brands) >= 1:
                 col_chart1, col_chart2 = st.columns(2)
                 with col_chart1:
+                    comp_is_dark = st.session_state.theme == "Dark"
                     fig_comp = go.Figure()
-                    for b in selected_brands:
+                    comp_colors = ['#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981']
+                    for idx_b, b in enumerate(selected_brands):
                         b_res = st.session_state.comparison_data[b]
                         fig_comp.add_trace(go.Bar(
                             x=[b],
                             y=[b_res.get('confidence_score', 0.0) * 100],
                             name=b,
-                            marker_color='#3182ce' if b == brand_name else '#A0AEC0'
+                            marker_color=comp_colors[idx_b % len(comp_colors)]
                         ))
                     fig_comp.update_layout(
-                        title="Search Confidence Benchmark (%)",
+                        title=dict(text="Search Confidence Benchmark (%)", font=dict(color='white' if comp_is_dark else '#1E293B')),
                         yaxis_range=[0, 105],
                         paper_bgcolor='rgba(0,0,0,0)',
                         plot_bgcolor='rgba(0,0,0,0)',
                         showlegend=False,
-                        font={'color': 'white' if st.session_state.theme == "Dark" else '#2D3748'}
+                        font={'color': 'white' if comp_is_dark else '#1E293B'}
                     )
                     st.plotly_chart(fig_comp, use_container_width=True)
 
@@ -1151,8 +1181,9 @@ else:
     # Empty State Content
     st.markdown("""
         <div style='text-align: center; padding: 100px 0;'>
-            <h2 style='font-size: 2rem;'>Ready to optimize your brand for AI Search?</h2>
-            <p style='color: #718096; max-width: 600px; margin: 0 auto;'>Configure your audit in the sidebar to start identifying and fixing search engine data gaps.</p>
+            <div style='font-size: 4rem; margin-bottom: 20px; animation: float3D 3s ease-in-out infinite;'>🌍</div>
+            <h2 style='font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 50%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Ready to optimize your brand for AI Search?</h2>
+            <p style='color: #64748B; max-width: 600px; margin: 0 auto; font-size: 1.1rem;'>Configure your audit in the sidebar to start identifying and fixing search engine data gaps.</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1176,6 +1207,6 @@ st.sidebar.markdown("""
     <div style='font-size: 0.75rem; color: #718096;'>
         <b>BrandSight GEO v1.2</b><br>
         Engine: LangGraph Orchestrator<br>
-        © 2026 Alchemist PANDA
+        &copy; 2026 Alchemist PANDA
     </div>
 """, unsafe_allow_html=True)
