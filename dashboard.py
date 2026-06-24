@@ -36,100 +36,168 @@ if "theme" not in st.session_state:
 
 # --- Custom CSS (Modernized) ---
 def apply_theme():
+    # Font imports
+    st.markdown("""
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    """, unsafe_allow_html=True)
+
     if st.session_state.theme == "Dark":
-        bg_color = "#0e1117"
-        card_color = "#1d232a"
-        text_color = "#e2e8f0"
-        border_color = "#2d3748"
-        accent_color = "#3b82f6"
+        bg_style = "radial-gradient(circle at 50% 0%, #171035 0%, #06060c 50%, #020205 100%)"
+        card_bg = "rgba(18, 18, 30, 0.55)"
+        text_color = "#f8fafc"
+        border_color = "rgba(255, 255, 255, 0.08)"
+        accent_gradient = "linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%)"
+        accent_hover = "linear-gradient(135deg, #8B5CF6 0%, #60A5FA 100%)"
+        sidebar_bg = "rgba(6, 6, 12, 0.85)"
+        input_bg = "rgba(255, 255, 255, 0.03)"
+        title_gradient = "linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%)"
+        shadow_style = "0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.05)"
+        hover_shadow = "0 20px 40px -10px rgba(124, 58, 237, 0.25), 0 0 0 1px rgba(124, 58, 237, 0.2)"
     else:
-        bg_color = "#f7fafc"
-        card_color = "#ffffff"
-        text_color = "#2d3748"
-        border_color = "#e2e8f0"
-        accent_color = "#3182ce"
+        bg_style = "radial-gradient(circle at 50% 0%, #f5f3ff 0%, #f9fafb 70%, #f3f4f6 100%)"
+        card_bg = "rgba(255, 255, 255, 0.75)"
+        text_color = "#1e293b"
+        border_color = "rgba(0, 0, 0, 0.06)"
+        accent_gradient = "linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)"
+        accent_hover = "linear-gradient(135deg, #6366F1 0%, #22D3EE 100%)"
+        sidebar_bg = "rgba(249, 250, 251, 0.85)"
+        input_bg = "rgba(0, 0, 0, 0.02)"
+        title_gradient = "linear-gradient(135deg, #0f172a 40%, #312e81 100%)"
+        shadow_style = "0 20px 40px -15px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.8)"
+        hover_shadow = "0 20px 40px -10px rgba(79, 70, 229, 0.15), 0 0 0 1px rgba(79, 70, 229, 0.2)"
 
     st.markdown(f"""
     <style>
         /* Base styles */
         .stApp {{
-            background-color: {bg_color};
-            color: {text_color};
-            font-family: 'Inter', sans-serif;
+            background: {bg_style} !important;
+            color: {text_color} !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }}
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {{
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.02em !important;
+        }}
+
+        /* Premium Gradient Text for Titles */
+        .stApp h1 {{
+            background: {title_gradient} !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            display: inline-block !important;
         }}
 
         /* Metric cards */
         [data-testid="stMetricValue"] {{
-            font-size: 1.8rem;
-            font-weight: 700;
+            font-family: 'Outfit', sans-serif !important;
+            font-size: 2.2rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.03em !important;
+            background: {accent_gradient} !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
         }}
 
         .stMetric {{
-            background-color: {card_color};
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid {border_color};
-            transition: transform 0.2s ease;
+            background: {card_bg} !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            padding: 24px !important;
+            border-radius: 16px !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: {shadow_style} !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }}
         .stMetric:hover {{
-            transform: translateY(-2px);
+            transform: translateY(-4px) !important;
+            box-shadow: {hover_shadow} !important;
+            border-color: rgba(124, 58, 237, 0.3) !important;
         }}
 
         /* Containers */
         .custom-card {{
-            background-color: {card_color};
-            padding: 24px;
-            border-radius: 12px;
-            border: 1px solid {border_color};
-            margin-bottom: 1.5rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            background: {card_bg} !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            padding: 28px !important;
+            border-radius: 16px !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: {shadow_style} !important;
+            margin-bottom: 1.5rem !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }}
+        .custom-card:hover {{
+            transform: translateY(-2px) !important;
+            box-shadow: {hover_shadow} !important;
         }}
 
         /* Buttons */
         .stButton>button {{
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            transition: all 0.2s;
-            font-weight: 500;
+            background: {accent_gradient} !important;
+            border: none !important;
+            color: white !important;
+            padding: 10px 24px !important;
+            border-radius: 10px !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 600 !important;
+            letter-spacing: -0.01em !important;
+            box-shadow: 0 4px 14px 0 rgba(124, 58, 237, 0.3) !important;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }}
+        .stButton>button:hover {{
+            background: {accent_hover} !important;
+            box-shadow: 0 6px 20px 0 rgba(124, 58, 237, 0.45) !important;
+            transform: translateY(-2px) !important;
+        }}
+        .stButton>button:active {{
+            transform: translateY(0px) !important;
         }}
 
         /* Tabs */
         .stTabs [data-baseweb="tab-list"] {{
-            gap: 8px;
-            background-color: transparent;
+            gap: 8px !important;
+            background-color: rgba(255, 255, 255, 0.02) !important;
+            padding: 6px !important;
+            border-radius: 12px !important;
+            border: 1px solid {border_color} !important;
         }}
         .stTabs [data-baseweb="tab"] {{
-            height: 45px;
-            white-space: pre;
-            background-color: {card_color};
-            border-radius: 8px 8px 0 0;
-            padding: 0 20px;
-            border: 1px solid {border_color};
-            color: {text_color};
-            font-weight: 600;
+            height: 42px !important;
+            background-color: transparent !important;
+            border-radius: 8px !important;
+            padding: 0 16px !important;
+            color: {text_color} !important;
+            font-family: 'Outfit', sans-serif !important;
+            font-weight: 500 !important;
+            border: none !important;
+            transition: all 0.3s !important;
         }}
         .stTabs [aria-selected="true"] {{
-            background-color: {accent_color} !important;
+            background: {accent_gradient} !important;
             color: white !important;
-            border-color: {accent_color} !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25) !important;
         }}
 
         /* Gap tiles */
         .gap-tile {{
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            border-left: 6px solid;
-            background-color: {card_color};
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid {border_color};
-            border-left-width: 6px;
+            padding: 22px !important;
+            border-radius: 16px !important;
+            margin-bottom: 16px !important;
+            background: {card_bg} !important;
+            backdrop-filter: blur(20px) !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: {shadow_style} !important;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }}
         .gap-tile:hover {{
-            transform: scale(1.02);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px) scale(1.02) !important;
+            box-shadow: {hover_shadow} !important;
         }}
 
         /* Status labels */
@@ -143,11 +211,12 @@ def apply_theme():
 
         /* Code blocks */
         code {{
-            background-color: #1a202c !important;
-            color: #e2e8f0 !important;
-            padding: 1rem !important;
-            border-radius: 8px !important;
-            font-size: 0.9rem !important;
+            background-color: rgba(10, 10, 20, 0.8) !important;
+            border: 1px solid {border_color} !important;
+            color: #a5b4fc !important;
+            padding: 1.2rem !important;
+            border-radius: 12px !important;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
         }}
 
         /* Scrollbars */
@@ -156,20 +225,44 @@ def apply_theme():
             height: 8px;
         }}
         ::-webkit-scrollbar-track {{
-            background: {bg_color};
+            background: transparent;
         }}
         ::-webkit-scrollbar-thumb {{
-            background: {border_color};
-            border-radius: 4px;
+            background: rgba(124, 58, 237, 0.3);
+            border-radius: 10px;
         }}
         ::-webkit-scrollbar-thumb:hover {{
-            background: {accent_color};
+            background: rgba(124, 58, 237, 0.6);
         }}
 
         /* Sidebar styling */
         [data-testid="stSidebar"] {{
-            background-color: {card_color};
-            border-right: 1px solid {border_color};
+            background: {sidebar_bg} !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-right: 1px solid {border_color} !important;
+        }}
+
+        /* Form containers */
+        div[data-testid="stForm"] {{
+            background: {card_bg} !important;
+            border-radius: 16px !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: {shadow_style} !important;
+            padding: 24px !important;
+        }}
+
+        /* Inputs */
+        div[data-baseweb="input"] {{
+            background-color: {input_bg} !important;
+            border-radius: 10px !important;
+            border: 1px solid {border_color} !important;
+            color: {text_color} !important;
+            transition: all 0.3s !important;
+        }}
+        div[data-baseweb="input"]:focus-within {{
+            border-color: rgba(124, 58, 237, 0.6) !important;
+            box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.4) !important;
         }}
     </style>
     """, unsafe_allow_html=True)
