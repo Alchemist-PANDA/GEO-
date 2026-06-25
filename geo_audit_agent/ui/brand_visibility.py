@@ -154,22 +154,30 @@ def render_brand_visibility(multi_model_results, current_score):
     except Exception:
         platform_ranks = {p: (1, 5) for p in platform_names}
 
-    gpt_rank, gpt_total = platform_ranks.get('ChatGPT', (1, 5))
-    gem_rank, gem_total = platform_ranks.get('Gemini', (1, 5))
-    perp_rank, perp_total = platform_ranks.get('Perplexity', (1, 5))
-    cld_rank, cld_total = platform_ranks.get('Claude', (1, 5))
+    rank_items = []
+    for platform in platform_names:
+        r, t = platform_ranks.get(platform, (1, 5))
+        rank_items.append(f"{platform}: #{r} of {t}")
+    rank_inline_text = " • ".join(rank_items)
 
     # 3. Visibility Growth Rate
     last_score = st.session_state.get("last_scan_score")
     growth_html = ""
-    if last_score is not None and last_score > 0:
-        growth_val = ((score_pct - last_score) / last_score) * 100
-        arrow = "▲" if growth_val >= 0 else "▼"
-        color = "#10B981" if growth_val >= 0 else "#EF4444"
-        growth_html = f"""
-            <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">{growth_val:+.1f}%</h3>
-            <span style="color: {color}; font-size: 0.75rem; font-weight: 600;">{arrow} since last scan</span>
-        """
+    if last_score is not None:
+        last_score_pct = int(last_score * 100) if last_score <= 1 else int(last_score)
+        if last_score_pct > 0:
+            growth_val = ((score_pct - last_score_pct) / last_score_pct) * 100
+            arrow = "▲" if growth_val >= 0 else "▼"
+            color = "#10B981" if growth_val >= 0 else "#EF4444"
+            growth_html = f"""
+                <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">{growth_val:+.1f}% {arrow}</h3>
+                <span style="color: {color}; font-size: 0.75rem; font-weight: 600;">since last scan</span>
+            """
+        else:
+            growth_html = f"""
+                <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">N/A</h3>
+                <span style="color: #64748B; font-size: 0.75rem; font-weight: 500;">Run a second scan to measure</span>
+            """
     else:
         growth_html = f"""
             <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">N/A</h3>
@@ -188,13 +196,10 @@ def render_brand_visibility(multi_model_results, current_score):
                 <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">📈 Growth Rate</span>
                 {growth_html}
             </div>
-            <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
-                <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; text-align: center; margin-bottom: 6px;">🏆 AI Rec Ranks</span>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 0.75rem; color: {text_color};">
-                    <div style="display: flex; justify-content: space-between;"><span>🤖 GPT:</span><strong>#{gpt_rank}/{gpt_total}</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>♊ Gem:</span><strong>#{gem_rank}/{gem_total}</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>🔍 Perp:</span><strong>#{perp_rank}/{perp_total}</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>🪶 Claude:</span><strong>#{cld_rank}/{cld_total}</strong></div>
+            <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 6px;">🏆 AI Recommendation Rank</span>
+                <div style="font-size: 0.8rem; color: {text_color}; font-weight: 600; line-height: 1.4; max-height: 52px; overflow-y: auto;">
+                    {rank_inline_text}
                 </div>
             </div>
         </div>

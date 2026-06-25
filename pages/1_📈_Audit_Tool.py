@@ -784,8 +784,7 @@ if run_audit:
             }
             st.write(f"🌐 Crawling search engines for {brand_name} visibility...")
             if st.session_state.audit_results:
-                old_score = st.session_state.audit_results.get("confidence_score", 0.0)
-                st.session_state.last_scan_score = int(old_score * 100) if old_score <= 1 else int(old_score)
+                st.session_state.last_scan_score = st.session_state.audit_results.get("confidence_score", 0)
             results = agent.invoke(inputs)
             st.session_state.audit_results = results
             st.session_state.comparison_data[brand_name] = results
