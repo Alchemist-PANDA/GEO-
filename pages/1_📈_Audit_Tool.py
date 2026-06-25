@@ -58,6 +58,8 @@ if "tracked_keywords" not in st.session_state:
     st.session_state.tracked_keywords = []
 if "keyword_runs" not in st.session_state:
     st.session_state.keyword_runs = {}
+if "last_scan_score" not in st.session_state:
+    st.session_state.last_scan_score = None
 
 # Pre-populate default data for first-load beauty
 if st.session_state.audit_results is None:
@@ -781,6 +783,9 @@ if run_audit:
                 "remediation_results": []
             }
             st.write(f"🌐 Crawling search engines for {brand_name} visibility...")
+            if st.session_state.audit_results:
+                old_score = st.session_state.audit_results.get("confidence_score", 0.0)
+                st.session_state.last_scan_score = int(old_score * 100) if old_score <= 1 else int(old_score)
             results = agent.invoke(inputs)
             st.session_state.audit_results = results
             st.session_state.comparison_data[brand_name] = results

@@ -55,7 +55,7 @@ def render_brand_visibility(multi_model_results, current_score):
     
     # Render KPI Cards Row
     st.markdown(clean_html(f"""
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
             <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 16px; text-align: center;">
                 <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">🎯 AI Score</span>
                 <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">{score_pct}.0%</h3>
@@ -70,6 +70,132 @@ def render_brand_visibility(multi_model_results, current_score):
                 <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">💬 Sentiment</span>
                 <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">72.0%</h3>
                 <span style="color: #10B981; font-size: 0.75rem; font-weight: 600;">▲ 0.8% positive</span>
+            </div>
+        </div>
+    """), unsafe_allow_html=True)
+
+    # --- Compute Additional Metrics ---
+    brand_name = multi_model_results.get("brand", "Burger Hub") if multi_model_results else "Burger Hub"
+    
+    # 1. Share of Voice
+    competitors = []
+    leaderboard = []
+    your_mentions = 1597
+    if multi_model_results:
+        competitors = multi_model_results.get("competitors", [])
+        leaderboard = multi_model_results.get("leaderboard", [])
+        your_mentions = multi_model_results.get("your_mentions", 1597)
+        
+    sov_val = 37.5
+    sov_subtext = "Mentions Share"
+    try:
+        if competitors and any(c.get("mentions") is not None for c in competitors):
+            total_mentions = sum(c.get("mentions", 0) for c in competitors)
+            has_self = any(c.get("name", "").lower() == brand_name.lower() for c in competitors)
+            if not has_self:
+                total_mentions += your_mentions
+                sov_val = (your_mentions / total_mentions) * 100 if total_mentions > 0 else 0.0
+            else:
+                brand_comp = next(c for c in competitors if c.get("name", "").lower() == brand_name.lower())
+                sov_val = (brand_comp.get("mentions", 0) / total_mentions) * 100 if total_mentions > 0 else 0.0
+            sov_subtext = f"{your_mentions} of {total_mentions} mentions"
+        elif leaderboard:
+            total_score = sum(c.get("overall", 0) for c in leaderboard)
+            your_score = next((c.get("overall", 0) for c in leaderboard if c.get("name", "").lower() == brand_name.lower()), score_pct)
+            has_self = any(c.get("name", "").lower() == brand_name.lower() for c in leaderboard)
+            if not has_self:
+                total_score += your_score
+            sov_val = (your_score / total_score) * 100 if total_score > 0 else 0.0
+            sov_subtext = "Estimated from overall scores"
+        else:
+            sov_val = 37.5
+            sov_subtext = "Estimated Share of Voice"
+    except Exception:
+        pass
+
+    # 2. AI Recommendation Rank
+    platform_names = ['ChatGPT', 'Gemini', 'Perplexity', 'Claude', 'Grok', 'DeepSeek']
+    platform_ranks = {}
+    try:
+        if leaderboard:
+            for platform in platform_names:
+                scores = []
+                for comp in leaderboard:
+                    comp_scores = comp.get("scores", {})
+                    val = 0
+                    for k, v in comp_scores.items():
+                        if k.lower() == platform.lower():
+                            val = v
+                            break
+                    scores.append((comp.get("name", ""), val))
+                
+                has_self = any(name.lower() == brand_name.lower() for name, _ in scores)
+                if not has_self:
+                    brand_plat_score = 50
+                    if multi_model_results and "results" in multi_model_results:
+                        for r in multi_model_results["results"]:
+                            if r.get("model", "").lower() == platform.lower():
+                                brand_plat_score = int(r.get("confidence", 0) * 100) if r.get("mentioned") else int(r.get("confidence", 0.25) * 100)
+                                break
+                    scores.append((brand_name, brand_plat_score))
+                
+                sorted_comp = sorted(scores, key=lambda x: x[1], reverse=True)
+                rank = [i+1 for i, (name, _) in enumerate(sorted_comp) if name.lower() == brand_name.lower()][0]
+                platform_ranks[platform] = (rank, len(scores))
+        else:
+            platform_ranks = {
+                'ChatGPT': (2, 6),
+                'Gemini': (4, 6),
+                'Perplexity': (1, 6),
+                'Claude': (3, 6),
+                'Grok': (5, 6),
+                'DeepSeek': (2, 6)
+            }
+    except Exception:
+        platform_ranks = {p: (1, 5) for p in platform_names}
+
+    gpt_rank, gpt_total = platform_ranks.get('ChatGPT', (1, 5))
+    gem_rank, gem_total = platform_ranks.get('Gemini', (1, 5))
+    perp_rank, perp_total = platform_ranks.get('Perplexity', (1, 5))
+    cld_rank, cld_total = platform_ranks.get('Claude', (1, 5))
+
+    # 3. Visibility Growth Rate
+    last_score = st.session_state.get("last_scan_score")
+    growth_html = ""
+    if last_score is not None and last_score > 0:
+        growth_val = ((score_pct - last_score) / last_score) * 100
+        arrow = "▲" if growth_val >= 0 else "▼"
+        color = "#10B981" if growth_val >= 0 else "#EF4444"
+        growth_html = f"""
+            <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">{growth_val:+.1f}%</h3>
+            <span style="color: {color}; font-size: 0.75rem; font-weight: 600;">{arrow} since last scan</span>
+        """
+    else:
+        growth_html = f"""
+            <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">N/A</h3>
+            <span style="color: #64748B; font-size: 0.75rem; font-weight: 500;">Run a second scan to measure</span>
+        """
+
+    # Render Second Row of Cards
+    st.markdown(clean_html(f"""
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+            <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">🗣️ Share of Voice</span>
+                <h3 style="margin: 8px 0 2px 0; font-size: 1.8rem; font-weight: 800; color: {text_color};">{sov_val:.1f}%</h3>
+                <span style="color: #64748B; font-size: 0.75rem; font-weight: 500;">{sov_subtext}</span>
+            </div>
+            <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">📈 Growth Rate</span>
+                {growth_html}
+            </div>
+            <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center;">
+                <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; text-align: center; margin-bottom: 6px;">🏆 AI Rec Ranks</span>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 0.75rem; color: {text_color};">
+                    <div style="display: flex; justify-content: space-between;"><span>🤖 GPT:</span><strong>#{gpt_rank}/{gpt_total}</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>♊ Gem:</span><strong>#{gem_rank}/{gem_total}</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>🔍 Perp:</span><strong>#{perp_rank}/{perp_total}</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>🪶 Claude:</span><strong>#{cld_rank}/{cld_total}</strong></div>
+                </div>
             </div>
         </div>
     """), unsafe_allow_html=True)
