@@ -638,3 +638,65 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
     color: #4C1D95;
     font-size: 0.9rem;
 }
+
+/* --- New styles for the UI overhaul --- */
+.priority-matrix {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 20px;
+}
+
+.priority-card {
+    border-radius: 12px;
+    padding: 16px;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    margin-bottom: 12px;
+}
+
+.priority-card.critical { border-left-color: #EF4444; }
+.priority-card.high { border-left-color: #F59E0B; }
+.priority-card.medium { border-left-color: #3B82F6; }
+.priority-card.low { border-left-color: #10B981; }
+
+.action-card {
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.3s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.platform-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.progress-bar-track {
+    flex: 1;
+    height: 8px;
+    background: #E2E8F0;
+    border-radius: 4px;
+    margin: 0 16px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+}
+
+}
