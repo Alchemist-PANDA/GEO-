@@ -14,7 +14,7 @@ from multi_model import run_multi_model_audit
 from geo_audit_agent.ui.gap_matrix import render_gap_matrix
 from geo_audit_agent.ui.remediation_cards import render_remediation_hub
 from geo_audit_agent.ui.lift_simulator import render_lift_simulator
-from geo_audit_agent.ui.brand_visibility import render_brand_visibility, normalize_multi_model_results
+from geo_audit_agent.ui.brand_visibility import render_brand_visibility, normalize_multi_model_results, render_market_simulator
 from geo_audit_agent.ui.live_ticker import render_live_ticker
 
 # Configure logging
@@ -922,6 +922,8 @@ if st.session_state.audit_results:
             </div>
             """, unsafe_allow_html=True)
 
+        render_market_simulator()
+        
         col_left, col_right = st.columns([1.6, 1])
 
         with col_left:
