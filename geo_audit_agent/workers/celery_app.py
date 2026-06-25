@@ -20,3 +20,14 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
 )
+
+# Celery Beat schedule for recurring scans
+celery_app.conf.beat_schedule = {
+    "weekly-competitor-scan": {
+        "task": "geo_audit_agent.workers.tasks.run_competitor_analysis",
+        "schedule": 604800.0,  # 7 days in seconds
+        # Provide placeholder args to avoid crash if no kwargs provided
+        "args": ["Burger Hub", "fast food", "Islamabad"],
+        "kwargs": {"limit": 5},
+    },
+}

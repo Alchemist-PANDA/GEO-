@@ -844,8 +844,8 @@ with h_col2:
 if st.session_state.audit_results:
     res = st.session_state.audit_results
 
-    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare, tab_keywords = st.tabs([
-        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark", "🔍 Keyword Monitoring"
+    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare, tab_keywords, tab_competitors = st.tabs([
+        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark", "🔍 Keyword Monitoring", "🕵️ Competitor Intelligence"
     ])
 
     with tab_overview:
@@ -1196,6 +1196,197 @@ if st.session_state.audit_results:
                                 yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
                             )
                             st.plotly_chart(fig_kw_trend, use_container_width=True, config={'displayModeBar': False})
+
+    with tab_competitors:
+        import time
+        import requests
+        
+        st.markdown("### 🕵️ AI Competitor Intelligence")
+        st.caption("Discover, crawl, and analyze how your brand compares to top competitors across AI platforms.")
+        
+        # Alerts Section
+        try:
+            user_id = str(res.get("id")) if res.get("id") else "default_user"
+            alerts_resp = requests.get(f"http://localhost:8000/api/v1/competitors/alerts/{user_id}").json()
+            alerts = alerts_resp.get("alerts", [])
+            if alerts:
+                with st.expander(f"🔔 You have {len(alerts)} unread alerts!", expanded=True):
+                    for alert in alerts:
+                        if alert.get("severity") in ["high", "critical"]:
+                            st.error(f"**{alert.get('type').upper()}**: {alert.get('message')}")
+                        elif alert.get("severity") == "medium":
+                            st.warning(f"**{alert.get('type').upper()}**: {alert.get('message')}")
+                        else:
+                            st.info(f"**{alert.get('type').upper()}**: {alert.get('message')}")
+        except Exception:
+            pass # Silently fail if alerts API isn't reachable
+        
+        comp_btn_col, comp_status_col = st.columns([2, 5])
+        with comp_btn_col:
+            if st.button("🚀 Discover & Analyze Competitors", type="primary", use_container_width=True):
+                st.session_state.competitor_task_started = True
+                # Call POST /api/v1/competitors/analyze
+                try:
+                    resp = requests.post("http://localhost:8000/api/v1/competitors/analyze", json={
+                        "brand_name": res.get("brand_name", "Burger Hub"),
+                        "category": res.get("category", "fast food"),
+                        "city": res.get("city", "Islamabad"),
+                        "limit": 3
+                    })
+                    if resp.status_code == 202:
+                        st.session_state.competitor_task_id = resp.json().get("task_id")
+                except Exception as e:
+                    st.error(f"Failed to start task: {e}")
+                
+        if st.session_state.get("competitor_task_started"):
+            task_id = st.session_state.get("competitor_task_id")
+            if task_id:
+                # Poll status
+                try:
+                    status_resp = requests.get(f"http://localhost:8000/api/v1/competitors/status/{task_id}").json()
+                    status = status_resp.get("status")
+                    if status in ["PENDING", "STARTED"]:
+                        st.info(f"Analysis task running... Status: {status}")
+                        time.sleep(2)
+                        st.rerun()
+                    elif status == "SUCCESS":
+                        st.success("Analysis complete!")
+                        st.session_state.competitor_task_started = False
+                    elif status == "FAILURE":
+                        st.error("Analysis failed.")
+                        st.session_state.competitor_task_started = False
+                except Exception as e:
+                    st.warning("Could not connect to API for status update.")
+            else:
+                st.info("Analysis task dispatched. Waiting for task ID...")
+        
+        # Always attempt to fetch leaderboard
+        st.markdown("#### 🏆 AI Visibility Leaderboard")
+        brand_name = res.get("brand_name", "Burger Hub")
+        try:
+            lb_resp = requests.get(f"http://localhost:8000/api/v1/competitors/leaderboard/{brand_name}").json()
+            leaderboard = lb_resp.get("leaderboard", [])
+            
+            if not leaderboard:
+                st.info("No competitors analyzed yet. Run a discovery task to populate the leaderboard.")
+            else:
+                # Render Real Data Table
+                html_table = f"""
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                    <tr style="background: rgba(124, 58, 237, 0.1); text-align: left;">
+                        <th style="padding: 12px; border-bottom: 2px solid #7C3AED;">Rank</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #7C3AED;">Brand</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #7C3AED;">AI Visibility Score</th>
+                    </tr>
+                """
+                for entry in leaderboard:
+                    rank = entry.get("rank")
+                    name = entry.get("name")
+                    overall = entry.get("overall")
+                    color = "#10B981" if rank == 1 else ("#F59E0B" if name.lower() == brand_name.lower() else "#3B82F6")
+                    
+                    html_table += f"""
+                    <tr>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1);">#{rank}</td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1);"><b>{name}</b></td>
+                        <td style="padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1);"><span style="color: {color}; font-weight: bold;">{overall}</span></td>
+                    </tr>
+                    """
+                html_table += "</table>"
+                st.markdown(html_table, unsafe_allow_html=True)
+                
+                # Radar Chart
+                st.markdown("#### 📊 Dimension Comparison")
+                fig = go.Figure()
+                dimensions = ["authority", "schema", "content", "reviews", "entities", "citations", "brand"]
+                for entry in leaderboard[:3]: # top 3
+                    scores = entry.get("scores", {})
+                    r_values = [scores.get(d, 0) for d in dimensions]
+                    # close the loop
+                    r_values.append(r_values[0])
+                    theta = dimensions + [dimensions[0]]
+                    fig.add_trace(go.Scatterpolar(
+                        r=r_values,
+                        theta=theta,
+                        fill='toself',
+                        name=entry.get("name")
+                    ))
+                fig.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                    showlegend=True,
+                    height=400,
+                    paper_bgcolor='rgba(0,0,0,0)'
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Explanations & Remediation
+                st.markdown("#### 🧠 Intelligence & Strategy")
+                for entry in leaderboard:
+                    if entry.get("name").lower() != brand_name.lower() and entry.get("explanations"):
+                        exps = entry.get("explanations")
+                        with st.expander(f"Why **{entry.get('name')}** is winning"):
+                            st.info(f"**Winning Factors:**\n{exps.get('winning_factors', 'N/A')}")
+                            st.warning(f"**Their Strategy:**\n{exps.get('strategy', 'N/A')}")
+                            
+                            st.markdown("---")
+                            st.markdown("##### Was this insight helpful?")
+                            fb_col1, fb_col2, _ = st.columns([1, 1, 6])
+                            if fb_col1.button("👍 Yes", key=f"up_{entry.get('name')}"):
+                                try:
+                                    requests.post("http://localhost:8000/api/v1/competitors/feedback", json={
+                                        "competitor_id": entry.get("id"),
+                                        "is_helpful": True,
+                                        "comment": ""
+                                    })
+                                    st.success("Thanks for your feedback!")
+                                except Exception:
+                                    pass
+                            if fb_col2.button("👎 No", key=f"down_{entry.get('name')}"):
+                                try:
+                                    requests.post("http://localhost:8000/api/v1/competitors/feedback", json={
+                                        "competitor_id": entry.get("id"),
+                                        "is_helpful": False,
+                                        "comment": ""
+                                    })
+                                    st.success("Thanks for your feedback!")
+                                except Exception:
+                                    pass
+                            
+                            st.markdown("---")
+                            # Remediation Button
+                            if st.button(f"Generate Remediation for {entry.get('name')}", key=f"rem_{entry.get('name')}"):
+                                with st.spinner("Generating JSON-LD and FAQs..."):
+                                    try:
+                                        rem_resp = requests.post("http://localhost:8000/api/v1/competitors/remediate", json={
+                                            "brand_name": brand_name,
+                                            "competitor_name": entry.get("name"),
+                                            "strategy_text": exps.get("strategy", "")
+                                        }).json()
+                                        if rem_resp.get("status") == "success":
+                                            data = rem_resp.get("data", {})
+                                            st.success("Remediation Plan Generated!")
+                                            st.markdown("##### Recommended JSON-LD")
+                                            st.code(data.get("json_ld", ""), language="json")
+                                            st.markdown("##### Recommended FAQs")
+                                            for faq in data.get("faqs", []):
+                                                st.markdown(f"**Q:** {faq.get('q')}\n\n**A:** {faq.get('a')}")
+                                            
+                                            # Provide Download
+                                            import json
+                                            st.download_button(
+                                                label="Download Action Plan (JSON)",
+                                                data=json.dumps(data, indent=2),
+                                                file_name=f"remediation_{entry.get('name')}.json",
+                                                mime="application/json"
+                                            )
+                                        else:
+                                            st.error("Failed to generate remediation.")
+                                    except Exception as e:
+                                        st.error(f"Error connecting to remediation API: {e}")
+                                
+        except Exception as e:
+            st.warning("Could not fetch leaderboard. Ensure API is running.")
+
 else:
     st.markdown("""
         <div style='text-align: center; padding: 100px 0;'>
