@@ -100,9 +100,9 @@ def render_lift_simulator(current_score, gaps):
                 gridcolor=grid_color,
                 range=[0, 110],
                 tickfont=dict(size=10, color="#94A3B8"),
-                title="Projected Score (%)",
-                titlefont=dict(size=11, color="#94A3B8")
+                title=dict(text="Projected Score (%)", font=dict(size=11, color="#94A3B8"))
             ),
+
             showlegend=False
         )
         
