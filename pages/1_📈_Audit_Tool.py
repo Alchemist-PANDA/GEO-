@@ -1,15 +1,21 @@
 import streamlit as st
+import json
+import html
 import logging
 import os
+import re
 import hashlib
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 from geo_audit_agent.agent import build_geo_audit_agent
 from multi_model import run_multi_model_audit
-from streamlit_autorefresh import st_autorefresh
 
 # Import modernized dashboard components
-
+from geo_audit_agent.ui.gap_matrix import render_gap_matrix
+from geo_audit_agent.ui.remediation_cards import render_remediation_hub
+from geo_audit_agent.ui.lift_simulator import render_lift_simulator
+from geo_audit_agent.ui.brand_visibility import render_brand_visibility
+from geo_audit_agent.ui.live_ticker import render_live_ticker
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 # --- Load CSS ---
 def load_css(file_name="style.css"):
-    if os.path.exists(file_name):
-        with open(file_name, "r") as f:
+    css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), file_name)
+    if os.path.exists(css_path):
+        with open(css_path, "r") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # --- Page Configuration ---
@@ -374,10 +381,8 @@ def create_circular_gauge(score, is_dark=True):
     return fig
 
 def get_competitor_data(brand_name, category):
-    import hashlib
     import random
     
-    # Seed competitor brands based on category
     category_lower = category.lower()
     
     if "suv" in category_lower or "car" in category_lower or "vehicle" in category_lower or "automotive" in category_lower:
@@ -385,17 +390,14 @@ def get_competitor_data(brand_name, category):
     elif "food" in category_lower or "burger" in category_lower or "restaurant" in category_lower or "cafe" in category_lower:
         competitors = ["McDonald's", "KFC", "Burger King", "Subway", "Burger Hub", "Pizza Hut", "Hardee's", "Domino's", "Five Guys", "Wendy's"]
     else:
-        # Generic SaaS or tech/brand competitors
         competitors = [brand_name, "Brand Alpha", "Brand Beta", "Brand Gamma", "Brand Delta", "Brand Epsilon", "Brand Zeta"]
         
-    # Ensure brand_name is in the list
     if brand_name not in competitors:
         if len(competitors) > 4:
             competitors[4] = brand_name
         else:
             competitors.append(brand_name)
             
-    # Remove duplicates preserving order
     seen = set()
     competitors = [x for x in competitors if not (x in seen or seen.add(x))]
     
@@ -413,7 +415,6 @@ def get_competitor_data(brand_name, category):
         if b.lower() == brand_name.lower() and actual_results:
             b_scores = actual_results.copy()
         else:
-            # Generate deterministic scores using hashlib seed
             for m in model_names:
                 combined = f"{b}:{m}"
                 hash_obj = hashlib.md5(combined.encode())
@@ -424,7 +425,6 @@ def get_competitor_data(brand_name, category):
                 else:
                     b_scores[m] = 15 + (seed % 31)
                     
-        # Calculate Average
         b_scores["Average"] = int(sum(b_scores[m] for m in model_names) / len(model_names))
         b_scores["brand"] = b
         data.append(b_scores)
@@ -432,8 +432,6 @@ def get_competitor_data(brand_name, category):
     return data
 
 def get_keyword_monitoring_data(keyword, brand_name):
-    """Restructure multi-model audit signals by keyword/prompt instead of by brand."""
-    import hashlib
 
     model_names = ["ChatGPT", "Gemini", "Meta.ai", "Claude.ai", "DeepSeek"]
     model_breakdown = []
@@ -460,7 +458,6 @@ def get_keyword_monitoring_data(keyword, brand_name):
     overview_seed = int(hashlib.md5(f"{keyword}:overview".encode()).hexdigest()[:8], 16) % 100
     ai_overview = overview_seed % 100 >= 55
 
-    # Deterministic trend (last 6 runs) for the sparkline view
     trend = []
     for i in range(6):
         t_seed = int(hashlib.md5(f"{keyword}:trend:{i}".encode()).hexdigest()[:8], 16) % 100
@@ -475,74 +472,7 @@ def get_keyword_monitoring_data(keyword, brand_name):
         "trend": trend
     }
 
-
-BV_PLATFORMS = [
-    "DeepSeek", "Mistral", "Claude", "Grok", "Gemini",
-    "ChatGPT", "Google AI Mode", "Google AI Overview", "Perplexity", "Copilot"
-]
-
-
-def _bv_seed(text):
-    return int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
-
-
-def get_bv_platform_scores(brand_name):
-    """Deterministic per-platform visibility score (0-100) for the Brand Visibility tab."""
-    scores = []
-    for platform in BV_PLATFORMS:
-        seed = _bv_seed(f"{brand_name}:bv:{platform}") % 100
-        score = 25 + (seed % 70)
-        scores.append({"platform": platform, "score": score})
-    return sorted(scores, key=lambda x: x["score"], reverse=True)
-
-
-def get_bv_metrics(brand_name, platform_scores):
-    """Top-line Brand Visibility, Citation Rate and Sentiment metrics with deltas."""
-    visibility = sum(p["score"] for p in platform_scores) / len(platform_scores)
-    cr_seed = _bv_seed(f"{brand_name}:citation_rate") % 100
-    citation_rate = 10 + (cr_seed % 35)
-    sent_seed = _bv_seed(f"{brand_name}:sentiment") % 100
-    sentiment = 55 + (sent_seed % 40)
-
-    def _delta(text):
-        d = (_bv_seed(text) % 20) / 10.0 - 1.0
-        return round(d, 1)
-
-    return {
-        "visibility": round(visibility, 1),
-        "visibility_delta": _delta(f"{brand_name}:bv_delta"),
-        "citation_rate": citation_rate,
-        "citation_rate_delta": _delta(f"{brand_name}:cr_delta"),
-        "sentiment": sentiment,
-        "sentiment_delta": _delta(f"{brand_name}:sent_delta"),
-    }
-
-
-def get_bv_trend(brand_name, metric_name, n_points=25, base_value=70):
-    """Generate a deterministic daily trend series ending today for the Brand Visibility tab."""
-    dates = []
-    values = []
-    today = datetime.now()
-    for i in range(n_points):
-        day = today - timedelta(days=(n_points - 1 - i))
-        dates.append(day.strftime("%b %d"))
-        seed = _bv_seed(f"{brand_name}:{metric_name}:{i}") % 100
-        wobble = (seed % 30) - 15
-        values.append(max(5, min(100, base_value + wobble)))
-    return dates, values
-
-
-def rolling_average(values, window=3):
-    avg = []
-    for i in range(len(values)):
-        start = max(0, i - window + 1)
-        chunk = values[start:i + 1]
-        avg.append(round(sum(chunk) / len(chunk), 1))
-    return avg
-
-
 def create_multi_model_chart(data, selected_brand, is_dark=True):
-    # Sort data by Average score descending
     data_sorted = sorted(data, key=lambda x: x["Average"], reverse=False)
     
     brands = [d["brand"] for d in data_sorted]
@@ -556,14 +486,13 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
     fig = go.Figure()
     
     colors = {
-        "ChatGPT": "#FF9F43",   # Warm Orange
-        "Gemini": "#EC4899",    # Vibrant Pink
-        "Meta.ai": "#3B82F6",   # Royal Blue
-        "Claude.ai": "#60A5FA",  # Light Blue
-        "DeepSeek": "#0D9488",  # Deep Teal
+        "ChatGPT": "#FF9F43",
+        "Gemini": "#EC4899",
+        "Meta.ai": "#3B82F6",
+        "Claude.ai": "#60A5FA",
+        "DeepSeek": "#0D9488",
     }
     
-    # Add grouped horizontal bars
     fig.add_trace(go.Bar(
         y=brands,
         x=chatgpt_scores,
@@ -634,7 +563,6 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         hovertemplate="<b>%{y}</b><br>DeepSeek: %{x:.1f}<extra></extra>"
     ))
 
-    # Add Average line chart overlay
     avg_line_color = '#FFFFFF' if is_dark else '#1E293B'
     fig.add_trace(go.Scatter(
         y=brands,
@@ -647,7 +575,6 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         hovertemplate="<b>%{y}</b><br>Average: %{x:.1f}<extra></extra>"
     ))
     
-    # Highlight the selected brand row
     selected_brand_normalized = selected_brand.lower()
     brands_lower = [b.lower() for b in brands]
     if selected_brand_normalized in brands_lower:
@@ -820,7 +747,6 @@ with st.sidebar:
     st.caption("Generative Engine Optimization")
     st.divider()
 
-    # Theme Toggle with Tooltip
     st.markdown("#### Display Settings")
     st.session_state.theme = st.radio(
         "Dashboard Mode",
@@ -862,13 +788,11 @@ if run_audit:
             multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
             st.session_state.multi_model_results = multi_results
 
-            # Update history
             confidence = results.get("confidence_score", 0.0)
             st.session_state.score_history.append(confidence)
             if len(st.session_state.score_history) > 10:
                 st.session_state.score_history.pop(0)
 
-            # Initialize remediations state
             st.session_state.remediations = []
             for res_item in results.get("remediation_results", []):
                 st.session_state.remediations.append({
@@ -884,7 +808,6 @@ if run_audit:
             logger.exception(f"Audit error: {e}")
 
 # --- Main Dashboard ---
-# Header
 if st.session_state.audit_results:
     res = st.session_state.audit_results
     brand_name_val = res.get("brand_name", "Burger Hub")
@@ -893,299 +816,408 @@ else:
     brand_name_val = "Burger Hub"
     category_val = "fast food"
 
-# Page Header
-st.markdown(f"""
-<div style="margin-bottom: 24px;">
-    <h1 style="font-size: 2.8rem; font-weight: 900; margin-bottom: 0;
-        background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 50%, #EC4899 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        display: inline-block; letter-spacing: -0.04em;">
-        📊 Brand Visibility Dashboard
-    </h1>
-    <p style="color: #64748B; font-size: 1.05rem; margin-top: 4px;">
-        Full-spectrum AI search monitoring for <b style="color: #7C3AED;">{brand_name_val}</b> in <b>{category_val}</b>
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# Determine metrics (for Burger Hub, keep exactly the requested values; for others, compute deterministically)
-is_burger_hub = brand_name_val.lower() == "burger hub"
-
-if is_burger_hub:
-    bv_val = 60.0
-    cr_val = 27.0
-    sent_val = 72
-    mentions_text = "1597 mentions out of 2663 total"
-    citations_text = "719 citations in 2663 responses"
-    sentiment_text = """
-        <div style="display: flex; gap: 12px; justify-content: center; align-items: center; font-size: 0.85rem; font-weight: 700; margin-top: 6px;">
-            <span style="color: #10B981; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg> 1917</span>
-            <span style="color: #64748B; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg> 682</span>
-            <span style="color: #EF4444; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm10-7h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg> 64</span>
-        </div>
-    """
-    platform_scores = [
-        {"platform": "DeepSeek", "score": 99.5, "color": "linear-gradient(90deg, #0D9488, #14B8A6)"},
-        {"platform": "Mistral", "score": 98.5, "color": "linear-gradient(90deg, #F59E0B, #FBBF24)"},
-        {"platform": "Claude", "score": 91.2, "color": "linear-gradient(90deg, #EA580C, #F97316)"},
-        {"platform": "Grok", "score": 77.2, "color": "linear-gradient(90deg, #DB2777, #EC4899)"},
-        {"platform": "Gemini", "score": 74.8, "color": "linear-gradient(90deg, #7C3AED, #8B5CF6)"},
-        {"platform": "ChatGPT", "score": 74.6, "color": "linear-gradient(90deg, #06B6D4, #22D3EE)"},
-        {"platform": "Google AI Mo...", "score": 74.1, "color": "linear-gradient(90deg, #94A3B8, #CBD5E1)"},
-        {"platform": "Google AI Ov...", "score": 64.6, "color": "linear-gradient(90deg, #64748B, #94A3B8)"},
-        {"platform": "Perplexity", "score": 55.0, "color": "linear-gradient(90deg, #2563EB, #3B82F6)"},
-        {"platform": "Copilot", "score": 47.5, "color": "linear-gradient(90deg, #3B82F6, #60A5FA)"},
-    ]
-else:
-    # Deterministic dynamic values for other brands
-    raw_scores = get_bv_platform_scores(brand_name_val)
-    colors_list = [
-        "linear-gradient(90deg, #0D9488, #14B8A6)",
-        "linear-gradient(90deg, #F59E0B, #FBBF24)",
-        "linear-gradient(90deg, #EA580C, #F97316)",
-        "linear-gradient(90deg, #DB2777, #EC4899)",
-        "linear-gradient(90deg, #7C3AED, #8B5CF6)",
-        "linear-gradient(90deg, #06B6D4, #22D3EE)",
-        "linear-gradient(90deg, #94A3B8, #CBD5E1)",
-        "linear-gradient(90deg, #64748B, #94A3B8)",
-        "linear-gradient(90deg, #2563EB, #3B82F6)",
-        "linear-gradient(90deg, #3B82F6, #60A5FA)"
-    ]
-    platform_scores = []
-    for idx, p in enumerate(raw_scores):
-        name = p["platform"]
-        if "Overview" in name:
-            name = "Google AI Ov..."
-        elif "Mode" in name:
-            name = "Google AI Mo..."
-        elif "Copilot" in name or "Bing" in name:
-            name = "Copilot"
-        platform_scores.append({
-            "platform": name,
-            "score": p["score"],
-            "color": colors_list[idx % len(colors_list)]
-        })
-    bv_metrics = get_bv_metrics(brand_name_val, raw_scores)
-    bv_val = bv_metrics["visibility"]
-    cr_val = bv_metrics["citation_rate"]
-    sent_val = bv_metrics["sentiment"]
-    total_resp = 2663
-    mentions_val = int(total_resp * (bv_val / 100))
-    citations_val = int(total_resp * (cr_val / 100))
-    mentions_text = f"{mentions_val} mentions out of {total_resp} total"
-    citations_text = f"{citations_val} citations in {total_resp} responses"
-    
-    pos_count = int(total_resp * (sent_val / 100))
-    neg_count = int((total_resp - pos_count) * 0.1)
-    neu_count = total_resp - pos_count - neg_count
-    
-    sentiment_text = f"""
-        <div style="display: flex; gap: 12px; justify-content: center; align-items: center; font-size: 0.85rem; font-weight: 700; margin-top: 6px;">
-            <span style="color: #10B981; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg> {pos_count}</span>
-            <span style="color: #64748B; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg> {neu_count}</span>
-            <span style="color: #EF4444; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm10-7h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg> {neg_count}</span>
-        </div>
-    """
-
-# Custom SVG rendering helper function
-def render_gauge_html(title, value_str, percent, sub_label, delta, delta_color, color, bottom_text):
-    offset = 364.42 * (1 - percent / 100.0)
-    return f"""
-    <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
-        <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-            {title}
-            <span style="color: #94A3B8; font-size: 0.85rem; cursor: pointer;" title="Details">🛈</span>
-        </div>
-        <div style="position: relative; display: flex; justify-content: center; align-items: center; height: 150px; margin: 12px 0;">
-            <svg width="140" height="140" viewBox="0 0 140 140">
-                <circle cx="70" cy="70" r="58" stroke="#F1F5F9" stroke-width="8" fill="transparent" />
-                <circle cx="70" cy="70" r="58" stroke="{color}" stroke-width="8" fill="transparent"
-                        stroke-dasharray="364.42" stroke-dashoffset="{offset}" stroke-linecap="round"
-                        transform="rotate(-90 70 70)" />
-            </svg>
-            <div style="position: absolute; text-align: center;">
-                <div style="font-family: 'Inter', sans-serif; font-size: 1.85rem; font-weight: 900; color: #0F172A; line-height: 1.1;">{value_str}</div>
-                <div style="font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px;">{sub_label}</div>
-                <div style="font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700; color: {delta_color}; margin-top: 2px;">{delta}</div>
-            </div>
-        </div>
-        <div style="font-family: 'Inter', sans-serif; font-size: 0.8rem; color: #64748B; text-align: center; border-top: 1px solid #F1F5F9; padding-top: 12px; margin-top: 4px;">
-            {bottom_text}
-        </div>
-    </div>
-    """
-
-# 4 Columns Row: 3 Gauges + Platform Breakdown
-col_g1, col_g2, col_g3, col_pb = st.columns([1, 1, 1, 1.3])
-
-with col_g1:
-    st.markdown(render_gauge_html(
-        title="Brand Visibility",
-        value_str=f"{bv_val}%",
-        percent=bv_val,
-        sub_label="BV",
-        delta="▲ +0.2%",
-        delta_color="#10B981",
-        color="#10B981",
-        bottom_text=mentions_text
-    ), unsafe_allow_html=True)
-
-with col_g2:
-    st.markdown(render_gauge_html(
-        title="Citation Rate",
-        value_str=f"{cr_val}%",
-        percent=cr_val,
-        sub_label="CR",
-        delta="▲ +0.2%",
-        delta_color="#10B981",
-        color="#F59E0B",
-        bottom_text=citations_text
-    ), unsafe_allow_html=True)
-
-with col_g3:
-    st.markdown(render_gauge_html(
-        title="Sentiment",
-        value_str=f"{sent_val}%",
-        percent=sent_val,
-        sub_label="Positive",
-        delta="▼ -0.4%" if is_burger_hub else "▲ +0.2%",
-        delta_color="#EF4444" if is_burger_hub else "#10B981",
-        color="#10B981",
-        bottom_text=sentiment_text
-    ), unsafe_allow_html=True)
-
-with col_pb:
-    # Platform breakdown progress bars
-    rows_html = ""
-    for idx, p in enumerate(platform_scores):
-        rows_html += f"""
-        <div class="bv2-platform-item" style="padding: 6px 0;">
-            <div class="bv2-platform-name" style="width: 120px; font-size: 0.85rem; font-weight: 600; color: #1E293B;">{p['platform']}</div>
-            <div class="bv2-progress-bar-track" style="flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; margin: 0 10px;">
-                <div class="bv2-progress-bar-fill" style="width: {p['score']}%; height: 100%; background: {p['color']}; border-radius: 4px;"></div>
-            </div>
-            <div class="bv2-platform-score" style="width: 45px; text-align: right; font-weight: 700; font-size: 0.85rem; color: #1E293B;">{p['score']}%</div>
-        </div>
-        """
+h_col1, h_col2 = st.columns([3, 1])
+with h_col1:
+    is_dark_header = st.session_state.theme == "Dark"
+    subtitle_color = "#94A3B8" if is_dark_header else "#64748B"
     st.markdown(f"""
-    <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
-        <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-            <span>Brand Visibility By Platform</span>
-            <div style="display: flex; gap: 8px;">
-                <span style="color: #94A3B8; font-size: 0.85rem; cursor: pointer;">🛈</span>
-                <span style="color: #94A3B8; font-size: 0.85rem; cursor: pointer;">↓</span>
+        <h1 class='gradient-title' style='margin-bottom: 0;'>AI Brand Index</h1>
+        <p style='color: {subtitle_color}; font-size: 1.1rem; margin-top: 5px; font-weight: 500;'>
+            {brand_name_val} compared to other brands in {category_val}
+        </p>
+    """, unsafe_allow_html=True)
+with h_col2:
+    if st.session_state.audit_results:
+        cov_score = st.session_state.multi_model_results['summary']['geo_coverage_score'] if st.session_state.multi_model_results else int(res.get("confidence_score", 0.0) * 100)
+        c_g1, c_g2 = st.columns([1, 1.2])
+        with c_g1:
+            score_label_color = "#94A3B8" if st.session_state.theme == "Dark" else "#64748B"
+            st.markdown(f"""
+                <div style='text-align: right; padding-top: 25px;'>
+                    <span style='font-size: 0.7rem; color: {score_label_color}; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700;'>AI BRAND SCORE</span>
+                    <h2 style='font-size: 2.2rem; font-weight: 900; margin: 0; background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>{cov_score}</h2>
+                </div>
+            """, unsafe_allow_html=True)
+        with c_g2:
+            st.plotly_chart(create_circular_gauge(cov_score, is_dark=(st.session_state.theme == "Dark")), use_container_width=True, config={'displayModeBar': False})
+
+if st.session_state.audit_results:
+    res = st.session_state.audit_results
+
+    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare, tab_keywords = st.tabs([
+        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark", "🔍 Keyword Monitoring"
+    ])
+
+    with tab_overview:
+        m_col1, m_col2, m_col3 = st.columns(3)
+        cov_score = st.session_state.multi_model_results['summary']['geo_coverage_score'] if st.session_state.multi_model_results else int(res.get("confidence_score", 0.0) * 100)
+        is_dark = st.session_state.theme == "Dark"
+        icon_color = "#a5b4fc" if is_dark else "#7C3AED"
+        
+        with m_col1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-wrapper" style="background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{icon_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <div class="metric-label">AI Brand Score</div>
+                    <div class="metric-value">{cov_score}</div>
+                    <div class="metric-delta delta-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        Optimal Presence
+                    </div>
+                </div>
             </div>
-        </div>
-        <div style="margin-top: 8px;">
-            {rows_html}
-        </div>
-        <div style="font-family: 'Inter', sans-serif; font-size: 0.8rem; color: #64748B; text-align: center; border-top: 1px solid #F1F5F9; padding-top: 12px; margin-top: 12px;">
-            10 platforms tracked &bull; 2,663 total responses
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+            
+        with m_col2:
+            is_cited = res.get("is_cited", False)
+            status_label = "Cited" if is_cited else "Not Cited"
+            status_color = "#10B981" if is_cited else "#EF4444"
+            icon_stroke = "#10B981" if is_cited else "#EF4444"
+            bg_gradient = "rgba(16, 185, 129, 0.15)" if is_cited else "rgba(239, 68, 68, 0.15)"
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-wrapper" style="background: {bg_gradient}; border-color: rgba(16, 185, 129, 0.3) if is_cited else rgba(239, 68, 68, 0.3); color: {status_color};">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{icon_stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <div class="metric-label">Citation Status</div>
+                    <div class="metric-value" style="color: {status_color}; background: none; -webkit-text-fill-color: {status_color};">{status_label}</div>
+                    <div class="metric-delta" style="color: {status_color}; font-weight: 600;">
+                        {("Search Success" if is_cited else "Signal Missing")}
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with m_col3:
+            confidence_pct = int(res.get("confidence_score", 0.0) * 100)
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-wrapper" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{icon_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="10" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <div class="metric-info">
+                    <div class="metric-label">Confidence Score</div>
+                    <div class="metric-value">{confidence_pct}%</div>
+                    <div class="progress-container">
+                        <div class="progress-bar-fill" style="width: {confidence_pct}%;"></div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-# Trend charts row side-by-side
-st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
-trend_col1, trend_col2 = st.columns(2)
+        col_left, col_right = st.columns([1.6, 1])
 
-bv_dates, bv_values = get_bv_trend(brand_name_val, "visibility", base_value=int(bv_val))
-cr_dates, cr_values = get_bv_trend(brand_name_val, "citation_rate", base_value=int(cr_val) + 20)
-bv_rolling = rolling_average(bv_values)
-cr_rolling = rolling_average(cr_values)
+        with col_left:
+            chart_subtitle_color = "#94A3B8" if is_dark else "#64748B"
 
-with trend_col1:
+            st.markdown(f"""
+                <div class="custom-card" style="padding: 28px; margin-bottom: 24px;">
+                    <h3 style="margin-top: 0; margin-bottom: 5px; font-size: 1.25rem;">Multi-Model Benchmark Chart</h3>
+                    <p style="color: {chart_subtitle_color}; font-size: 0.9rem; margin-top: 0; margin-bottom: 20px;">AI visibility comparison across ChatGPT, Gemini, Meta.ai, Claude.ai, DeepSeek, and Average</p>
+                </div>
+            """, unsafe_allow_html=True)
+            comp_data = get_competitor_data(brand_name_val, category_val)
+            fig_multi = create_multi_model_chart(comp_data, brand_name_val, is_dark=(st.session_state.theme == "Dark"))
+            st.plotly_chart(fig_multi, use_container_width=True, config={'displayModeBar': False})
+
+            st.markdown("#### 📝 AI Search Intelligence Summary")
+            raw_response = html.escape(res.get("llm_response", "No response content."))
+            brand_name_val = res.get("brand_name", brand_name)
+            highlighted_response = re.sub(
+                f"({re.escape(html.escape(brand_name_val))})",
+                r'<span style="background-color: #FEEBC8; color: #7B341E; padding: 0 4px; border-radius: 4px; font-weight: 600;">\1</span>',
+                raw_response,
+                flags=re.IGNORECASE
+            )
+
+            theme_bg = "#1A202C" if st.session_state.theme == "Dark" else "rgba(255, 255, 255, 0.9)"
+            theme_text = "#E2E8F0" if st.session_state.theme == "Dark" else "#1E293B"
+            theme_border = "#2D3748" if st.session_state.theme == "Dark" else "rgba(124, 58, 237, 0.08)"
+
+            st.markdown(f"""
+                <div style="max-height: 400px; overflow-y: auto; padding: 20px;
+                     background-color: {theme_bg}; color: {theme_text};
+                     border-radius: 12px; border: 1px solid {theme_border};
+                     line-height: 1.6; font-size: 0.95rem; margin-bottom: 24px;">
+                    {highlighted_response}
+                </div>
+            """, unsafe_allow_html=True)
+
+        with col_right:
+            render_brand_visibility(st.session_state.multi_model_results, res.get("confidence_score", 0.0))
+            st.markdown("<br>", unsafe_allow_html=True)
+            render_live_ticker(brand_name_val)
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            if st.session_state.score_history:
+                st.markdown("#### 📈 Performance Trend")
+                fig_trend = go.Figure()
+                fig_trend.add_trace(go.Scatter(
+                    y=[s*100 for s in st.session_state.score_history],
+                    mode='lines+markers',
+                    line=dict(color='#7C3AED', width=3),
+                    marker=dict(size=8, color='#3B82F6'),
+                    fill='tozeroy',
+                    fillcolor='rgba(124, 58, 237, 0.1)'
+                ))
+                fig_trend.update_layout(
+                    height=200,
+                    margin=dict(l=0, r=0, t=10, b=0),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(showgrid=False, showticklabels=False),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(124, 58, 237, 0.06)', showticklabels=True, range=[0, 105]),
+                )
+                st.plotly_chart(fig_trend, use_container_width=True)
+
+    with tab_gaps:
+        st.subheader("🚩 GEO Search Gap Analysis")
+        st.caption("Identify areas where search engines lack clear data or signals about your brand.")
+        gaps = res.get("gaps", [])
+        if gaps:
+            render_gap_matrix(gaps)
+            st.divider()
+            f_col1, f_col2 = st.columns([2, 1])
+            with f_col1:
+                gap_types = ["All Categories"] + sorted(list(set([g['gap_type'] for g in gaps])))
+                selected_type = st.segmented_control("Filter Perspective", options=gap_types, default="All Categories")
+
+            severity_order = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
+            display_gaps = [g for g in gaps if selected_type == "All Categories" or g['gap_type'] == selected_type]
+            sorted_gaps = sorted(display_gaps, key=lambda x: severity_order.get(x.get('severity', 'Medium').title(), 99))
+
+            st.markdown("#### Detailed Findings")
+            for gap in sorted_gaps:
+                sev = gap.get('severity', 'Medium').title()
+                color_class = {"Critical": "red", "High": "orange", "Medium": "blue", "Low": "green"}.get(sev, "gray")
+                with st.expander(f"**{gap['gap_type']}** — :{color_class}[{sev} Priority]"):
+                    st.write(gap['description'])
+                    c1, c2, _ = st.columns([1, 1, 2])
+                    with c1:
+                        if st.button("Fix in Hub", key=f"fix_nav_{gap['gap_type']}"):
+                            st.info("Direct implementation strategy generated in Remediation Hub.")
+                    with c2:
+                        st.button("Explain Impact", key=f"exp_{gap['gap_type']}", help="AI explanation of why this gap affects your SEO.")
+        else:
+            st.success("✨ Zero critical gaps identified! Your brand data satisfies search engine requirements.")
+
+    with tab_remediation:
+        st.subheader("🛠️ Remediation Hub")
+        st.caption("Execute AI-generated fixes to bridge data gaps and improve search visibility.")
+        if st.session_state.remediations:
+            render_remediation_hub(st.session_state.remediations)
+            st.markdown("#### 🚀 Deployment Package")
+            approved_items = [i for i in st.session_state.remediations if i['status'] == "Approved"]
+            pkg_col1, pkg_col2 = st.columns(2)
+            with pkg_col1:
+                if approved_items:
+                    export_data = {
+                        "brand": res["brand_name"],
+                        "timestamp": datetime.now().isoformat(),
+                        "audit_score": res.get("confidence_score", 0.0),
+                        "approved_remediations": approved_items
+                    }
+                    st.download_button(
+                        label="📦 Export All Approved Assets (JSON)",
+                        data=json.dumps(export_data, indent=4),
+                        file_name=f"geo_package_{res['brand_name'].lower()}.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
+                else:
+                    st.button("📦 Export All Approved Assets (JSON)", disabled=True, use_container_width=True)
+            with pkg_col2:
+                report_md = generate_markdown_report(res, approved_items)
+                st.download_button(
+                    label="📄 Download Audit Report (Markdown)",
+                    data=report_md,
+                    file_name=f"geo_report_{res['brand_name'].lower()}.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                    help="Downloads a Markdown report."
+                )
+        else:
+            st.info("Run an audit to generate remediation strategies.")
+
+    with tab_simulator:
+        current_score = res.get("confidence_score", 0.0)
+        gaps = res.get("gaps", [])
+        render_lift_simulator(current_score, gaps)
+
+    with tab_compare:
+        st.subheader("🔄 Market Benchmarking")
+        if len(st.session_state.comparison_data) < 1:
+            st.info("Run audits for competing brands to unlock market comparisons.")
+        else:
+            brands = list(st.session_state.comparison_data.keys())
+            selected_brands = st.multiselect("Select Brands to Benchmark", options=brands, default=brands[:2])
+            if len(selected_brands) >= 1:
+                col_chart1, col_chart2 = st.columns(2)
+                with col_chart1:
+                    comp_is_dark = st.session_state.theme == "Dark"
+                    fig_comp = go.Figure()
+                    comp_colors = ['#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981']
+                    for idx_b, b in enumerate(selected_brands):
+                        b_res = st.session_state.comparison_data[b]
+                        fig_comp.add_trace(go.Bar(
+                            x=[b],
+                            y=[b_res.get('confidence_score', 0.0) * 100],
+                            name=b,
+                            marker_color=comp_colors[idx_b % len(comp_colors)]
+                        ))
+                    fig_comp.update_layout(
+                        title=dict(text="Search Confidence Benchmark (%)", font=dict(color='white' if comp_is_dark else '#1E293B')),
+                        yaxis_range=[0, 105],
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        showlegend=False,
+                        font={'color': 'white' if comp_is_dark else '#1E293B'}
+                    )
+                    st.plotly_chart(fig_comp, use_container_width=True)
+
+                with col_chart2:
+                    fig_radar = go.Figure()
+                    for b in selected_brands:
+                        b_res = st.session_state.comparison_data[b]
+                        fig_radar.add_trace(go.Scatterpolar(
+                            r=[b_res.get('confidence_score', 0.0)*100,
+                               80 if b_res.get('is_cited') else 20,
+                               100 - (len(b_res.get('gaps', []))*10)],
+                            theta=['Search Presence', 'Citations', 'Data Completeness'],
+                            fill='toself',
+                            name=b
+                        ))
+                    fig_radar.update_layout(
+                        polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+                        showlegend=True,
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        height=350,
+                        margin=dict(l=40, r=40, t=20, b=20)
+                    )
+                    st.plotly_chart(fig_radar, use_container_width=True)
+
+    with tab_keywords:
+        kw_is_dark = st.session_state.theme == "Dark"
+        kw_subtitle_color = "#94A3B8" if kw_is_dark else "#64748B"
+        st.markdown(f"""
+            <h3 style="margin-bottom: 2px;">🔍 Keyword Monitoring</h3>
+            <p style="color: {kw_subtitle_color}; font-size: 0.95rem; margin-top: 0; margin-bottom: 20px;">
+                Track {brand_name_val}'s visibility across the search queries and prompts AI systems are asked.
+            </p>
+        """, unsafe_allow_html=True)
+        with st.form("add_keyword_form", clear_on_submit=True):
+            kw_col1, kw_col2 = st.columns([4, 1])
+            with kw_col1:
+                new_keyword = st.text_input("Add a keyword or prompt to monitor", placeholder="e.g. best fast food delivery in Islamabad", label_visibility="collapsed")
+            with kw_col2:
+                add_kw = st.form_submit_button("➕ Add Keyword", use_container_width=True)
+            if add_kw and new_keyword.strip():
+                kw_clean = new_keyword.strip()
+                if kw_clean not in st.session_state.tracked_keywords:
+                    st.session_state.tracked_keywords.append(kw_clean)
+                    st.session_state.keyword_runs[kw_clean] = {
+                        "last_run": datetime.now().strftime("%Y-%m-%d"),
+                        "num_runs": 1
+                    }
+                    st.toast(f"Now monitoring: {kw_clean}")
+                    st.rerun()
+
+        if not st.session_state.tracked_keywords:
+            st.info("No keywords tracked yet. Add one above to start monitoring AI visibility.")
+        else:
+            for kw in st.session_state.tracked_keywords:
+                kw_meta = st.session_state.keyword_runs.get(kw, {"last_run": "—", "num_runs": 0})
+                kw_data = get_keyword_monitoring_data(kw, brand_name_val)
+                overview_color = "#10B981" if kw_data["ai_overview"] else "#EF4444"
+                overview_bg = "rgba(16, 185, 129, 0.12)" if kw_data["ai_overview"] else "rgba(239, 68, 68, 0.12)"
+                overview_label = "YES" if kw_data["ai_overview"] else "NO"
+
+                with st.container(border=True):
+                    row_c1, row_c2, row_c3, row_c4, row_c5 = st.columns([3, 1.4, 1, 1, 1])
+                    with row_c1:
+                        st.markdown(f"**{kw}**")
+                        st.caption(f"Last run: {kw_meta['last_run']} · # runs: {kw_meta['num_runs']}")
+                    with row_c2:
+                        st.markdown(f"""
+                            <div style='text-align:center;'>
+                                <span class='status-pill' style='background-color: {overview_bg}; color: {overview_color};'>AI Overview: {overview_label}</span>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    with row_c3:
+                        st.metric("Brands", kw_data["brands_count"])
+                    with row_c4:
+                        st.metric("Sources", kw_data["sources_count"])
+                    with row_c5:
+                        run_now = st.button("🔄 Run", key=f"run_kw_{kw}", use_container_width=True)
+                        if run_now:
+                            kw_meta["num_runs"] += 1
+                            kw_meta["last_run"] = datetime.now().strftime("%Y-%m-%d")
+                            st.session_state.keyword_runs[kw] = kw_meta
+                            st.toast(f"Re-ran monitoring for: {kw}")
+                            st.rerun()
+
+                    with st.expander("📊 View Detail"):
+                        d_col1, d_col2 = st.columns([1, 1])
+                        with d_col1:
+                            st.markdown("**Per-Model Breakdown**")
+                            for mb in kw_data["model_breakdown"]:
+                                mention_icon = "✅" if mb["brand_mentioned"] else "❌"
+                                st.markdown(f"{mention_icon} **{mb['model']}** — {mb['brands_count']} brands, {mb['sources_count']} sources")
+                        with d_col2:
+                            st.markdown("**Trend Over Time**")
+                            fig_kw_trend = go.Figure()
+                            fig_kw_trend.add_trace(go.Scatter(
+                                y=kw_data["trend"],
+                                mode='lines+markers',
+                                line=dict(color='#7C3AED', width=3),
+                                marker=dict(size=7, color='#3B82F6'),
+                                fill='tozeroy',
+                                fillcolor='rgba(124, 58, 237, 0.1)'
+                            ))
+                            fig_kw_trend.update_layout(
+                                height=160,
+                                margin=dict(l=0, r=0, t=10, b=0),
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                xaxis=dict(showgrid=False, showticklabels=False),
+                                yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
+                            )
+                            st.plotly_chart(fig_kw_trend, use_container_width=True, config={'displayModeBar': False})
+else:
     st.markdown("""
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <span style="font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 700; color: #0F172A;">Brand Visibility Trend</span>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <button style="border: 1px solid #E2E8F0; background: #FFFFFF; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; color: #64748B; font-weight: 600; cursor: pointer;">+ Add annotation</button>
-            <span style="font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #64748B; font-weight: 600;">Rolling average</span>
-            <div style="width: 28px; height: 16px; background: #7C3AED; border-radius: 8px; position: relative; cursor: pointer; display: inline-block;"><div style="width: 12px; height: 12px; background: white; border-radius: 6px; position: absolute; right: 2px; top: 2px;"></div></div>
+        <div style='text-align: center; padding: 100px 0;'>
+            <div style='font-size: 4rem; margin-bottom: 20px; animation: float3D 3s ease-in-out infinite;'>🌍</div>
+            <h2 style='font-size: 2.2rem; font-weight: 900; background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 50%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>Ready to optimize your brand for AI Search?</h2>
+            <p style='color: #64748B; max-width: 600px; margin: 0 auto; font-size: 1.1rem;'>Configure your audit in the sidebar to start identifying and fixing search engine data gaps.</p>
         </div>
-    </div>
     """, unsafe_allow_html=True)
-    
-    fig_bv_trend = go.Figure()
-    fig_bv_trend.add_trace(go.Scatter(
-        x=bv_dates, y=bv_values, mode='lines+markers', name='Visibility',
-        line=dict(color='#7C3AED', width=3, shape='spline'),
-        marker=dict(size=6, color='#7C3AED'),
-        fill='tozeroy', fillcolor='rgba(124, 58, 237, 0.05)'
-    ))
-    fig_bv_trend.add_trace(go.Scatter(
-        x=bv_dates, y=bv_rolling, mode='lines', name='Rolling avg',
-        line=dict(color='#EC4899', width=2, dash='dash')
-    ))
-    fig_bv_trend.update_layout(
-        height=260,
-        margin=dict(l=20, r=20, t=10, b=20),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter', color='#64748B', size=10),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(124, 58, 237, 0.05)', range=[0, 105]),
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-        hovermode='x unified'
-    )
-    st.plotly_chart(fig_bv_trend, use_container_width=True, config={'displayModeBar': False})
 
-with trend_col2:
-    st.markdown("""
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <span style="font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 700; color: #0F172A;">Citation Rate Trend</span>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <button style="border: 1px solid #E2E8F0; background: #FFFFFF; border-radius: 6px; padding: 4px 8px; font-size: 0.75rem; color: #64748B; font-weight: 600; cursor: pointer;">+ Add annotation</button>
-            <span style="font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #64748B; font-weight: 600;">Rolling average</span>
-            <div style="width: 28px; height: 16px; background: #7C3AED; border-radius: 8px; position: relative; cursor: pointer; display: inline-block;"><div style="width: 12px; height: 12px; background: white; border-radius: 6px; position: absolute; right: 2px; top: 2px;"></div></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    fig_cr_trend = go.Figure()
-    fig_cr_trend.add_trace(go.Scatter(
-        x=cr_dates, y=cr_values, mode='lines+markers', name='Citation Rate',
-        line=dict(color='#3B82F6', width=3, shape='spline'),
-        marker=dict(size=6, color='#3B82F6'),
-        fill='tozeroy', fillcolor='rgba(59, 130, 246, 0.05)'
-    ))
-    fig_cr_trend.add_trace(go.Scatter(
-        x=cr_dates, y=cr_rolling, mode='lines', name='Rolling avg',
-        line=dict(color='#10B981', width=2, dash='dash')
-    ))
-    fig_cr_trend.update_layout(
-        height=260,
-        margin=dict(l=20, r=20, t=10, b=20),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(family='Inter', color='#64748B', size=10),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(59, 130, 246, 0.05)', range=[0, 105]),
-        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
-        hovermode='x unified'
-    )
-    st.plotly_chart(fig_cr_trend, use_container_width=True, config={'displayModeBar': False})
-
-# Live Ticker activity feed at the bottom
-st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
-st_autorefresh(interval=5000, key="bv_ticker_refresh")
-
-ticker_mentions = int(bv_val * 26.63) + (_bv_seed(f"{brand_name_val}:{datetime.now().strftime('%Y%m%d%H%M%S')[:13]}") % 7)
-ticker_citations = int(cr_val * 26.63) + (_bv_seed(f"{brand_name_val}:c:{datetime.now().strftime('%Y%m%d%H%M%S')[:13]}") % 5)
-
-st.markdown(f"""
-    <div style="background: rgba(124, 58, 237, 0.05); border: 1px solid rgba(124, 58, 237, 0.1); border-radius: 999px; padding: 12px 24px; text-align: center; font-weight: 600; color: #4C1D95; font-size: 0.9rem; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.03);">
-        <span style="display: inline-block; width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; animation: pulse 1.5s infinite; margin-right: 4px;"></span>
-        🔄 Live activity: <b style="color: #7C3AED;">{ticker_mentions}</b> mentions &bull; <b style="color: #3B82F6;">{ticker_citations}</b> citations &bull; Last update: {datetime.now().strftime('%I:%M:%S %p')}
-    </div>
-    <style>
-        @keyframes pulse {{
-            0% {{ transform: scale(0.95); opacity: 0.5; }}
-            50% {{ transform: scale(1.1); opacity: 1; }}
-            100% {{ transform: scale(0.95); opacity: 0.5; }}
-        }}
-    </style>
-""", unsafe_allow_html=True)
+    col_feat1, col_feat2, col_feat3 = st.columns(3)
+    with col_feat1:
+        with st.container(border=True):
+            st.markdown("#### 🔍 Multi-Agent Audit")
+            st.caption("Deep search across ChatGPT, Gemini, and Perplexity to identify how AI perceives your brand.")
+    with col_feat2:
+        with st.container(border=True):
+            st.markdown("#### 🛠️ Smart Remediation")
+            st.caption("Automated generation of JSON-LD, content schemas, and SEO data to bridge intelligence gaps.")
+    with col_feat3:
+        with st.container(border=True):
+            st.markdown("#### 📈 Benchmarking")
+            st.caption("Compare your GEO performance against competitors and market standards.")
 
 # Footer
 st.sidebar.divider()
