@@ -346,6 +346,9 @@ def apply_theme():
 apply_theme()
 
 # --- Helper Functions ---
+def clean_html(html_str: str) -> str:
+    return "\n".join(line.strip() for line in html_str.split("\n"))
+
 def create_circular_gauge(score, is_dark=True):
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
@@ -979,18 +982,19 @@ else:
     neg_count = int((total_resp - pos_count) * 0.1)
     neu_count = total_resp - pos_count - neg_count
     
-    sentiment_text = f"""
+    sentiment_text = clean_html(f"""
         <div style="display: flex; gap: 12px; justify-content: center; align-items: center; font-size: 0.85rem; font-weight: 700; margin-top: 6px;">
             <span style="color: #10B981; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg> {pos_count}</span>
             <span style="color: #64748B; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg> {neu_count}</span>
             <span style="color: #EF4444; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm10-7h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg> {neg_count}</span>
         </div>
-    """
+    """)
+
 
 # Custom SVG rendering helper function
 def render_gauge_html(title, value_str, percent, sub_label, delta, delta_color, color, bottom_text):
     offset = 364.42 * (1 - percent / 100.0)
-    return f"""
+    raw_html = f"""
     <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
         <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
             {title}
@@ -1014,6 +1018,8 @@ def render_gauge_html(title, value_str, percent, sub_label, delta, delta_color, 
         </div>
     </div>
     """
+    return clean_html(raw_html)
+
 
 # 4 Columns Row: 3 Gauges + Platform Breakdown
 col_g1, col_g2, col_g3, col_pb = st.columns([1, 1, 1, 1.3])
@@ -1058,7 +1064,7 @@ with col_pb:
     # Platform breakdown progress bars
     rows_html = ""
     for idx, p in enumerate(platform_scores):
-        rows_html += f"""
+        rows_html += clean_html(f"""
         <div class="bv2-platform-item" style="padding: 6px 0;">
             <div class="bv2-platform-name" style="width: 120px; font-size: 0.85rem; font-weight: 600; color: #1E293B;">{p['platform']}</div>
             <div class="bv2-progress-bar-track" style="flex: 1; height: 8px; background: #F1F5F9; border-radius: 4px; overflow: hidden; margin: 0 10px;">
@@ -1066,8 +1072,8 @@ with col_pb:
             </div>
             <div class="bv2-platform-score" style="width: 45px; text-align: right; font-weight: 700; font-size: 0.85rem; color: #1E293B;">{p['score']}%</div>
         </div>
-        """
-    st.markdown(f"""
+        """)
+    st.markdown(clean_html(f"""
     <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
         <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
             <span>Brand Visibility By Platform</span>
@@ -1083,7 +1089,8 @@ with col_pb:
             10 platforms tracked &bull; 2,663 total responses
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
+
 
 # Trend charts row side-by-side
 st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)

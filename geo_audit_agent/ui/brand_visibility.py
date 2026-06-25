@@ -1,5 +1,8 @@
 import streamlit as st
 
+def clean_html(html_str: str) -> str:
+    return "\n".join(line.strip() for line in html_str.split("\n"))
+
 def normalize_multi_model_results(multi_model_results):
     if not multi_model_results:
         return multi_model_results
@@ -51,7 +54,7 @@ def render_brand_visibility(multi_model_results, current_score):
     row_border = "rgba(255, 255, 255, 0.04)" if is_dark else "rgba(124, 58, 237, 0.05)"
     
     # Render KPI Cards Row
-    st.markdown(f"""
+    st.markdown(clean_html(f"""
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
             <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 12px; padding: 16px; text-align: center;">
                 <span style="font-size: 0.75rem; color: {label_color}; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">🎯 AI Score</span>
@@ -69,7 +72,7 @@ def render_brand_visibility(multi_model_results, current_score):
                 <span style="color: #10B981; font-size: 0.75rem; font-weight: 600;">▲ 0.8% positive</span>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
     
     # Build list of platforms and scores
     # If we have real results from multi_model, we can use them, otherwise we fallback to high-fidelity mocks
@@ -118,7 +121,7 @@ def render_brand_visibility(multi_model_results, current_score):
             color = "#EF4444"  # Red
             indicator = "🔴"
             
-        st.markdown(f"""
+        st.markdown(clean_html(f"""
             <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: {row_bg}; border: 1px solid {row_border}; border-radius: 8px; margin-bottom: 8px;">
                 <div style="display: flex; align-items: center; gap: 8px; width: 220px;">
                     <span style="font-size: 0.9rem;">{indicator}</span>
@@ -131,13 +134,13 @@ def render_brand_visibility(multi_model_results, current_score):
                     <span style="font-size: 0.9rem; font-weight: 700; color: {color};">{score}%</span>
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         
     # Info footer
-    st.markdown(f"""
+    st.markdown(clean_html(f"""
         <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: {label_color}; margin-top: 15px; border-top: 1px solid {row_border}; padding-top: 10px;">
             <span>📊 1,597 mentions out of 2,663 total</span>
             <span>🔗 719 citations</span>
             <span>📱 10 platforms tracked</span>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
