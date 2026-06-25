@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+
 
 def render_live_ticker(brand_name):
     """Render the real-time activity feed/live ticker."""
