@@ -670,5 +670,17 @@
         "city": "London",
         "category": "ecommerce fashion store",
         "anomalies": []
+    },
+    {
+        "timestamp": 1782375409.9422312,
+        "city": "Islamabad",
+        "category": "fast food",
+        "anomalies": []
+    },
+    {
+        "timestamp": 1782375667.4489038,
+        "city": "Islamabad",
+        "category": "fast food",
+        "anomalies": []
     }
 ]

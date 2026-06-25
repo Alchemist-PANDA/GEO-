@@ -207,3 +207,109 @@ class GuardrailEvent(SQLModel, table=True):
         default_factory=datetime.utcnow,
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
+
+# ── Competitor Intelligence ──
+
+class Competitor(SQLModel, table=True):
+    __tablename__ = "competitors"
+    __table_args__ = (
+        Index("idx_competitors_brand_id", "brand_id"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    brand_id: uuid.UUID = Field(foreign_key="brands.id", index=True)
+    name: str = Field(max_length=255)
+    website: Optional[str] = Field(default=None, max_length=500)
+    category: str = Field(default="", max_length=100)
+    city: str = Field(default="", max_length=100)
+    is_auto_discovered: bool = Field(default=True)
+    added_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class CompetitorScan(SQLModel, table=True):
+    __tablename__ = "competitor_scans"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    scan_type: str = Field(default="weekly", max_length=20)
+    status: str = Field(default="pending", max_length=20)
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    crawl_data: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn("crawl_data", JSONB, server_default=text("'{}'"))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class CompetitorScore(SQLModel, table=True):
+    __tablename__ = "competitor_scores"
+    __table_args__ = (
+        Index("idx_scores_competitor_scan", "competitor_id", "scan_id"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    scan_id: uuid.UUID = Field(foreign_key="competitor_scans.id", index=True)
+    dimension: str = Field(max_length=50)  # authority, schema, content, reviews, entities, citations, brand
+    score: float = Field(default=0.0)
+    details: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn("details", JSONB, server_default=text("'{}'"))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class CompetitorExplanation(SQLModel, table=True):
+    __tablename__ = "competitor_explanations"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    scan_id: uuid.UUID = Field(foreign_key="competitor_scans.id", index=True)
+    explanation_type: str = Field(max_length=50)  # winning_factors, strategy, summary
+    content: str = ""
+    confidence: float = Field(default=0.0)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class Alert(SQLModel, table=True):
+    __tablename__ = "alerts"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    competitor_id: Optional[uuid.UUID] = Field(default=None, foreign_key="competitors.id")
+    alert_type: str = Field(max_length=50)  # visibility_change, competitor_update, new_opportunity
+    severity: str = Field(default="info", max_length=20)  # critical, high, medium, info
+    message: str = ""
+    is_read: bool = Field(default=False)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+class CompetitorFeedback(SQLModel, table=True):
+    __tablename__ = "competitor_feedback"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    is_helpful: bool = Field(default=True)
+    comment: Optional[str] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
