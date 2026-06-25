@@ -69,7 +69,7 @@ async def get_competitor_leaderboard(
         })
         
     # Sort by overall score descending
-    leaderboard.sort(key=lambda x: x["overall"], reverse=True)
+    leaderboard.sort(key=lambda x: x["overall"], reverse=True)  # type: ignore[arg-type, return-value]
     
     # Assign ranks
     for i, entry in enumerate(leaderboard):
@@ -87,7 +87,7 @@ async def get_alerts(
 ) -> Dict[str, Any]:
     """Fetch unread alerts for a user."""
     # Using raw str for user_id in this MVP
-    alerts = db.exec(select(Alert).where(Alert.user_id == user_id, not Alert.is_read).order_by(Alert.created_at.desc())).all()
+    alerts = db.exec(select(Alert).where(Alert.user_id == user_id, not Alert.is_read).order_by(Alert.created_at.desc())).all()  # type: ignore[attr-defined]
     return {"alerts": [{"id": str(a.id), "type": a.alert_type, "severity": a.severity, "message": a.message, "created_at": a.created_at} for a in alerts]}
 
 @router.post("/remediate")
@@ -108,9 +108,9 @@ Output strictly as a JSON object with two keys:
 Do NOT wrap the output in markdown backticks. Just pure JSON."""
     
     try:
-        response = query_provider(prompt, provider="gemini")
+        response = query_provider(prompt, tier="balanced")
         # Try to parse the response, in case it returns markdown we can strip it
-        clean_resp = response.strip()
+        clean_resp = response.text.strip()
         if clean_resp.startswith("```json"):
             clean_resp = clean_resp[7:-3]
         if clean_resp.startswith("```"):
@@ -119,7 +119,7 @@ Do NOT wrap the output in markdown backticks. Just pure JSON."""
         data = json.loads(clean_resp.strip())
         return {"status": "success", "data": data}
     except Exception as e:
-        return {"status": "failed", "error": str(e), "raw_response": response}
+        return {"status": "failed", "error": str(e), "raw_response": response.text}
 
 @router.post("/feedback")
 async def submit_competitor_feedback(

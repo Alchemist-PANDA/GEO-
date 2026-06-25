@@ -8,7 +8,7 @@ def agent():
 
 def test_discover_competitors(agent):
     mock_response = MagicMock()
-    mock_response.content = '[{"name": "Burger King", "website": "https://burgerking.com", "source": "Google"}]'
+    mock_response.text = '[{"name": "Burger King", "website": "https://burgerking.com", "source": "Google"}]'
     
     with patch('geo_audit_agent.agents.unified_competitor_agent.query_provider', return_value=mock_response):
         competitors = agent.discover_competitors("Burger Hub", "fast food", "Islamabad", limit=1)
@@ -56,7 +56,7 @@ def test_analyze_competitor(agent):
 
 def test_generate_intelligence(agent):
     mock_response = MagicMock()
-    mock_response.content = '{"explanation": "Better schema", "strategy": "Add JSON-LD"}'
+    mock_response.text = '{"explanation": "Better schema", "strategy": "Add JSON-LD"}'
     
     scores = {
         "authority": 90, "schema": 100, "content": 80, 
@@ -71,7 +71,7 @@ def test_generate_intelligence(agent):
 
 def test_generate_summary(agent):
     mock_response = MagicMock()
-    mock_response.content = '{"insights": ["Insight 1"], "recommendations": ["Rec 1"], "projected_growth": "High"}'
+    mock_response.text = '{"insights": ["Insight 1"], "recommendations": ["Rec 1"], "projected_growth": "High"}'
     
     with patch('geo_audit_agent.agents.unified_competitor_agent.query_provider', return_value=mock_response):
         summary = agent.generate_summary("My Brand", [{"competitor": "Comp A"}])

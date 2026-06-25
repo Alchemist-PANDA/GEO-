@@ -17,7 +17,7 @@ class UnifiedCompetitorIntelligenceAgent:
         self.correlation_id = correlation_id or str(uuid.uuid4())
         pass
 
-    def discover_competitors(self, brand: str, category: str, city: str, limit: int = 10) -> List[Dict[str, str]]:
+    def discover_competitors(self, brand: str, category: str, city: str, limit: int = 10) -> List[Dict[str, Any]]:
         logger.info(f"[{self.correlation_id}] Discovering competitors for {brand} in {category}, {city}")
         prompt = f"List the top {limit} competitor brands for {brand} which is a {category} in {city}. Return ONLY a valid JSON array of objects with keys 'name', 'website', 'source' (e.g. 'Google Maps', 'Yelp', 'AI Knowledge Base'). Make sure websites are real URLs."
         
@@ -25,7 +25,7 @@ class UnifiedCompetitorIntelligenceAgent:
         
         try:
             # strip markdown blocks if exist
-            content = response.content
+            content = response.text
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -39,7 +39,7 @@ class UnifiedCompetitorIntelligenceAgent:
     async def crawl_website(self, url: str) -> Dict[str, Any]:
         """Crawl a single website. Uses basic httpx as ScraperAPI needs a valid key."""
         logger.info(f"[{self.correlation_id}] Crawling {url}")
-        result = {"url": url, "status": "failed", "html": "", "structured_data": {}, "meta": {}}
+        result: Dict[str, Any] = {"url": url, "status": "failed", "html": "", "structured_data": {}, "meta": {}}
         
         if not url or url.lower() == "none":
             return result
@@ -108,7 +108,7 @@ class UnifiedCompetitorIntelligenceAgent:
         response = query_provider(prompt, tier="balanced", correlation_id=self.correlation_id)
         
         try:
-            content = response.content
+            content = response.text
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -125,7 +125,7 @@ class UnifiedCompetitorIntelligenceAgent:
         response = query_provider(prompt, tier="balanced", correlation_id=self.correlation_id)
         
         try:
-            content = response.content
+            content = response.text
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
