@@ -407,8 +407,8 @@ def get_competitor_data(brand_name, category):
     seen = set()
     competitors = [x for x in competitors if not (x in seen or seen.add(x))]
     
-    brand_scores = {}
     actual_results = {}
+
     if st.session_state.multi_model_results and brand_name.lower() == st.session_state.audit_results.get("brand_name", "").lower():
         for r in st.session_state.multi_model_results["results"]:
             actual_results[r["model"]] = int(r["confidence"] * 100) if r["mentioned"] else int(random.Random(r["model"]).randint(15, 35))

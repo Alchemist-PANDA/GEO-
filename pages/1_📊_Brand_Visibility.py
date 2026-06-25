@@ -315,8 +315,8 @@ def generate_platform_scores(brand, category):
 
 def generate_keyword_row(keyword, brand):
     s = _seed(f"{keyword}:{brand}")
-    models = ["Google", "ChatGPT", "Perplexity", "Claude.ai", "Gemini"]
     row = {"keyword": keyword}
+
 
     # Google columns
     row["ai_overview"] = (s % 100) >= 50
@@ -457,13 +457,13 @@ with left_col:
     for name, color, _ in PLATFORMS:
         pct = platform_scores[name]
         if pct >= 80:
-            bar_color = f"linear-gradient(90deg, #10B981, #34D399)"
+            bar_color = "linear-gradient(90deg, #10B981, #34D399)"
         elif pct >= 60:
-            bar_color = f"linear-gradient(90deg, #F59E0B, #FBBF24)"
+            bar_color = "linear-gradient(90deg, #F59E0B, #FBBF24)"
         elif pct >= 40:
-            bar_color = f"linear-gradient(90deg, #F97316, #FB923C)"
+            bar_color = "linear-gradient(90deg, #F97316, #FB923C)"
         else:
-            bar_color = f"linear-gradient(90deg, #EF4444, #F87171)"
+            bar_color = "linear-gradient(90deg, #EF4444, #F87171)"
 
         pct_color = "#10B981" if pct >= 80 else "#F59E0B" if pct >= 60 else "#F97316" if pct >= 40 else "#EF4444"
 
