@@ -16,7 +16,7 @@ def test_discover_competitors(agent):
         assert len(competitors) == 1
         assert competitors[0]["name"] == "Burger King"
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_crawl_website(agent):
     mock_html = "<html><head><meta name='description' content='Test'></head><body></body></html>"
     mock_resp = MagicMock()
