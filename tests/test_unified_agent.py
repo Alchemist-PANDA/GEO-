@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 from geo_audit_agent.agents.unified_competitor_agent import UnifiedCompetitorIntelligenceAgent
 

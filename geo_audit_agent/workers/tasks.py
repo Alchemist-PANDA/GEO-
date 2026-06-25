@@ -1,11 +1,14 @@
 # tasks.py
 import logging
-from sqlmodel import Session
+import asyncio
+from datetime import datetime
+from sqlmodel import Session, select
 from geo_audit_agent.workers.celery_app import celery_app
 from geo_audit_agent.db.session import engine
-from geo_audit_agent.db.models import Audit, Brand, AuditStatus
+from geo_audit_agent.db.models import Audit, Brand, AuditStatus, Competitor, CompetitorScan, CompetitorScore, CompetitorExplanation, Alert
 from geo_audit_agent.agent.graph import audit_graph
 from geo_audit_agent.agent.state import AuditState
+from geo_audit_agent.agents.unified_competitor_agent import UnifiedCompetitorIntelligenceAgent
 
 logger = logging.getLogger(__name__)
 
@@ -68,13 +71,6 @@ def run_audit_task(audit_id: str, user_id: str):
             session.commit()
             return False
 
-
-import asyncio
-from datetime import datetime
-from sqlmodel import select
-from geo_audit_agent.db.models import Competitor, CompetitorScan, CompetitorScore, CompetitorExplanation, Alert
-from geo_audit_agent.agents.unified_competitor_agent import UnifiedCompetitorIntelligenceAgent
-
 @celery_app.task(name="geo_audit_agent.workers.tasks.run_competitor_analysis")
 def run_competitor_analysis(brand_name: str, category: str, city: str, limit: int = 5):
     """Executes the Unified Competitor Intelligence Agent and persists to DB."""
@@ -104,8 +100,6 @@ def run_competitor_analysis(brand_name: str, category: str, city: str, limit: in
                 # 1. Upsert Competitor
                 comp_name = comp_data.get("name")
                 competitor = session.exec(select(Competitor).where(Competitor.name == comp_name, Competitor.brand_id == brand.id)).first()
-                is_new_competitor = False
-                
                 if not competitor:
                     competitor = Competitor(
                         brand_id=brand.id,
@@ -117,7 +111,6 @@ def run_competitor_analysis(brand_name: str, category: str, city: str, limit: in
                     session.add(competitor)
                     session.commit()
                     session.refresh(competitor)
-                    is_new_competitor = True
                     
                     # Generate an Alert for new competitor
                     alert = Alert(

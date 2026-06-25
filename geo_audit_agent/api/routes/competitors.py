@@ -1,9 +1,14 @@
 import uuid
+import json
 from typing import Any, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
-from geo_audit_agent.api.schemas import CompetitorAnalysisRequest
+from fastapi import APIRouter, Depends, status
+from sqlmodel import Session, select
+from geo_audit_agent.db.session import get_session
+from geo_audit_agent.db.models import Competitor, CompetitorScore, Brand, CompetitorExplanation, Alert, CompetitorFeedback
+from geo_audit_agent.api.schemas import CompetitorAnalysisRequest, RemediationRequest, CompetitorFeedbackRequest
 from geo_audit_agent.workers.tasks import run_competitor_analysis
 from geo_audit_agent.workers.celery_app import celery_app
+from geo_audit_agent.services.llm_router import query_provider
 
 router = APIRouter()
 
@@ -27,12 +32,6 @@ async def get_competitor_status(task_id: str) -> Dict[str, Any]:
         "status": task_result.status,
         "result": task_result.result if task_result.ready() else None
     }
-
-from sqlmodel import Session, select
-from geo_audit_agent.db.session import get_session
-from geo_audit_agent.db.models import Competitor, CompetitorScore, Brand, CompetitorExplanation, Alert
-from geo_audit_agent.api.schemas import RemediationRequest
-from geo_audit_agent.services.llm_router import query_provider
 
 @router.get("/leaderboard/{brand_name}")
 async def get_competitor_leaderboard(
@@ -88,7 +87,7 @@ async def get_alerts(
 ) -> Dict[str, Any]:
     """Fetch unread alerts for a user."""
     # Using raw str for user_id in this MVP
-    alerts = db.exec(select(Alert).where(Alert.user_id == user_id, Alert.is_read == False).order_by(Alert.created_at.desc())).all()
+    alerts = db.exec(select(Alert).where(Alert.user_id == user_id, not Alert.is_read).order_by(Alert.created_at.desc())).all()
     return {"alerts": [{"id": str(a.id), "type": a.alert_type, "severity": a.severity, "message": a.message, "created_at": a.created_at} for a in alerts]}
 
 @router.post("/remediate")
@@ -110,7 +109,6 @@ Do NOT wrap the output in markdown backticks. Just pure JSON."""
     
     try:
         response = query_provider(prompt, provider="gemini")
-        import json
         # Try to parse the response, in case it returns markdown we can strip it
         clean_resp = response.strip()
         if clean_resp.startswith("```json"):
@@ -123,9 +121,6 @@ Do NOT wrap the output in markdown backticks. Just pure JSON."""
     except Exception as e:
         return {"status": "failed", "error": str(e), "raw_response": response}
 
-from geo_audit_agent.db.models import CompetitorFeedback
-from geo_audit_agent.api.schemas import CompetitorFeedbackRequest
-
 @router.post("/feedback")
 async def submit_competitor_feedback(
     req: CompetitorFeedbackRequest,
@@ -133,7 +128,6 @@ async def submit_competitor_feedback(
 ) -> Dict[str, Any]:
     """Submit user feedback on competitor intelligence."""
     # For MVP, assume a default user UUID if auth is bypassed
-    import uuid
     # Let's see if we have a default user profile, else just generate one
     user_id_str = "00000000-0000-0000-0000-000000000000"
     

@@ -1255,7 +1255,7 @@ if st.session_state.audit_results:
                     elif status == "FAILURE":
                         st.error("Analysis failed.")
                         st.session_state.competitor_task_started = False
-                except Exception as e:
+                except Exception:
                     st.warning("Could not connect to API for status update.")
             else:
                 st.info("Analysis task dispatched. Waiting for task ID...")
@@ -1271,7 +1271,7 @@ if st.session_state.audit_results:
                 st.info("No competitors analyzed yet. Run a discovery task to populate the leaderboard.")
             else:
                 # Render Real Data Table
-                html_table = f"""
+                html_table = """
                 <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
                     <tr style="background: rgba(124, 58, 237, 0.1); text-align: left;">
                         <th style="padding: 12px; border-bottom: 2px solid #7C3AED;">Rank</th>
@@ -1384,7 +1384,7 @@ if st.session_state.audit_results:
                                     except Exception as e:
                                         st.error(f"Error connecting to remediation API: {e}")
                                 
-        except Exception as e:
+        except Exception:
             st.warning("Could not fetch leaderboard. Ensure API is running.")
 
 else:
