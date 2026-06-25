@@ -1,7 +1,43 @@
 import streamlit as st
 
+def normalize_multi_model_results(multi_model_results):
+    if not multi_model_results:
+        return multi_model_results
+    
+    # Format A check (if results key is present, it's already Format A)
+    if "results" in multi_model_results:
+        return multi_model_results
+    
+    # Format B conversion
+    brand = multi_model_results.get("brand", "Burger Hub")
+    scores = multi_model_results.get("scores", {})
+    platforms = multi_model_results.get("platforms", {})
+    
+    results = []
+    for platform, score_val in platforms.items():
+        # confidence is fraction of 100
+        conf = score_val / 100.0 if score_val > 1.0 else score_val
+        results.append({
+            "model": platform,
+            "mentioned": score_val > 0,
+            "confidence": conf
+        })
+    
+    summary = {
+        "geo_coverage_score": int(scores.get("visibility", 0))
+    }
+    
+    return {
+        "brand": brand,
+        "results": results,
+        "summary": summary
+    }
+
 def render_brand_visibility(multi_model_results, current_score):
     """Render the Brand Visibility breakdown panel."""
+    # Normalize input format first
+    multi_model_results = normalize_multi_model_results(multi_model_results)
+    
     # Compute display scores
     score_pct = int(current_score * 100) if current_score <= 1 else int(current_score)
     
