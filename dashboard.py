@@ -11,6 +11,14 @@ from geo_audit_agent.agent import build_geo_audit_agent
 from multi_model import run_multi_model_audit
 from streamlit_autorefresh import st_autorefresh
 
+# Import modernized dashboard components
+from geo_audit_agent.ui.gap_matrix import render_gap_matrix
+from geo_audit_agent.ui.remediation_cards import render_remediation_hub
+from geo_audit_agent.ui.lift_simulator import render_lift_simulator
+from geo_audit_agent.ui.brand_visibility import render_brand_visibility
+from geo_audit_agent.ui.live_ticker import render_live_ticker
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1000,10 +1008,13 @@ if st.session_state.audit_results:
             </div>
             """, unsafe_allow_html=True)
 
-        # Multi-Model Comparison Chart
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.container():
+        # Split Dashboard Layout
+        col_left, col_right = st.columns([1.6, 1])
+
+        with col_left:
+            # Multi-Model Comparison Chart
             chart_subtitle_color = "#94A3B8" if is_dark else "#64748B"
+
             st.markdown(f"""
                 <div class="custom-card" style="padding: 28px; margin-bottom: 24px;">
                     <h3 style="margin-top: 0; margin-bottom: 5px; font-size: 1.25rem;">Multi-Model Benchmark Chart</h3>
@@ -1014,12 +1025,8 @@ if st.session_state.audit_results:
             fig_multi = create_multi_model_chart(comp_data, brand_name_val, is_dark=(st.session_state.theme == "Dark"))
             st.plotly_chart(fig_multi, use_container_width=True, config={'displayModeBar': False})
 
-        # Bottom section: split layout
-        col_b1, col_b2 = st.columns([2, 1])
-        with col_b1:
             # Analysis Summary Card
             st.markdown("#### 📝 AI Search Intelligence Summary")
-            # Issue #3: HTML-escape LLM output before injection to prevent XSS
             raw_response = html.escape(res.get("llm_response", "No response content."))
             brand_name_val = res.get("brand_name", brand_name)
             highlighted_response = re.sub(
@@ -1037,15 +1044,25 @@ if st.session_state.audit_results:
                 <div style="max-height: 400px; overflow-y: auto; padding: 20px;
                      background-color: {theme_bg}; color: {theme_text};
                      border-radius: 12px; border: 1px solid {theme_border};
-                     line-height: 1.6; font-size: 0.95rem;">
+                     line-height: 1.6; font-size: 0.95rem; margin-bottom: 24px;">
                     {highlighted_response}
                 </div>
             """, unsafe_allow_html=True)
 
-        with col_b2:
+        with col_right:
+            # Brand Visibility Platform Status
+            render_brand_visibility(st.session_state.multi_model_results, res.get("confidence_score", 0.0))
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Live Ticker activity feed
+            render_live_ticker(brand_name_val)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Performance Trend
             if st.session_state.score_history:
                 st.markdown("#### 📈 Performance Trend")
-                # Convert history to values Plotly can use
                 fig_trend = go.Figure()
                 fig_trend.add_trace(go.Scatter(
                     y=[s*100 for s in st.session_state.score_history],
@@ -1056,7 +1073,7 @@ if st.session_state.audit_results:
                     fillcolor='rgba(124, 58, 237, 0.1)'
                 ))
                 fig_trend.update_layout(
-                    height=240,
+                    height=200,
                     margin=dict(l=0, r=0, t=10, b=0),
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
@@ -1065,6 +1082,7 @@ if st.session_state.audit_results:
                 )
                 st.plotly_chart(fig_trend, use_container_width=True)
 
+
     with tab_gaps:
         st.subheader("🚩 GEO Search Gap Analysis")
         st.caption("Identify areas where search engines lack clear data or signals about your brand.")
@@ -1072,6 +1090,10 @@ if st.session_state.audit_results:
         gaps = res.get("gaps", [])
 
         if gaps:
+            # Render visual priority matrix
+            render_gap_matrix(gaps)
+            st.divider()
+
             # Filtering and Ordering
             f_col1, f_col2 = st.columns([2, 1])
             with f_col1:
@@ -1082,22 +1104,6 @@ if st.session_state.audit_results:
             display_gaps = [g for g in gaps if selected_type == "All Categories" or g['gap_type'] == selected_type]
             # Issue #11: normalize severity to title-case for display
             sorted_gaps = sorted(display_gaps, key=lambda x: severity_order.get(x.get('severity', 'Medium').title(), 99))
-
-            # Heatmap Visual
-            st.divider()
-            cols = st.columns(4)
-            for idx, gap in enumerate(sorted_gaps):
-                sev = gap.get('severity', 'Medium').title()  # Issue #11: normalize
-                color = {"Critical": "#E53E3E", "High": "#DD6B20", "Medium": "#3182CE", "Low": "#38A169"}.get(sev, "#718096")
-
-                with cols[idx % 4]:
-                    st.markdown(f"""
-                    <div class="gap-tile" style="border-left-color: {color};">
-                        <div style="font-weight: bold; color: {color}; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;">{sev} RISK</div>
-                        <div style="font-weight: 700; margin: 4px 0; font-size: 1rem;">{gap['gap_type']}</div>
-                        <div style="font-size: 0.85rem; color: #718096; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">{gap['description']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
 
             # Details List
             st.markdown("#### Detailed Findings")
@@ -1115,60 +1121,14 @@ if st.session_state.audit_results:
         else:
             st.success("✨ Zero critical gaps identified! Your brand data satisfies search engine requirements.")
 
+
     with tab_remediation:
         st.subheader("🛠️ Remediation Hub")
         st.caption("Execute AI-generated fixes to bridge data gaps and improve search visibility.")
 
         if st.session_state.remediations:
-            for idx, item in enumerate(st.session_state.remediations):
-                with st.container(border=True):
-                    c1, c2 = st.columns([3, 1])
-                    with c1:
-                        st.markdown(f"### `{item['tool']}` Strategy")
-                    with c2:
-                        status = item['status']
-                        color_hex = "#38A169" if status == "Approved" else "#E53E3E" if status == "Rejected" else "#DD6B20"
-                        st.markdown(f"<div style='text-align: right;'><span class='status-pill' style='background-color: {color_hex}22; color: {color_hex};'>{status}</span></div>", unsafe_allow_html=True)
+            render_remediation_hub(st.session_state.remediations)
 
-                    tab_code, tab_preview = st.tabs(["💻 Implementation Code", "📝 Human-Readable Preview"])
-
-                    with tab_code:
-                        edited_content = st.text_area(
-                            "Edit Remediation Snippet",
-                            value=item['content'],
-                            height=250,
-                            key=f"edit_code_{idx}"
-                        )
-                        st.session_state.remediations[idx]['content'] = edited_content
-                        st.code(edited_content, language="json" if "JSON" in item['tool'] else "markdown")
-
-                    with tab_preview:
-                        st.markdown(edited_content)
-
-                    # Action Bar
-                    st.divider()
-                    b_col1, b_col2, b_col3, b_col4 = st.columns([1, 1, 1, 2])
-                    with b_col1:
-                        if st.button("✅ Approve", key=f"app_btn_{idx}", use_container_width=True):
-                            st.session_state.remediations[idx]['status'] = "Approved"
-                            st.toast(f"Approved {item['tool']}")
-                            st.rerun()
-                    with b_col2:
-                        if st.button("❌ Reject", key=f"rej_btn_{idx}", use_container_width=True):
-                            st.session_state.remediations[idx]['status'] = "Rejected"
-                            st.toast(f"Rejected {item['tool']}")
-                            st.rerun()
-                    with b_col3:
-                        st.download_button(
-                            "📥 Download",
-                            data=edited_content,
-                            file_name=f"brandsight_{item['tool'].lower().replace(' ', '_')}.txt",
-                            key=f"dl_btn_{idx}",
-                            use_container_width=True
-                        )
-                    with b_col4:
-                        if st.button("✨ Auto-Optimize", key=f"opt_{idx}", help="AI refinement of this content."):
-                            st.warning("Auto-optimization is a premium feature.")
 
             # Bulk Actions
             st.markdown("#### 🚀 Deployment Package")
@@ -1208,49 +1168,10 @@ if st.session_state.audit_results:
             st.info("Run an audit to generate remediation strategies.")
 
     with tab_simulator:
-        st.subheader("🧪 Strategic Lift Simulator")
-        st.caption("Visualize your projected visibility improvements after implementing remediations.")
-
         current_score = res.get("confidence_score", 0.0)
         gaps = res.get("gaps", [])
+        render_lift_simulator(current_score, gaps)
 
-        if gaps:
-            col_controls, col_visual = st.columns([1.2, 1])
-
-            with col_controls:
-                st.markdown("#### Remediation Roadmap")
-                st.write("Toggle the items you plan to implement:")
-                fixed_gaps = []
-                for i, gap in enumerate(gaps):
-                    with st.container(border=True):
-                        c_check, c_label = st.columns([1, 8])
-                        with c_check:
-                            if st.checkbox("", key=f"sim_check_{i}"):
-                                fixed_gaps.append(gap)
-                        with c_label:
-                            st.markdown(f"**{gap['gap_type']}**")
-                            st.caption(f"Priority: {gap['severity']}")
-
-            with col_visual:
-                # Simulation Math (Client-side only)
-                severity_weights = {"Critical": 0.15, "High": 0.10, "Medium": 0.05, "Low": 0.02}
-                raw_lift = sum([severity_weights.get(g['severity'], 0.05) for g in fixed_gaps])
-                diminishing_return_factor = (1.0 - current_score)
-                lift = raw_lift * diminishing_return_factor
-                predicted_score = min(1.0, current_score + lift)
-
-                st.plotly_chart(create_gauge_chart(predicted_score, title="Projected GEO Score (%)"), use_container_width=True)
-
-                s_col1, s_col2 = st.columns(2)
-                with s_col1:
-                    st.metric("Current", f"{current_score*100:.0f}%")
-                with s_col2:
-                    st.metric("Projected", f"{predicted_score*100:.0f}%", delta=f"{lift*100:+.1f}%")
-
-                st.success(f"**Growth Opportunity:** Implementing these fixes could bridge your search presence gap by **{lift*100:.1f} points**.")
-        else:
-            st.balloons()
-            st.success("Your brand performance is already optimized for Generative Search.")
 
     with tab_compare:
         st.subheader("🔄 Market Benchmarking")
