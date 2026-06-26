@@ -43,6 +43,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-cov ruff mypy
+          pip install redis psycopg2-binary celery
 
       - name: Lint
         run: ruff check geo_audit_agent/ tests/
