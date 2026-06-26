@@ -4,7 +4,12 @@ import uuid
 import logging
 from datetime import datetime
 from typing import AsyncIterator, Dict, Any, List, Optional
-import anthropic
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    
 from sqlmodel import Session
 
 from geo_audit_agent.db.models import CopilotConversation, CopilotMessage
@@ -192,7 +197,7 @@ async def stream_chat(
         db_session_inner.add(new_msg)
         db_session_inner.commit()
     
-    if use_mock or not api_key:
+    if use_mock or not api_key or not ANTHROPIC_AVAILABLE:
         from geo_audit_agent.copilot.mock_engine import MockCopilotEngine
         engine = MockCopilotEngine()
         async for mock_event in engine.stream_chat(conversation_id, user_message, context, db_session, save_msg):
