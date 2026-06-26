@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from typing import AsyncIterator, Dict, Any, List, Optional
 import anthropic
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from geo_audit_agent.db.models import CopilotConversation, CopilotMessage
 from geo_audit_agent.copilot.chart_builder import build_chart

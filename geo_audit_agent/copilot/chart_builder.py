@@ -1,4 +1,3 @@
-import json
 import plotly.graph_objects as go
 from typing import Dict, Any, List, Optional
 

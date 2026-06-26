@@ -1,15 +1,13 @@
 import streamlit as st
 import uuid
-import json
 import os
 import asyncio
 import plotly.io
-from datetime import datetime
 from sqlmodel import Session, create_engine, select, desc, SQLModel
 
-from geo_audit_agent.db.models import UserProfile, CopilotConversation, CopilotMessage
+from geo_audit_agent.db.models import UserProfile, CopilotConversation
 from geo_audit_agent.copilot.context import build_copilot_context
-from geo_audit_agent.copilot.engine import stream_chat, save_msg
+from geo_audit_agent.copilot.engine import stream_chat
 
 # Database Setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///geo_saas.db")
@@ -149,8 +147,8 @@ with get_db_session() as session:
                 try:
                     fig = plotly.io.from_json(msg.artifacts["chart"])
                     st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    logger.error(f"Error loading chart from message artifacts: {e}")
+                except Exception:
+                    print("Error loading chart from message artifacts")
             
             # Render navigation if present in artifacts
             if msg.artifacts and "navigation" in msg.artifacts:
@@ -174,34 +172,35 @@ if user_query:
         chart_placeholder = st.empty()
         nav_placeholder = st.empty()
         
-        full_text = ""
-        plotly_json = None
-        nav_info = None
+        state = {
+            "full_text": "",
+            "plotly_json": None,
+            "nav_info": None
+        }
 
         # Execute stream async-to-sync
         async def run_stream():
-            nonlocal full_text, plotly_json, nav_info
             with get_db_session() as session:
                 async for event in stream_chat(active_id, user_query, ctx, session):
                     if event["type"] == "text":
-                        full_text += event["content"]
-                        response_placeholder.write(full_text)
+                        state["full_text"] += event["content"]
+                        response_placeholder.write(state["full_text"])
                     elif event["type"] == "chart":
-                        plotly_json = event["content"]
+                        state["plotly_json"] = event["content"]
                     elif event["type"] == "navigation":
-                        nav_info = event["content"]
+                        state["nav_info"] = event["content"]
 
         asyncio.run(run_stream())
 
         # Render any generated chart or navigation tips
-        if plotly_json:
+        if state["plotly_json"]:
             try:
-                fig = plotly.io.from_json(plotly_json)
+                fig = plotly.io.from_json(state["plotly_json"])
                 chart_placeholder.plotly_chart(fig, use_container_width=True)
-            except Exception as e:
-                logger.error(f"Plotly load error: {e}")
-        if nav_info:
-            nav_placeholder.info(f"💡 Suggestion: Navigate to the **{nav_info.get('tab')}** tab. Reason: {nav_info.get('reason')}")
+            except Exception:
+                print("Plotly load error")
+        if state["nav_info"]:
+            nav_placeholder.info(f"💡 Suggestion: Navigate to the **{state['nav_info'].get('tab')}** tab. Reason: {state['nav_info'].get('reason')}")
 
     # Rerun to refresh conversation list titles and order
     st.rerun()

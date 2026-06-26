@@ -3,14 +3,14 @@ import logging
 import json
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select, desc
 from pydantic import BaseModel
 
 from geo_audit_agent.api.auth import get_current_user
 from geo_audit_agent.db.session import get_async_session
-from geo_audit_agent.db.models import CopilotConversation, CopilotMessage
+from geo_audit_agent.db.models import CopilotConversation
 from geo_audit_agent.copilot.engine import stream_chat
 
 router = APIRouter()
