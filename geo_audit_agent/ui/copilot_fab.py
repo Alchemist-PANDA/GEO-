@@ -41,5 +41,4 @@ def render_copilot_fab():
     """, unsafe_allow_html=True)
     
     if st.button("🤖", key="copilot_fab", use_container_width=False):
-        st.session_state["copilot_open"] = not st.session_state.get("copilot_open", False)
-        st.rerun()
+        st.switch_page("pages/3_🤖_Copilot.py")

@@ -156,12 +156,15 @@ with get_db_session() as session:
                 st.info(f"💡 Suggestion: Navigate to the **{nav.get('tab')}** tab. Reason: {nav.get('reason')}")
 
 # Chat Input
+pending_prompt = st.session_state.pop("copilot_pending_message", None)
 user_query = st.chat_input("Ask about your brand visibility...")
 
-if user_query:
+prompt_to_send = pending_prompt or user_query
+
+if prompt_to_send:
     # 1. Display user query immediately
     with st.chat_message("user"):
-        st.write(user_query)
+        st.write(prompt_to_send)
 
     # 2. Build context
     ctx = build_copilot_context(st.session_state)
@@ -181,7 +184,7 @@ if user_query:
         # Execute stream async-to-sync
         async def run_stream():
             with get_db_session() as session:
-                async for event in stream_chat(active_id, user_query, ctx, session):
+                async for event in stream_chat(active_id, prompt_to_send, ctx, session):
                     if event["type"] == "text":
                         state["full_text"] += event["content"]
                         response_placeholder.write(state["full_text"])

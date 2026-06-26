@@ -18,7 +18,6 @@ def render_chart_with_explain_button(fig: go.Figure, chart_title: str, chart_dat
             
         # Ensure copilot state is correctly synchronized
         st.session_state["copilot_open"] = True
-        st.session_state.copilot["panel_open"] = True
         
         # Populate context and pre-fill prompt
         st.session_state.copilot["context"] = {
@@ -34,5 +33,6 @@ def render_chart_with_explain_button(fig: go.Figure, chart_title: str, chart_dat
         # Pre-fill the question
         st.session_state.copilot["prefill"] = f"Explain this chart: {chart_title}"
         st.session_state["copilot_pending_message"] = f"Explain this chart: {chart_title}"
+        st.switch_page("pages/3_🤖_Copilot.py")
 
     st.button("💡 Explain This Chart", key=button_key, on_click=on_explain)
