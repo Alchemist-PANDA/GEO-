@@ -1,7 +1,15 @@
 import time
 import logging
 from typing import Tuple, Dict, Optional
-import redis
+try:
+    import redis
+    REDIS_MODULE_AVAILABLE = True
+    from redis import RedisError
+except ImportError:
+    REDIS_MODULE_AVAILABLE = False
+    class RedisError(Exception):  # type: ignore
+        pass
+
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -16,11 +24,12 @@ class RedisRateLimiter:
                  db: int = 1, limit: int = 100, window: int = 3600):
         self.limit = limit
         self.window = window
-        self.redis: Optional[redis.Redis] = None
-        try:
-            self.redis = redis.Redis(host=host, port=port, db=db, socket_timeout=3)
-        except Exception as e:
-            logger.error(f"Redis rate limiter connection failed: {e}")
+        self.redis: Optional[redis.Redis] = None  # type: ignore
+        if REDIS_MODULE_AVAILABLE:
+            try:
+                self.redis = redis.Redis(host=host, port=port, db=db, socket_timeout=3)  # type: ignore
+            except Exception as e:
+                logger.error(f"Redis rate limiter connection failed: {e}")
 
     def is_allowed(self, client_key: str) -> Tuple[bool, Dict[str, str]]:
         now = int(time.time())
@@ -48,7 +57,7 @@ class RedisRateLimiter:
                 return False, headers
 
             return True, headers
-        except redis.RedisError as e:
+        except RedisError as e:
             logger.error(f"Rate limiter error: {e}")
             return True, {}
 
