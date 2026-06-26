@@ -1,0 +1,1 @@
+# BrandSight GEO Copilot module
