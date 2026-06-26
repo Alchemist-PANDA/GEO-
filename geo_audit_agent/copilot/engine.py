@@ -26,7 +26,7 @@ When answering questions:
 
 Always be professional, concise, and structured in your explanations."""
 
-TOOLS = [
+TOOLS: List[Any] = [
     {
         "name": "generate_chart",
         "description": "Generate a Plotly chart from audit/competitor data. Use when the user asks for a visualization, comparison chart, trend graph, or any visual representation of data.",
@@ -156,7 +156,7 @@ async def stream_chat(
         raise ValueError(f"Conversation {conversation_id} not found")
 
     db_messages = conversation.messages
-    formatted_messages = []
+    formatted_messages: List[Dict[str, Any]] = []
     
     # 2. Build history
     for msg in db_messages:
@@ -200,7 +200,7 @@ async def stream_chat(
             max_tokens=max_tokens,
             system=SYSTEM_PROMPT,
             tools=TOOLS,
-            messages=formatted_messages,
+            messages=formatted_messages,  # type: ignore
         ) as stream:
             for event in stream:
                 if event.type == "content_block_delta" and event.delta.type == "text_delta":
@@ -275,7 +275,8 @@ def auto_title(first_message: str, api_key: str) -> Optional[str]:
             max_tokens=20,
             messages=[{"role": "user", "content": f"Generate a 3-5 word title for a conversation that starts with: '{first_message[:200]}'. Return only the title, no quotes."}]
         )
-        return response.content[0].text.strip()
+        first_content = response.content[0]
+        return getattr(first_content, "text", "").strip()
     except Exception as e:
         logger.error(f"Error generating auto title: {e}")
         return None

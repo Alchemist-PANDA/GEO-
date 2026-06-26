@@ -57,7 +57,7 @@ async def chat_endpoint(
         conversation_id = str(conversation.id)
     else:
         # Validate conversation ownership
-        conversation = session.get(CopilotConversation, uuid.UUID(conversation_id))
+        conversation = session.get(CopilotConversation, uuid.UUID(conversation_id))  # type: ignore
         if not conversation or conversation.user_id != user_uuid:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
