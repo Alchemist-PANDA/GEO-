@@ -313,3 +313,55 @@ class CompetitorFeedback(SQLModel, table=True):
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
+
+class CopilotConversation(SQLModel, table=True):
+    __tablename__ = "copilot_conversations"
+    __table_args__ = (
+        Index("idx_copilot_conv_user_id", "user_id"),
+        Index("idx_copilot_conv_created_at", "created_at"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    title: str = Field(max_length=200, default="New conversation")
+    context_snapshot: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+    messages: List["CopilotMessage"] = Relationship(
+        back_populates="conversation",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "order_by": "CopilotMessage.created_at"}
+    )
+
+
+class CopilotMessage(SQLModel, table=True):
+    __tablename__ = "copilot_messages"
+    __table_args__ = (
+        Index("idx_copilot_msg_conv_id", "conversation_id"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    conversation_id: uuid.UUID = Field(foreign_key="copilot_conversations.id", index=True)
+    role: str = Field(max_length=20)  # "user" | "assistant"
+    content: str  # Plain text or markdown
+    artifacts: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    )
+    tokens_used: int = Field(default=0)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+    conversation: CopilotConversation = Relationship(back_populates="messages")
+

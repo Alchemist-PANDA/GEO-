@@ -16,6 +16,7 @@ from geo_audit_agent.ui.remediation_cards import render_remediation_hub
 from geo_audit_agent.ui.lift_simulator import render_lift_simulator
 from geo_audit_agent.ui.brand_visibility import render_brand_visibility, normalize_multi_model_results, render_market_simulator
 from geo_audit_agent.ui.live_ticker import render_live_ticker
+from geo_audit_agent.ui.explain_this import explain_this
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1077,6 +1078,18 @@ if st.session_state.audit_results:
                 hovermode='x unified'
             )
             st.plotly_chart(fig_cr_trend, use_container_width=True, config={'displayModeBar': False})
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            explain_this(
+                element_type="dashboard",
+                element_id="overview_dashboard",
+                context_data={
+                    "geo_coverage_score": cov_score,
+                    "is_cited": is_cited,
+                    "confidence_score": res.get("confidence_score"),
+                    "llm_response_summary": res.get("llm_response")
+                }
+            )
 
     with tab_gaps:
         st.subheader("🚩 GEO Search Gap Analysis")
@@ -1515,3 +1528,10 @@ st.sidebar.markdown("""
         &copy; 2026 Alchemist PANDA
     </div>
 """, unsafe_allow_html=True)
+
+# Inject Copilot FAB and Panel
+from geo_audit_agent.ui.copilot_fab import render_copilot_fab
+from geo_audit_agent.ui.copilot_panel import render_copilot_panel
+
+render_copilot_fab()
+render_copilot_panel()
