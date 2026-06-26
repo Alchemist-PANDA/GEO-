@@ -3,16 +3,19 @@ import uuid
 import asyncio
 import plotly.io
 import os
-from datetime import datetime
 from sqlmodel import Session, create_engine, select
 
-from geo_audit_agent.db.models import UserProfile, CopilotConversation, CopilotMessage
+from geo_audit_agent.db.models import UserProfile, CopilotConversation
 from geo_audit_agent.copilot.context import build_copilot_context
 from geo_audit_agent.copilot.engine import stream_chat
 
 # Database Setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///geo_saas.db")
 db_engine = create_engine(DATABASE_URL)
+
+# Ensure tables exist (critical for Streamlit Cloud with local sqlite)
+from sqlmodel import SQLModel  # noqa: E402
+SQLModel.metadata.create_all(db_engine)
 
 def get_db_session():
     return Session(db_engine)
@@ -81,7 +84,7 @@ def render_copilot_panel():
                 try:
                     fig = plotly.io.from_json(msg.artifacts["chart"])
                     st.sidebar.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
+                except Exception:
                     pass
             st.sidebar.markdown("---")
 
@@ -124,7 +127,7 @@ def render_copilot_panel():
             try:
                 fig = plotly.io.from_json(plotly_json)
                 chart_placeholder.plotly_chart(fig, use_container_width=True)
-            except Exception as e:
+            except Exception:
                 pass
                 
         st.rerun()

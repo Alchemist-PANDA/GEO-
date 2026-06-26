@@ -3,14 +3,14 @@ import logging
 import json
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select, desc
 from pydantic import BaseModel
 
 from geo_audit_agent.api.auth import get_current_user
 from geo_audit_agent.db.session import get_async_session
-from geo_audit_agent.db.models import CopilotConversation, CopilotMessage
+from geo_audit_agent.db.models import CopilotConversation
 from geo_audit_agent.copilot.engine import stream_chat
 
 router = APIRouter()
@@ -57,7 +57,7 @@ async def chat_endpoint(
         conversation_id = str(conversation.id)
     else:
         # Validate conversation ownership
-        conversation = session.get(CopilotConversation, uuid.UUID(conversation_id))
+        conversation = session.get(CopilotConversation, uuid.UUID(conversation_id))  # type: ignore
         if not conversation or conversation.user_id != user_uuid:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

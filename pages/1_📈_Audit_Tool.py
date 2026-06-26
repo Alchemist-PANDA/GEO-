@@ -1530,8 +1530,8 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 # Inject Copilot FAB and Panel
-from geo_audit_agent.ui.copilot_fab import render_copilot_fab
-from geo_audit_agent.ui.copilot_panel import render_copilot_panel
+from geo_audit_agent.ui.copilot_fab import render_copilot_fab  # noqa: E402
+from geo_audit_agent.ui.copilot_panel import render_copilot_panel  # noqa: E402
 
 render_copilot_fab()
 render_copilot_panel()

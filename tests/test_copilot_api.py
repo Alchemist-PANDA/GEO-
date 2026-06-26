@@ -269,9 +269,9 @@ class TestChatEndpoint:
         assert "text/event-stream" in resp.headers["content-type"]
 
         data_lines = [
-            l.removeprefix("data:").strip()
-            for l in resp.text.split("\n")
-            if l.startswith("data:")
+            line.removeprefix("data:").strip()
+            for line in resp.text.split("\n")
+            if line.startswith("data:")
         ]
         assert len(data_lines) >= 1
 

@@ -2,7 +2,7 @@ import pytest
 import sys
 import uuid
 from pathlib import Path
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, create_engine
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
