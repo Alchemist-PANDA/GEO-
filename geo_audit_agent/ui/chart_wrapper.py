@@ -12,7 +12,7 @@ def render_chart_with_explain_button(fig: go.Figure, chart_title: str, chart_dat
     base_key = kwargs.get("key", chart_title.replace(' ', '_'))
     button_key = f"explain_{base_key}"
     
-    if st.button("💡 Explain This Chart", key=button_key):
+    def on_explain():
         if "copilot" not in st.session_state:
             st.session_state.copilot = {"panel_open": False, "context": {}, "prefill": None, "messages": []}
             
@@ -34,5 +34,5 @@ def render_chart_with_explain_button(fig: go.Figure, chart_title: str, chart_dat
         # Pre-fill the question
         st.session_state.copilot["prefill"] = f"Explain this chart: {chart_title}"
         st.session_state["copilot_pending_message"] = f"Explain this chart: {chart_title}"
-        
-        st.rerun()
+
+    st.button(f"💡 Explain This Chart", key=button_key, on_click=on_explain)
