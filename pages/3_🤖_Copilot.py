@@ -5,7 +5,7 @@ import os
 import asyncio
 import plotly.io
 from datetime import datetime
-from sqlmodel import Session, create_engine, select, desc
+from sqlmodel import Session, create_engine, select, desc, SQLModel
 
 from geo_audit_agent.db.models import UserProfile, CopilotConversation, CopilotMessage
 from geo_audit_agent.copilot.context import build_copilot_context
@@ -14,6 +14,8 @@ from geo_audit_agent.copilot.engine import stream_chat, save_msg
 # Database Setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///geo_saas.db")
 engine = create_engine(DATABASE_URL)
+
+SQLModel.metadata.create_all(engine)
 
 def get_db_session():
     return Session(engine)

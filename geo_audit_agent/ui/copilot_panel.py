@@ -14,6 +14,10 @@ from geo_audit_agent.copilot.engine import stream_chat
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///geo_saas.db")
 db_engine = create_engine(DATABASE_URL)
 
+# Ensure tables exist (critical for Streamlit Cloud with local sqlite)
+from sqlmodel import SQLModel
+SQLModel.metadata.create_all(db_engine)
+
 def get_db_session():
     return Session(db_engine)
 
