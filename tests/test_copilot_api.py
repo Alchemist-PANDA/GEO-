@@ -63,7 +63,6 @@ def client():
 
 @pytest.fixture(scope="module")
 def seed_user():
-    from geo_audit_agent.db.models import UserProfile
     user_uuid = uuid.UUID(TEST_USER_ID)
     with Session(test_engine) as session:
         existing = session.get(UserProfile, user_uuid)
@@ -219,7 +218,6 @@ class TestDeleteConversation:
 # ── 5. Clear all history ──────────────────────────────────────────────────────
 class TestClearAllHistory:
     def test_clear_all_succeeds(self, client, seed_user):
-        from geo_audit_agent.db.models import CopilotConversation
         with Session(test_engine) as session:
             for i in range(2):
                 session.add(CopilotConversation(
@@ -281,7 +279,6 @@ class TestChatEndpoint:
         assert "conversation_id" in first
 
     def test_existing_conversation_stream(self, client, seed_user):
-        from geo_audit_agent.db.models import CopilotConversation
         with Session(test_engine) as session:
             conv = CopilotConversation(
                 user_id=uuid.UUID(TEST_USER_ID),

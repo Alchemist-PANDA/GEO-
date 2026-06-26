@@ -3,7 +3,7 @@ from sqlmodel import create_engine, Session
 from contextlib import contextmanager
 
 try:
-    import psycopg2
+    import psycopg2  # noqa: F401
     PSYCOPG2_AVAILABLE = True
 except ImportError:
     PSYCOPG2_AVAILABLE = False
