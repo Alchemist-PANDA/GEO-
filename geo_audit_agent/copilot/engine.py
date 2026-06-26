@@ -179,6 +179,19 @@ async def stream_chat(
     use_mock = os.getenv("USE_MOCK", "True").lower() == "true"
     api_key = os.getenv("ANTHROPIC_API_KEY")
     
+    def save_msg(conv_id, role, content, tokens, db_session_inner, artifacts=None):
+        if artifacts is None:
+            artifacts = {}
+        new_msg = CopilotMessage(
+            conversation_id=uuid.UUID(conv_id),
+            role=role,
+            content=content,
+            tokens=tokens,
+            artifacts=artifacts
+        )
+        db_session_inner.add(new_msg)
+        db_session_inner.commit()
+    
     if use_mock or not api_key:
         from geo_audit_agent.copilot.mock_engine import MockCopilotEngine
         engine = MockCopilotEngine()

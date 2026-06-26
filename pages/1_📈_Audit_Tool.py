@@ -1304,7 +1304,7 @@ if st.session_state.audit_results:
                                 xaxis=dict(showgrid=False, showticklabels=False),
                                 yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
                             )
-                            render_chart_with_explain_button(fig_kw_trend, 'Keyword Trend', {'type': 'keyword_trend'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False})
+                            render_chart_with_explain_button(fig_kw_trend, 'Keyword Trend', {'type': 'keyword_trend'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False}, key=f"kw_{kw}")
 
     with tab_competitors:
         import time

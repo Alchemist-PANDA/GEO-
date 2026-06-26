@@ -9,8 +9,10 @@ def render_chart_with_explain_button(fig: go.Figure, chart_title: str, chart_dat
     if "use_container_width" not in kwargs:
         kwargs["use_container_width"] = True
     st.plotly_chart(fig, **kwargs)
+    base_key = kwargs.get("key", chart_title.replace(' ', '_'))
+    button_key = f"explain_{base_key}"
     
-    if st.button("💡 Explain This Chart", key=f"explain_{chart_title.replace(' ', '_')}"):
+    if st.button("💡 Explain This Chart", key=button_key):
         if "copilot" not in st.session_state:
             st.session_state.copilot = {"panel_open": False, "context": {}, "prefill": None, "messages": []}
             
