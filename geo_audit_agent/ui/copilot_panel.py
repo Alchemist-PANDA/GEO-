@@ -2,7 +2,6 @@ import streamlit as st
 import uuid
 import asyncio
 import plotly.io
-import os
 from sqlmodel import Session, select, SQLModel
 from geo_audit_agent.db.session import engine
 
