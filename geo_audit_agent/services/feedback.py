@@ -2,7 +2,14 @@
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, cast, List
-import redis
+try:
+    import redis
+    REDIS_MODULE_AVAILABLE = True
+    from redis import RedisError
+except ImportError:
+    REDIS_MODULE_AVAILABLE = False
+    class RedisError(Exception):  # type: ignore
+        pass
 
 logger = logging.getLogger(__name__)
 
@@ -10,15 +17,37 @@ class FeedbackPersistenceManager:
     """Manages user feedback collection (thumbs, NPS) and telemetry persistence in Redis."""
     
     def __init__(self, host: str = "localhost", port: int = 6379, db: int = 0, password: Optional[str] = None):
-        self.pool = redis.ConnectionPool(
-            host=host, 
-            port=port, 
-            db=db, 
-            password=password, 
-            max_connections=10
-        )
-        self.r = redis.Redis(connection_pool=self.pool)
-        
+        if REDIS_MODULE_AVAILABLE:
+            self.pool = redis.ConnectionPool(  # type: ignore
+                host=host, 
+                port=port, 
+                db=db, 
+                password=password, 
+                max_connections=10
+            )
+            self.r = redis.Redis(connection_pool=self.pool)  # type: ignore
+        else:
+            self.pool = None
+            class MockRedisClient:
+                def __init__(self):
+                    self.db: Dict[str, Any] = {}
+                    self.index: List[bytes] = []
+                def hset(self, key: str, mapping: Dict[str, Any]) -> int:
+                    self.db[key] = {
+                        k.encode("utf-8") if isinstance(k, str) else k:
+                        (v.encode("utf-8") if isinstance(v, str) else str(v).encode("utf-8") if isinstance(v, int) else v)
+                        for k, v in mapping.items()
+                    }
+                    return 1
+                def lpush(self, key: str, value: str) -> int:
+                    self.index.insert(0, value.encode("utf-8"))
+                    return len(self.index)
+                def lrange(self, key: str, start: int, end: int) -> List[bytes]:
+                    return self.index
+                def hgetall(self, key: str) -> Dict[bytes, bytes]:
+                    return self.db.get(key, {})
+            self.r = MockRedisClient()  # type: ignore
+            
     def submit_feedback(self, run_id: str, brand_name: str, score_nps: int, rating_verdict: str, user_comment: str = "") -> bool:
         """
         Submits feedback data to Redis.
@@ -43,7 +72,7 @@ class FeedbackPersistenceManager:
             # Add run ID to a tracking index list for analytical queries
             self.r.lpush("geo:feedback:index", run_id)
             return True
-        except redis.RedisError as e:
+        except RedisError as e:
             logger.error(f"Failed to persist feedback in Redis: {e}")
             return False
             
@@ -89,6 +118,6 @@ class FeedbackPersistenceManager:
                 "promoters_pct": round((promoters / total) * 100, 2),
                 "detractors_pct": round((detractors / total) * 100, 2)
             }
-        except redis.RedisError as e:
+        except RedisError as e:
             logger.error(f"Failed to calculate NPS metrics: {e}")
             return {"error": str(e)}

@@ -1,5 +1,31 @@
 import json
-import redis.asyncio as aioredis
+try:
+    import redis.asyncio as aioredis
+    REDIS_ASYNC_AVAILABLE = True
+except ImportError:
+    REDIS_ASYNC_AVAILABLE = False
+
+if not REDIS_ASYNC_AVAILABLE:
+    class MockAioRedis:
+        @classmethod
+        def from_url(cls, *args, **kwargs):
+            class MockPubSub:
+                async def subscribe(self, *args, **kwargs):
+                    pass
+                async def unsubscribe(self, *args, **kwargs):
+                    pass
+                async def listen(self):
+                    # Yield nothing
+                    if False:
+                        yield None
+            class MockClient:
+                def pubsub(self):
+                    return MockPubSub()
+                async def aclose(self):
+                    pass
+            return MockClient()
+    aioredis = MockAioRedis()  # type: ignore
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from geo_audit_agent.api.auth import get_current_user
