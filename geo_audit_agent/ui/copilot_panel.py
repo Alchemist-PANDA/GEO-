@@ -3,22 +3,18 @@ import uuid
 import asyncio
 import plotly.io
 import os
-from sqlmodel import Session, create_engine, select
+from sqlmodel import Session, select, SQLModel
+from geo_audit_agent.db.session import engine
 
 from geo_audit_agent.db.models import UserProfile, CopilotConversation
 from geo_audit_agent.copilot.context import build_copilot_context
 from geo_audit_agent.copilot.engine import stream_chat
 
-# Database Setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///geo_saas.db")
-db_engine = create_engine(DATABASE_URL)
-
 # Ensure tables exist (critical for Streamlit Cloud with local sqlite)
-from sqlmodel import SQLModel  # noqa: E402
-SQLModel.metadata.create_all(db_engine)
+SQLModel.metadata.create_all(engine)
 
 def get_db_session():
-    return Session(db_engine)
+    return Session(engine)
 
 def get_or_create_sidebar_user() -> uuid.UUID:
     with get_db_session() as session:
