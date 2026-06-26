@@ -10,6 +10,8 @@ def build_copilot_context(session_state: Dict[str, Any]) -> Dict[str, Any]:
         "brand_name": session_state.get("brand_name", ""),
         "category": session_state.get("category", ""),
         "city": session_state.get("city", ""),
+        "chart_title": session_state.get("chart_title", ""),
+        "chart_data": session_state.get("chart_data", ""),
     }
 
     # Audit data (if an audit has been run)

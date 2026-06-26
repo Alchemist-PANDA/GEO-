@@ -37,6 +37,10 @@ def explain_this(element_type: str, element_id: str, context_data: dict):
         st.session_state["copilot_open"] = True
         st.session_state["copilot_pending_message"] = prompt
         
+        # Set context for mock engine
+        st.session_state["chart_title"] = f"{element_type.title()} ({element_id})"
+        st.session_state["chart_data"] = json.dumps(context_data)
+        
         # Add to message list directly to trigger processing
         if "copilot_messages" not in st.session_state:
             st.session_state["copilot_messages"] = []

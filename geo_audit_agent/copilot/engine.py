@@ -176,14 +176,14 @@ async def stream_chat(
     # Compact history if too long
     formatted_messages = compact_history(formatted_messages)
 
+    use_mock = os.getenv("USE_MOCK", "True").lower() == "true"
     api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        # Mock mode fallback if no API key is present
-        yield {"type": "text", "content": "*(API Key missing. Running in demo mode)*\n\nBased on your GEO Score of " + str(context.get("geo_score", 72)) + ", you have strong platform presence but can optimize Authority."}
-        # Save user & assistant messages
-        save_msg(conversation_id, "user", user_message, 0, db_session)
-        save_msg(conversation_id, "assistant", "Based on your GEO Score, you have strong platform presence but can optimize Authority.", 0, db_session)
-        yield {"type": "done", "conversation_id": conversation_id, "title": conversation.title}
+    
+    if use_mock or not api_key:
+        from geo_audit_agent.copilot.mock_engine import MockCopilotEngine
+        engine = MockCopilotEngine()
+        async for mock_event in engine.stream_chat(conversation_id, user_message, context, db_session, save_msg):
+            yield mock_event
         return
 
     client = anthropic.Anthropic(api_key=api_key)
@@ -268,6 +268,11 @@ def save_msg(conversation_id: str, role: str, content: str, tokens: int, db_sess
     db_session.commit()
 
 def auto_title(first_message: str, api_key: str) -> Optional[str]:
+    use_mock = os.getenv("USE_MOCK", "True").lower() == "true"
+    if use_mock or not api_key:
+        words = first_message.split()
+        return " ".join(words[:4]).capitalize() + "..."
+
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
