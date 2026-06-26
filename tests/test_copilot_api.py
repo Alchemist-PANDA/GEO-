@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine
 from sqlmodel.pool import StaticPool
+from geo_audit_agent.db.models import UserProfile, CopilotConversation
 
 # ── Test database (in-memory SQLite) ─────────────────────────────────────────
 TEST_DB_URL = "sqlite://"
