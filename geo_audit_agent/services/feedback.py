@@ -27,7 +27,7 @@ class FeedbackPersistenceManager:
             )
             self.r = redis.Redis(connection_pool=self.pool)  # type: ignore
         else:
-            self.pool = None
+            self.pool = None  # type: ignore[assignment]
             class MockRedisClient:
                 def __init__(self):
                     self.db: Dict[str, Any] = {}
