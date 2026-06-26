@@ -39,7 +39,8 @@ def get_cached_response(tier: str, prompt: str) -> Optional[str]:
     key = get_cache_key(tier, prompt)
     if REDIS_AVAILABLE:
         try:
-            val = r.get(key)  # type: ignore
+            assert r is not None
+            val = r.get(key)
             if val:
                 return val.decode("utf-8")  # type: ignore
         except Exception as e:
@@ -50,6 +51,7 @@ def set_cached_response(tier: str, prompt: str, response: str, ttl: int = 86400)
     key = get_cache_key(tier, prompt)
     if REDIS_AVAILABLE:
         try:
+            assert r is not None
             r.setex(key, ttl, response)
             return
         except Exception as e:
