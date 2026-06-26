@@ -26,6 +26,11 @@ class MockCopilotEngine:
         
         if chart_title and chart_summary and "explain" in msg_lower:
             response = f"This chart shows your '{chart_title}'. Here is the data summary: {chart_summary}. Based on this trend, you've seen a +17 gain recently, likely correlating with your recent FAQ schema deployment."
+            # Generate a mock chart based on the fact that they clicked a chart
+            chart_data = {
+                "data": [{"x": ["Last Week", "This Week"], "y": [50, 75], "type": "bar", "marker": {"color": "#7C3AED"}}],
+                "layout": {"title": f"Copilot Generated: {chart_title}"}
+            }
         elif any(word in msg_lower for word in ["visibility", "score", "trend"]):
             response = "Your current Brand Visibility is 68%, up 5% from last month. ChatGPT drives 86% of your visibility, while Claude lags at 34%. The trend is upward with 'Fast' acceleration."
         elif any(word in msg_lower for word in ["competitor", "mcdonald's", "winning"]):

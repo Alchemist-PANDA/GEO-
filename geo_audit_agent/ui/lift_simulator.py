@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_explain_button
 
 def render_lift_simulator(current_score, gaps):
     """Render the interactive strategic lift simulator with checklist and progression line chart."""
@@ -106,7 +107,7 @@ def render_lift_simulator(current_score, gaps):
             showlegend=False
         )
         
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        render_chart_with_explain_button(fig, 'Lift Simulator Progression', {'type': 'lift_simulator'}, 'Lift Simulator', use_container_width=True, config={'displayModeBar': False})
         
         # Summary metrics
         final_lift = scores[-2] - scores[0] if len(scores) > 1 else 0

@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_explain_button
 
 def clean_html(html_str: str) -> str:
     return "\n".join(line.strip() for line in html_str.split("\n"))
@@ -342,7 +343,7 @@ def render_brand_visibility(multi_model_results, current_score):
             <div id="sparkline-wrapper" style="height: 45px; margin-bottom: 2px;">
         """, unsafe_allow_html=True)
         # Render inline sparkline
-        st.plotly_chart(render_momentum_sparkline(historical_data), use_container_width=True, key="momentum_sparkline", config={'staticPlot': True, 'displayModeBar': False})
+        render_chart_with_explain_button(render_momentum_sparkline(historical_data), "Momentum Sparkline", {'type': 'sparkline'}, 'Brand Visibility', key="momentum_sparkline", config={'staticPlot': True, 'displayModeBar': False})
         st.markdown("</div></div>", unsafe_allow_html=True)
         
     with r2_col3:

@@ -17,7 +17,7 @@ from geo_audit_agent.ui.lift_simulator import render_lift_simulator
 from geo_audit_agent.ui.brand_visibility import render_brand_visibility, normalize_multi_model_results, render_market_simulator
 from geo_audit_agent.ui.live_ticker import render_live_ticker
 from geo_audit_agent.ui.explain_this import explain_this
-
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_explain_button
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -938,7 +938,7 @@ if st.session_state.audit_results:
             """, unsafe_allow_html=True)
             comp_data = get_competitor_data(brand_name_val, category_val)
             fig_multi = create_multi_model_chart(comp_data, brand_name_val, is_dark=(st.session_state.theme == "Dark"))
-            st.plotly_chart(fig_multi, use_container_width=True, config={'displayModeBar': False})
+            render_chart_with_explain_button(fig_multi, 'Multi-Model Benchmark', {'type': 'multi_model'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False})
 
             st.markdown("#### 📝 AI Search Intelligence Summary")
             raw_response = html.escape(res.get("llm_response", "No response content."))
@@ -1041,7 +1041,7 @@ if st.session_state.audit_results:
                 legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
                 hovermode='x unified'
             )
-            st.plotly_chart(fig_bv_trend, use_container_width=True, config={'displayModeBar': False})
+            render_chart_with_explain_button(fig_bv_trend, 'Brand Visibility Trend', {'type': 'visibility_trend'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False})
 
         with trend_col2:
             st.markdown("""
@@ -1077,7 +1077,7 @@ if st.session_state.audit_results:
                 legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
                 hovermode='x unified'
             )
-            st.plotly_chart(fig_cr_trend, use_container_width=True, config={'displayModeBar': False})
+            render_chart_with_explain_button(fig_cr_trend, 'Citation Rate Trend', {'type': 'citation_trend'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False})
             
             st.markdown("<br>", unsafe_allow_html=True)
             explain_this(
@@ -1194,7 +1194,7 @@ if st.session_state.audit_results:
                         showlegend=False,
                         font={'color': 'white' if comp_is_dark else '#1E293B'}
                     )
-                    st.plotly_chart(fig_comp, use_container_width=True)
+                    render_chart_with_explain_button(fig_comp, 'Competitor Comparison', {'type': 'competitor_comparison'}, 'Audit Tool', use_container_width=True)
 
                 with col_chart2:
                     fig_radar = go.Figure()
@@ -1216,7 +1216,7 @@ if st.session_state.audit_results:
                         height=350,
                         margin=dict(l=40, r=40, t=20, b=20)
                     )
-                    st.plotly_chart(fig_radar, use_container_width=True)
+                    render_chart_with_explain_button(fig_radar, 'Competitor Radar', {'type': 'radar'}, 'Audit Tool', use_container_width=True)
 
     with tab_keywords:
         kw_is_dark = st.session_state.theme == "Dark"
@@ -1304,7 +1304,7 @@ if st.session_state.audit_results:
                                 xaxis=dict(showgrid=False, showticklabels=False),
                                 yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
                             )
-                            st.plotly_chart(fig_kw_trend, use_container_width=True, config={'displayModeBar': False})
+                            render_chart_with_explain_button(fig_kw_trend, 'Keyword Trend', {'type': 'keyword_trend'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False})
 
     with tab_competitors:
         import time
@@ -1426,7 +1426,7 @@ if st.session_state.audit_results:
                     height=400,
                     paper_bgcolor='rgba(0,0,0,0)'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                render_chart_with_explain_button(fig, 'Historical Scores', {'type': 'historical'}, 'Audit Tool', use_container_width=True)
                 
                 # Explanations & Remediation
                 st.markdown("#### 🧠 Intelligence & Strategy")

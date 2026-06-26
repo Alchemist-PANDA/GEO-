@@ -2,9 +2,13 @@ import streamlit as st
 
 def render_copilot_fab():
     """Render the floating Copilot button (bottom-right corner)."""
+    if "copilot" not in st.session_state:
+        st.session_state.copilot = {"panel_open": False, "context": {}, "prefill": None, "messages": []}
+
     st.markdown("""
     <style>
-    .copilot-fab-button {
+    /* Target the container of the FAB button to make it float */
+    div[data-testid="stButton"] button:has(div:contains("🤖")) {
         position: fixed;
         bottom: 24px;
         right: 24px;
@@ -21,18 +25,21 @@ def render_copilot_fab():
         z-index: 999999;
         cursor: pointer;
         transition: all 0.3s ease;
-        text-decoration: none;
+        border: none;
     }
-    .copilot-fab-button:hover {
+    div[data-testid="stButton"] button:has(div:contains("🤖")):hover {
         transform: scale(1.1) rotate(5deg);
         box-shadow: 0 6px 20px rgba(124, 58, 237, 0.6);
+    }
+    /* Hide the paragraph text inside the button to just show the emoji */
+    div[data-testid="stButton"] button:has(div:contains("🤖")) p {
+        font-size: 24px;
+        margin: 0;
+        padding: 0;
     }
     </style>
     """, unsafe_allow_html=True)
     
-    # We use a standard Streamlit button in a sidebar/footer or floating column to toggle the state.
-    # To keep layout clean and simple, we place it in sidebar bottom.
-    st.sidebar.markdown("---")
-    if st.sidebar.button("🤖 Open Copilot Panel", key="toggle_copilot_sidebar", use_container_width=True):
+    if st.button("🤖", key="copilot_fab", use_container_width=False):
         st.session_state["copilot_open"] = not st.session_state.get("copilot_open", False)
         st.rerun()
