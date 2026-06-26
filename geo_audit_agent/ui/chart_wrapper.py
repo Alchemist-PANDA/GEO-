@@ -35,4 +35,4 @@ def render_chart_with_explain_button(fig: go.Figure, chart_title: str, chart_dat
         st.session_state.copilot["prefill"] = f"Explain this chart: {chart_title}"
         st.session_state["copilot_pending_message"] = f"Explain this chart: {chart_title}"
 
-    st.button(f"💡 Explain This Chart", key=button_key, on_click=on_explain)
+    st.button("💡 Explain This Chart", key=button_key, on_click=on_explain)
