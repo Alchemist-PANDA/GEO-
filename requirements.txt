@@ -13,6 +13,7 @@ tenacity>=8.0.0
 # FastAPI + Backend
 fastapi>=0.100.0
 uvicorn>=0.22.0
+PyJWT>=2.0.0
 sqlmodel>=0.0.14
 alembic>=1.11.0
 redis>=5.0.0
