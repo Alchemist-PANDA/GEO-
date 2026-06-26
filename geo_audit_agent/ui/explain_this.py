@@ -7,7 +7,7 @@ def explain_this(element_type: str, element_id: str, context_data: dict):
     """
     button_key = f"explain_{element_type}_{element_id}"
 
-    st.markdown(f"""
+    st.markdown("""
     <style>
     .explain-btn {{
         background: rgba(124, 58, 237, 0.08);
