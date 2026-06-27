@@ -3,8 +3,15 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from sqlmodel import Field, SQLModel, Relationship
-from sqlalchemy import Column as SAColumn, DateTime, text, Index, JSON
+from sqlalchemy import Column as SAColumn, DateTime, text, Index, JSON, MetaData
+import sqlmodel.main
 JSONB = JSON
+
+# Reset MetaData and registry to prevent Streamlit hot-reload duplicate class errors
+SQLModel.metadata = MetaData()
+if hasattr(sqlmodel.main, "default_registry"):
+    sqlmodel.main.default_registry.dispose()
+    sqlmodel.main.default_registry._class_registry.clear()
 
 
 class AuditTier(str, Enum):
@@ -31,6 +38,7 @@ class FeedbackType(str, Enum):
 # ── Users (managed by Supabase Auth, mirrored for FK references) ──
 
 class UserProfile(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "user_profiles"
 
     id: uuid.UUID = Field(
@@ -56,6 +64,7 @@ class Brand(SQLModel, table=True):
     __tablename__ = "brands"
     __table_args__ = (
         Index("idx_brands_name_city", "name", "city"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -87,6 +96,7 @@ class Audit(SQLModel, table=True):
     __table_args__ = (
         Index("idx_audits_created_at", "created_at"),
         Index("idx_audits_status", "status"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -151,6 +161,7 @@ class Audit(SQLModel, table=True):
 # ── Feedback ──
 
 class AuditFeedback(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "audit_feedback"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -174,6 +185,7 @@ class LLMCallLog(SQLModel, table=True):
     __table_args__ = (
         Index("idx_llm_calls_audit_id", "audit_id"),
         Index("idx_llm_calls_created_at", "created_at"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -195,6 +207,7 @@ class LLMCallLog(SQLModel, table=True):
 # ── Guardrail Event Log ──
 
 class GuardrailEvent(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "guardrail_events"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -214,6 +227,7 @@ class Competitor(SQLModel, table=True):
     __tablename__ = "competitors"
     __table_args__ = (
         Index("idx_competitors_brand_id", "brand_id"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -230,6 +244,7 @@ class Competitor(SQLModel, table=True):
 
 
 class CompetitorScan(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "competitor_scans"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -253,6 +268,7 @@ class CompetitorScore(SQLModel, table=True):
     __tablename__ = "competitor_scores"
     __table_args__ = (
         Index("idx_scores_competitor_scan", "competitor_id", "scan_id"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -271,6 +287,7 @@ class CompetitorScore(SQLModel, table=True):
 
 
 class CompetitorExplanation(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "competitor_explanations"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -286,6 +303,7 @@ class CompetitorExplanation(SQLModel, table=True):
 
 
 class Alert(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "alerts"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -301,6 +319,7 @@ class Alert(SQLModel, table=True):
     )
 
 class CompetitorFeedback(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "competitor_feedback"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -319,6 +338,7 @@ class CopilotConversation(SQLModel, table=True):
     __table_args__ = (
         Index("idx_copilot_conv_user_id", "user_id"),
         Index("idx_copilot_conv_created_at", "created_at"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -347,6 +367,7 @@ class CopilotMessage(SQLModel, table=True):
     __tablename__ = "copilot_messages"
     __table_args__ = (
         Index("idx_copilot_msg_conv_id", "conversation_id"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
