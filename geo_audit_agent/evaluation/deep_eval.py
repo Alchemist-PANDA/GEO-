@@ -14,5 +14,6 @@ def evaluate_case(*, input_text, actual_output, expected_output=None, context=No
                      expected_output=expected_output, retrieval_context=context or [])
     out = {}
     for M in (AnswerRelevancyMetric(threshold=0.7), FaithfulnessMetric(threshold=0.7)):
-        M.measure(tc); out[M.__class__.__name__] = M.score
+        M.measure(tc)
+        out[M.__class__.__name__] = M.score
     return out

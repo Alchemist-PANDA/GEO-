@@ -1,6 +1,7 @@
 """Guardrail handlers. Each returns a list[Violation] (possibly empty).
 Deterministic checks inline; semantic checks call NeMo / the LLM gateway."""
-import os, re
+import os
+import re
 from urllib.parse import urlparse
 from geo_audit_agent.guardrails.types import Violation, Severity as S
 

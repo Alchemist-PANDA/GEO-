@@ -317,6 +317,7 @@ def compact_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         context_msg,
         {"role": "user", "content": "[Older parts of conversation compacted to save memory]"},
         {"role": "assistant", "content": "Understood, I am retaining the context of our previous discussion."},
+    ] + recent_messages
     return compacted
 
 

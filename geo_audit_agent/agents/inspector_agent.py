@@ -34,7 +34,8 @@ class InspectorAgent:
         # ---- semantic (LLM) — skipped if a hard check already failed or offline ----
         if not hard_failed:
             sem = self._semantic(output, context)
-            checks.update(sem["checks"]); issues.extend(sem["issues"])
+            checks.update(sem["checks"])
+            issues.extend(sem["issues"])
 
         passed = all(checks.values())
         risk = "high" if any("hallucination" in i or "governance" in i for i in issues) \
@@ -47,14 +48,17 @@ class InspectorAgent:
     def _output_quality(self, o, issues):
         text = o.get("text", "")
         if not text or len(text) < 10:
-            issues.append("output_quality:empty"); return False
+            issues.append("output_quality:empty")
+            return False
         if "<|" in text or "system prompt" in text.lower():
-            issues.append("output_quality:prompt_leak"); return False
+            issues.append("output_quality:prompt_leak")
+            return False
         return True
 
     def _evidence(self, o, ctx, issues):
         if o.get("is_recommendation") and not ctx.get("bundle", {}).get("evidence"):
-            issues.append("evidence:missing"); return False
+            issues.append("evidence:missing")
+            return False
         return True
 
     def _business(self, o, ctx, issues):
@@ -69,20 +73,23 @@ class InspectorAgent:
     def _tools(self, o, issues):
         for call in o.get("tool_calls", []):
             if call.get("error"):
-                issues.append(f"tool:{call.get('name')}_failed"); return False
+                issues.append(f"tool:{call.get('name')}_failed")
+                return False
         return True
 
     def _context_quality(self, ctx, issues):
         val = ctx.get("validation", {})
         if "over_token_budget" in val.get("issues", []):
-            issues.append("context:over_budget"); return False
+            issues.append("context:over_budget")
+            return False
         return True
 
     def _memory(self, o, issues):  return True   # extend: validate writes vs guardrail
     def _governance(self, o, issues):
         import re
         if re.search(r"\b(api[_ ]?key|password|secret)\b", o.get("text", ""), re.I):
-            issues.append("governance:secret_leak"); return False
+            issues.append("governance:secret_leak")
+            return False
         return True
 
     # semantic checks ------------------------------------------------------
@@ -98,8 +105,10 @@ class InspectorAgent:
         issues, checks = [], {}
         checks["fact_verification"] = bool(data.get("fact_verified", True))
         checks["hallucination"]     = not bool(data.get("hallucination", False))
-        if data.get("hallucination"):       issues.append("hallucination:flagged")
-        if data.get("unsupported_claims"):  issues.append("unsupported_claims")
+        if data.get("hallucination"):       
+            issues.append("hallucination:flagged")
+        if data.get("unsupported_claims"):  
+            issues.append("unsupported_claims")
         return {"checks": checks, "issues": issues}
 
     def _persist(self, agent_id, trace_id, verdict):

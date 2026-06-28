@@ -3,7 +3,10 @@ from enum import Enum
 from typing import Any
 
 class Severity(str, Enum):
-    LOW = "low"; MEDIUM = "medium"; HIGH = "high"; CRITICAL = "critical"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
 @dataclass
 class Violation:

@@ -18,5 +18,6 @@ def map_gaps_to_actions(gaps: list[dict]) -> list[Action]:
             if gap_kw in key:
                 for aid in action_ids:
                     if aid not in seen:
-                        seen.add(aid); chosen.append(REGISTRY[aid])
+                        seen.add(aid)
+                        chosen.append(REGISTRY[aid])
     return sorted(chosen, key=lambda a: a.impact_pct / max(a.effort_min, 1), reverse=True)

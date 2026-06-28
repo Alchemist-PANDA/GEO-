@@ -6,7 +6,8 @@ def compress(bundle: dict, token_budget: int = 6000) -> dict:
     for txt in bundle["evidence"]:
         key = txt[:120]
         if key not in seen:
-            seen.add(key); deduped.append(txt)
+            seen.add(key)
+            deduped.append(txt)
     bundle["evidence"] = deduped
     # token budgeting via existing util (falls back to char heuristic offline)
     try:
@@ -15,7 +16,8 @@ def compress(bundle: dict, token_budget: int = 6000) -> dict:
         joined, out, used = "", [], 0
         for t in deduped:
             used += len(t) // 4
-            if used > token_budget: break
+            if used > token_budget: 
+                break
             out.append(t)
         bundle["evidence"] = out
     return bundle

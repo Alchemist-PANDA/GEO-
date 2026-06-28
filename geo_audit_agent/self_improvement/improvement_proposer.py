@@ -25,5 +25,7 @@ def propose(agent_id: str, limit: int = 40) -> dict | None:
     with get_session() as s:
         p = ImprovementProposal(agent_id=agent_id, proposal_type=data.get("proposal_type", "prompt"),
             description=data["description"], payload=data.get("payload", {}), status="pending")
-        s.add(p); s.commit(); s.refresh(p)
+        s.add(p)
+        s.commit()
+        s.refresh(p)
         return {"id": str(p.id), **data}

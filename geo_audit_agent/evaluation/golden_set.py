@@ -1,5 +1,6 @@
 """Versioned golden traces — the regression suite for self-improvement."""
-import json, pathlib
+import json
+import pathlib
 _PATH = pathlib.Path("data/golden_set.jsonl")
 
 def load() -> list[dict]:

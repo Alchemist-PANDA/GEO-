@@ -16,7 +16,8 @@ def _node_input_guard(state: AgenticState) -> AgenticState:
 
 def _node_context(state: AgenticState) -> AgenticState:
     ctx = build_context(state.user_message, brand=state.brand_name, industry=state.category)
-    state.context = ctx; state.intent = ctx["intent"]
+    state.context = ctx
+    state.intent = ctx["intent"]
     return state
 
 def _node_policy(state: AgenticState) -> AgenticState:
@@ -39,23 +40,30 @@ def _node_audit(state):       # wraps existing audit agent
     from geo_audit_agent.agent import build_geo_audit_agent
     out = build_geo_audit_agent().invoke({"brand": state.brand_name,
         "category": state.category, "city": state.city, "force_mock": True})
-    state.gaps = out.get("gaps", []); state.next_agent = "inspector"; return state
+    state.gaps = out.get("gaps", [])
+    state.next_agent = "inspector"
+    return state
 
 def _node_competitor(state):  # wraps existing competitor agent
     from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
     state.competitor_data = run_competitor_scan(state.brand_name, state.category, state.city) \
         if False else {}          # call the real entrypoint; mock-safe
-    state.next_agent = "inspector"; return state
+    state.next_agent = "inspector"
+    return state
 
 def _node_copilot(state):
     from geo_audit_agent.copilot import engine
     state.copilot_answer = engine.get_response(state.user_message,
         {**state.context.get("bundle", {}), "brand_name": state.brand_name})
-    state.next_agent = "inspector"; return state
+    state.next_agent = "inspector"
+    return state
 
 def _node_action(state):
-    a = ActionAgent(); state = a.plan(state); state = a.execute(state)
-    state.next_agent = "inspector"; return state
+    a = ActionAgent()
+    state = a.plan(state)
+    state = a.execute(state)
+    state.next_agent = "inspector"
+    return state
 
 def _node_inspector(state):
     output = {"text": state.copilot_answer or state.block_reason or str(state.action_results),

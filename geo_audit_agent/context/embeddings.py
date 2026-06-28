@@ -1,5 +1,6 @@
 """sentence-transformers wrapper, lazy-loaded, mock-safe."""
-import os, hashlib
+import os
+import hashlib
 _model = None
 
 def _load():

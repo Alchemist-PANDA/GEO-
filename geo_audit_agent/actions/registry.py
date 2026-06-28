@@ -1,7 +1,6 @@
 """The 16 actions. Each ACTION is metadata + an executor reference.
 impact = projected visibility lift %, effort = minutes, platform, approval flag."""
 from dataclasses import dataclass
-from typing import Callable
 
 @dataclass(frozen=True)
 class Action:

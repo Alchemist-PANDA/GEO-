@@ -1,6 +1,10 @@
 """Langfuse tracing. @trace_span wraps any node; falls back to no-op offline."""
 from __future__ import annotations
-import functools, os, time, uuid, logging
+import functools
+import os
+import time
+import uuid
+import logging
 
 logger = logging.getLogger(__name__)
 _client = None
