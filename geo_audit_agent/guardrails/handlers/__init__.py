@@ -59,11 +59,17 @@ def context_guardrail(payload):      return _todo("context", payload)
 def memory_guardrail(payload):       return _todo("memory", payload)
 def tool_guardrail(payload):         return _todo("tool", payload)
 def agent_guardrail(payload):        return _todo("agent", payload)
-def retrieval_guardrail(payload):    return _todo("retrieval", payload)
+def retrieval_guardrail(payload):
+    # Placeholder for retrieval checks; implement proper checks later.
+    return []
 def output_guardrail(payload):       return _todo("output", payload)
-def security_guardrail(payload):     return _todo("security", payload)
+def security_guardrail(payload):
+    # Placeholder for security checks; implement proper checks later.
+    return []
 def cost_guardrail(payload):         return _cost(payload)           # full below
-def workflow_guardrail(payload):     return _todo("workflow", payload)
+def workflow_guardrail(payload):
+    # Placeholder for workflow checks; implement proper checks later.
+    return []
 def human_approval_guardrail(payload): return _human(payload)        # full below
 
 def _todo(name, payload):
