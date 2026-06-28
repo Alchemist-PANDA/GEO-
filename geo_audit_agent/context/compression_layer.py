@@ -13,7 +13,7 @@ def compress(bundle: dict, token_budget: int = 6000) -> dict:
     try:
         bundle["evidence"] = _cc.fit_to_budget(deduped, token_budget)
     except Exception:
-        joined, out, used = "", [], 0
+        out, used = [], 0
         for t in deduped:
             used += len(t) // 4
             if used > token_budget: 
