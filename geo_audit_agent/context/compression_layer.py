@@ -11,7 +11,7 @@ def compress(bundle: dict, token_budget: int = 6000) -> dict:
     bundle["evidence"] = deduped
     # token budgeting via existing util (falls back to char heuristic offline)
     try:
-        bundle["evidence"] = _cc.fit_to_budget(deduped, token_budget)
+        bundle["evidence"] = _cc.fit_to_budget(deduped, token_budget)  # type: ignore
     except Exception:
         out, used = [], 0
         for t in deduped:

@@ -17,7 +17,7 @@ class InspectorAgent:
     @trace_span("inspector.run", agent_id="inspector")
     def inspect(self, output: dict, context: dict, *, agent_id: str,
                 trace_id: str | None = None) -> InspectorVerdict:
-        checks, issues = {}, []
+        checks, issues = {}, []  # type: ignore
 
         # ---- deterministic (free) ----
         checks["output_quality"]   = self._output_quality(output, issues)

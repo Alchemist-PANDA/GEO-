@@ -236,7 +236,7 @@ async def stream_chat(
         formatted_messages.append({"role": "assistant", "content": final_message.content})
 
         for tool_block in tool_blocks:
-            result = execute_tool(tool_block.name, tool_block.input, context)
+            result = execute_tool(tool_block.name, tool_block.input, context)  # type: ignore
             
             # Append tool result
             formatted_messages.append({

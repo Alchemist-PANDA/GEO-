@@ -36,6 +36,6 @@ def search(query: str, *, brand: str | None = None, industry: str | None = None,
         must.append(FieldCondition(key="industry", match=MatchValue(value=industry)))
     vec = embed([query])[0]
     hits = client.search(collection_name=COLLECTION, query_vector=vec,
-                         query_filter=Filter(must=must), limit=top_k, with_payload=True)
+                         query_filter=Filter(must=must), limit=top_k, with_payload=True)  # type: ignore
     return [{"text": h.payload.get("text", ""), "score": h.score,
              "meta": h.payload} for h in hits]

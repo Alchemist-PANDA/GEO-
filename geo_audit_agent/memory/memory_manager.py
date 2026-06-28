@@ -1,6 +1,6 @@
 """Long-term memory via Mem0, scoped per user_id. Mock-safe in-process store offline."""
 import os
-_mem, _fallback = None, {}
+_mem, _fallback = None, {}  # type: ignore
 
 def _client():
     global _mem

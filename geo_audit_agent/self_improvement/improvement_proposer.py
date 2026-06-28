@@ -6,8 +6,8 @@ from geo_audit_agent.db.models import AgentTrace, ImprovementProposal
 def propose(agent_id: str, limit: int = 40) -> dict | None:
     with get_session() as s:
         traces = (s.query(AgentTrace).filter(AgentTrace.agent_id == agent_id)
-                  .filter(AgentTrace.score.isnot(None))
-                  .order_by(AgentTrace.created_at.desc()).limit(limit).all())
+                  .filter(AgentTrace.score.isnot(None))  # type: ignore
+                  .order_by(AgentTrace.created_at.desc()).limit(limit).all())  # type: ignore
     if len(traces) < 10:
         return None
     wins = [t for t in traces if (t.score or 0) >= 0.8]

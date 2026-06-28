@@ -38,7 +38,7 @@ def claude(system: str, user: str, *, model: str = "claude-opus-4-8",
         with client.messages.stream(
             model=model,
             max_tokens=max_tokens,
-            thinking={"type": "adaptive"},
+            thinking={"type": "adaptive"},  # type: ignore
             system=sys_prompt,
             messages=[{"role": "user", "content": user}],
         ) as stream:
