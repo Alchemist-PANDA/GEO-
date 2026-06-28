@@ -317,6 +317,12 @@ def compact_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         context_msg,
         {"role": "user", "content": "[Older parts of conversation compacted to save memory]"},
         {"role": "assistant", "content": "Understood, I am retaining the context of our previous discussion."},
-        *recent_messages
-    ]
     return compacted
+
+
+def get_response(user_message: str, context: dict) -> str:
+    """Synchronous wrapper to get response from copilot, reusing SYSTEM_PROMPT."""
+    from geo_audit_agent.llm import gateway
+    system_prompt = SYSTEM_PROMPT + "\n\nContext:\n" + json.dumps(context or {}, indent=2)
+    res = gateway.claude(system=system_prompt, user=user_message)
+    return res.text

@@ -386,3 +386,95 @@ class CopilotMessage(SQLModel, table=True):
 
     conversation: CopilotConversation = Relationship(back_populates="messages")
 
+
+# ── Agentic system tables ──
+
+class PlanStatus(str, Enum):
+    PENDING = "pending"
+    AWAITING_APPROVAL = "awaiting_approval"
+    APPROVED = "approved"
+    EXECUTING = "executing"
+    COMPLETE = "complete"
+    FAILED = "failed"
+    ROLLED_BACK = "rolled_back"
+
+
+class ActionPlan(SQLModel, table=True):
+    __tablename__ = "action_plans"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    brand_id: uuid.UUID = Field(foreign_key="brands.id", index=True)
+    audit_id: Optional[uuid.UUID] = Field(default=None, index=True)
+    plan_data: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    status: PlanStatus = Field(default=PlanStatus.PENDING, index=True)
+    approved_by: Optional[uuid.UUID] = Field(default=None, foreign_key="user_profiles.id")
+    approved_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
+class ActionExecution(SQLModel, table=True):
+    __tablename__ = "action_executions"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    plan_id: uuid.UUID = Field(foreign_key="action_plans.id", index=True)
+    action_id: str = Field(max_length=100)
+    status: str = Field(default="pending", max_length=20)
+    result: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    error_message: Optional[str] = Field(default=None)
+    executed_at: datetime = Field(default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
+class InspectorCheck(SQLModel, table=True):
+    __tablename__ = "inspector_checks"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    agent_id: str = Field(max_length=50, index=True)
+    trace_id: Optional[str] = Field(default=None, index=True, max_length=100)
+    check_type: str = Field(max_length=50)
+    input_data: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    result: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    passed: bool = Field(default=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
+class GuardrailViolation(SQLModel, table=True):
+    __tablename__ = "guardrail_violations"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    guardrail_type: str = Field(max_length=50, index=True)
+    agent_id: Optional[str] = Field(default=None, max_length=50)
+    trace_id: Optional[str] = Field(default=None, index=True, max_length=100)
+    violation_details: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    severity: str = Field(default="medium", max_length=20)
+    blocked: bool = Field(default=False, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
+class AgentTrace(SQLModel, table=True):
+    __tablename__ = "agent_traces"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    agent_id: str = Field(max_length=50, index=True)
+    trace_id: str = Field(max_length=100, index=True)
+    context: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    decision: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    outcome: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    score: Optional[float] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
+class ImprovementProposal(SQLModel, table=True):
+    __tablename__ = "improvement_proposals"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    agent_id: str = Field(max_length=50, index=True)
+    proposal_type: str = Field(max_length=50)   # prompt | ranking | rule | tool
+    description: str
+    payload: Dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSON))
+    before_score: Optional[float] = Field(default=None)
+    after_score: Optional[float] = Field(default=None)
+    status: str = Field(default="pending", max_length=20, index=True)  # pending|shadow_pass|canary|deployed|rejected|rolled_back
+    deployed_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
