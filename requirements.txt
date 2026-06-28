@@ -40,11 +40,15 @@ pandas
 # Agentic AI Implementation Dependencies
 nemoguardrails==0.11.0
 qdrant-client==1.12.1
-sentence-transformers==3.3.1
+sentence-transformers>=3.3.1
 FlagEmbedding==1.3.3
 llama-index-core==0.12.8
 mem0ai==0.1.40
 langfuse==2.57.0
-deepeval
-langgraph==0.2.59
+deepeval>=3.3.9
+langgraph>=0.2.59
 anthropic==0.69.0
+
+# Ensure tokenizers uses pre-built wheel for Python 3.14
+tokenizers>=0.20.0
+transformers>=4.45.0
