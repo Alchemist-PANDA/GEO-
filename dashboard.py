@@ -83,7 +83,7 @@ if st.session_state.audit_results is None:
         "llm_response": "Burger Hub has emerging visibility in Islamabad's fast food category. While it is cited in local listings, there is a lack of structured LocalBusiness schema and technical entity backlinks, which creates a critical information gap for generative engines."
     }
     st.session_state.audit_results = mock_inputs
-    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False)
+    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False, user_id=st.session_state.get("user_id"))
     st.session_state.comparison_data["Burger Hub"] = mock_inputs
     st.session_state.remediations = [
         {
@@ -766,52 +766,269 @@ def generate_markdown_report(res, approved_items):
 
 # --- Authentication ---
 def login_screen():
+    if "show_login" not in st.session_state:
+        st.session_state.show_login = False
+
     st.markdown("""
-        <div class="geo-shape geo-shape-1"></div>
-        <div class="geo-shape geo-shape-2"></div>
-        <div class="geo-shape geo-shape-3"></div>
-        <div class="geo-shape geo-shape-4"></div>
-        <div class="geo-shape geo-shape-5"></div>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;1,500&display=swap" rel="stylesheet" />
+        
+        <video autoplay loop muted playsinline style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -1;">
+            <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260315_073750_51473149-4350-4920-ae24-c8214286f323.mp4" type="video/mp4" />
+        </video>
+
         <style>
             [data-testid="stSidebar"] { display: none !important; }
+            .stAppHeader { display: none !important; }
+            
+            /* Remove default padding */
             .main .block-container {
                 max-width: 100% !important;
                 padding: 0 !important;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
+                margin: 0 !important;
             }
             .stApp {
-                background: linear-gradient(135deg, #F8FAFC 0%, #EDE9FE 30%, #DBEAFE 60%, #FCE7F3 100%) !important;
+                background: transparent !important;
+            }
+            
+            * {
+                font-family: 'Poppins', sans-serif;
+            }
+
+            /* Liquid Glass overlay for the entire left panel */
+            .left-panel-glass {
+                position: absolute;
+                inset: 1.5rem;
+                border-radius: 1.5rem;
+                overflow: hidden;
+                background: rgba(255, 255, 255, 0.01);
+                background-blend-mode: luminosity;
+                backdrop-filter: blur(50px);
+                border: none;
+                box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+                z-index: 0;
+            }
+            .left-panel-glass::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                padding: 1.4px;
+                background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 20%, transparent 40%, transparent 60%, rgba(255,255,255,0.2) 80%, rgba(255,255,255,0.5) 100%);
+                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                mask-composite: exclude;
+                -webkit-mask-composite: xor;
+                pointer-events: none;
+                border-radius: inherit;
+            }
+            
+            /* Inner glass for components */
+            .liquid-glass {
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
+                border-radius: 9999px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            
+            /* Override Streamlit form styling */
+            [data-testid="stForm"] {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            
+            /* Inputs */
+            .stTextInput input {
+                background: rgba(255, 255, 255, 0.1) !important;
+                border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                color: white !important;
+                border-radius: 12px !important;
+                padding: 12px !important;
+            }
+            .stTextInput input::placeholder {
+                color: rgba(255, 255, 255, 0.5) !important;
+            }
+            
+            /* Submit button */
+            .stButton button {
+                background: rgba(255, 255, 255, 0.15) !important;
+                color: white !important;
+                border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                border-radius: 9999px !important;
+                padding: 12px 24px !important;
+                font-weight: 500 !important;
+                transition: all 0.2s ease !important;
+            }
+            .stButton button:hover {
+                background: rgba(255, 255, 255, 0.25) !important;
+                transform: scale(1.02) !important;
+            }
+            
+            p, h1, h2, h3, label {
+                color: white !important;
+            }
+            
+            .serif-italic {
+                font-family: 'Source Serif 4', serif !important;
+                font-style: italic !important;
+                font-weight: 500 !important;
+                color: rgba(255,255,255,0.8) !important;
+            }
+            
+            /* Streamlit layout fixes for full height */
+            .row-widget.stHorizontal {
+                height: 100vh;
+                margin: 0;
+            }
+            
+            .stAlert {
+                background: rgba(0,0,0,0.5) !important;
+                border: 1px solid rgba(255,255,255,0.2) !important;
+                color: white !important;
             }
         </style>
+        
+        <div class="left-panel-glass" style="width: 52%;"></div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1.2, 1.5, 1.2])
-    with col2:
+    col1, col2 = st.columns([0.52, 0.48], gap="small")
+    
+    with col1:
+        st.markdown("<div style='height: 15vh;'></div>", unsafe_allow_html=True)
+        
+        # Logo + Text
         st.markdown("""
-            <div class="login-card">
-                <div class="login-logo">🌍</div>
-                <div class="login-title">BrandSight GEO</div>
-                <div class="login-subtitle">AI-Powered Generative Engine Optimization</div>
+            <div style="display: flex; flex-direction: column; padding: 0 4rem; z-index: 10; position: relative;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2rem;">
+                    <div style="font-size: 2rem;">🌍</div>
+                    <span style="font-size: 1.5rem; font-weight: 600; tracking: -0.05em;">BrandSight GEO</span>
+                </div>
+                
+                <h1 style="font-size: 4rem; font-weight: 500; letter-spacing: -0.05em; line-height: 1.1; margin-bottom: 2rem;">
+                    Innovating the <br />
+                    <span class="serif-italic">spirit of AI search</span>
+                </h1>
+                
+                <div style="display: flex; gap: 12px; margin-bottom: 3rem;">
+                    <div class="liquid-glass" style="padding: 6px 16px; font-size: 0.8rem; color: rgba(255,255,255,0.8);">Generative Engine Optimization</div>
+                    <div class="liquid-glass" style="padding: 6px 16px; font-size: 0.8rem; color: rgba(255,255,255,0.8);">Brand Visibility</div>
+                    <div class="liquid-glass" style="padding: 6px 16px; font-size: 0.8rem; color: rgba(255,255,255,0.8);">AI Audits</div>
+                </div>
             </div>
         """, unsafe_allow_html=True)
+        
+        st.markdown("<div style='padding: 0 4rem; z-index: 10; position: relative; max-width: 400px;'>", unsafe_allow_html=True)
+        
+        if not st.session_state.show_login:
+            if st.button("Explore Now (Login/Signup)", use_container_width=True):
+                st.session_state.show_login = True
+                st.rerun()
+            
+            st.markdown("""
+                <div style="margin-top: 2rem; width: 100%; max-width: 400px;">
+                    <div style="font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem;">VISIONARY DESIGN</div>
+                    <div style="font-size: 1.125rem; font-weight: 500; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem;">
+                    <span>"We imagined a realm</span>
+                    <span class="serif-italic">with no ending."</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            with st.form("login_form"):
+                username = st.text_input("Username", placeholder="admin")
+                password = st.text_input("Password", type="password", placeholder="••••••••")
+                st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+                submit = st.form_submit_button("Sign In", use_container_width=True)
 
-        with st.form("login_form"):
-            username = st.text_input("Username", placeholder="admin")
-            password = st.text_input("Password", type="password", placeholder="••••••••")
-            submit = st.form_submit_button("Sign In", use_container_width=True)
+                if submit:
+                    expected_user = os.getenv("DASHBOARD_USER", "admin")
+                    expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
+                    if username == expected_user and password == expected_pass:
+                        st.session_state.authenticated = True
+                        
+                        try:
+                            from geo_audit_agent.db.session import get_session
+                            from geo_audit_agent.db.models import UserProfile
+                            import uuid
+                            
+                            admin_email = f"{username}@brandsightgeo.com"
+                            with get_session() as s:
+                                user = s.query(UserProfile).filter(UserProfile.email == admin_email).first()
+                                if not user:
+                                    user = UserProfile(id=uuid.uuid4(), email=admin_email, display_name=username, tier="free")
+                                    s.add(user)
+                                    s.commit()
+                                st.session_state.user_id = str(user.id)
+                        except Exception as e:
+                            logger.error(f"Error setting up mock user: {e}")
+                            pass
+                            
+                        st.success("Welcome back!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials")
+            
+            if st.button("Back to Home", use_container_width=True):
+                st.session_state.show_login = False
+                st.rerun()
 
-            if submit:
-                expected_user = os.getenv("DASHBOARD_USER", "admin")
-                expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
-                if username == expected_user and password == expected_pass:
-                    st.session_state.authenticated = True
-                    st.success("Welcome back!")
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    with col2:
+        if not st.session_state.show_login:
+            st.markdown("<div style='height: 10vh;'></div>", unsafe_allow_html=True)
+            
+            c2_col1, c2_col2 = st.columns([0.6, 0.4])
+            with c2_col2:
+                if st.button("✨ Account (Sign In)"):
+                    st.session_state.show_login = True
                     st.rerun()
-                else:
-                    st.error("Invalid credentials")
+
+            st.markdown("""
+                <div style="display: flex; flex-direction: column; height: 75vh; gap: 1.25rem; padding-right: 2rem;">
+                    
+                    <div style="margin-top: 2rem;"></div>
+
+                    <!-- Community card -->
+                    <div class="liquid-glass" style="padding: 1.25rem; width: 14rem; border-radius: 1.5rem;">
+                        <div style="font-size: 0.875rem; font-weight: 500; color: rgba(255,255,255,0.8);">Enter our ecosystem</div>
+                        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.6); margin-top: 0.25rem; line-height: 1.625;">Connect, share, and grow with the BrandSight community.</p>
+                    </div>
+
+                    <!-- bottom feature container (mt-auto) -->
+                    <div class="liquid-glass" style="margin-top: auto; border-radius: 2.5rem; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- two cards side-by-side -->
+                        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem;">
+                            <div class="liquid-glass" style="padding: 1rem; border-radius: 1.5rem; display: flex; flex-direction: column; align-items: flex-start;">
+                                <div style="width: 2rem; height: 2rem; border-radius: 9999px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;"><span style="font-size: 1.2rem;">⚡</span></div>
+                                <span style="font-size: 0.875rem; font-weight: 500; color: white;">Processing</span>
+                                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.125rem;">High-end processing functions that bring brand visibility to form</p>
+                            </div>
+                            <div class="liquid-glass" style="padding: 1rem; border-radius: 1.5rem; display: flex; flex-direction: column; align-items: flex-start;">
+                                <div style="width: 2rem; height: 2rem; border-radius: 9999px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem;"><span style="font-size: 1.2rem;">📈</span></div>
+                                <span style="font-size: 0.875rem; font-weight: 500; color: white;">Growth Archive</span>
+                                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.125rem;">Self-up templates and choices for different industry varieties</p>
+                            </div>
+                        </div>
+
+                        <!-- bottom card: Advanced Plant Sculpting -> Advanced Brand Audits -->
+                        <div class="liquid-glass" style="padding: 1rem; border-radius: 1.5rem; display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 6rem; height: 4rem; border-radius: 0.75rem; background: rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 2rem;">
+                                📊
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <span style="font-size: 0.875rem; font-weight: 500; color: white;">Advanced Brand Audits</span>
+                                </div>
+                                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.125rem;">Modern AI crafting assets that permit you to build very complex and lifelike forms.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+
 
 if not st.session_state.authenticated:
     login_screen()
@@ -862,7 +1079,10 @@ if run_audit:
             st.session_state.comparison_data[brand_name] = results
             
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
-            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
+            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False, user_id=st.session_state.get("user_id"))
+            if "error" in multi_results:
+                st.error(multi_results["error"])
+                st.stop()
             st.session_state.multi_model_results = multi_results
 
             # Update history
@@ -1136,6 +1356,13 @@ with trend_col1:
         hovermode='x unified'
     )
     st.plotly_chart(fig_bv_trend, use_container_width=True, config={'displayModeBar': False})
+    
+    comp_data = get_competitor_data(brand_name_val, category_val)
+    fig_multi = create_multi_model_chart(comp_data, brand_name_val, is_dark=(st.session_state.theme == "Dark"))
+    st.plotly_chart(fig_multi, use_container_width=True, config={'displayModeBar': False})
+
+    from geo_audit_agent.auth.user import render_tier_upgrade_prompt
+    render_tier_upgrade_prompt(st.session_state.get("user_id"))
 
 with trend_col2:
     st.markdown("""

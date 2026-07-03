@@ -93,7 +93,7 @@ if st.session_state.audit_results is None:
         "llm_response": "Burger Hub has emerging visibility in Islamabad's fast food category. While it is cited in local listings, there is a lack of structured LocalBusiness schema and technical entity backlinks, which creates a critical information gap for generative engines."
     }
     st.session_state.audit_results = mock_inputs
-    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False)
+    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False, user_id=st.session_state.get("user_id"))
     st.session_state.comparison_data["Burger Hub"] = mock_inputs
     st.session_state.remediations = [
         {
@@ -736,6 +736,24 @@ def login_screen():
                 expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
                 if username == expected_user and password == expected_pass:
                     st.session_state.authenticated = True
+                    
+                    try:
+                        from geo_audit_agent.db.session import get_session
+                        from geo_audit_agent.db.models import UserProfile
+                        import uuid
+                        
+                        admin_email = f"{username}@brandsightgeo.com"
+                        with get_session() as s:
+                            user = s.query(UserProfile).filter(UserProfile.email == admin_email).first()
+                            if not user:
+                                user = UserProfile(id=uuid.uuid4(), email=admin_email, display_name=username, tier="free")
+                                s.add(user)
+                                s.commit()
+                            st.session_state.user_id = str(user.id)
+                    except Exception as e:
+                        logger.error(f"Error setting up mock user: {e}")
+                        pass
+                    
                     st.success("Welcome back!")
                     st.rerun()
                 else:
@@ -791,7 +809,10 @@ if run_audit:
             st.session_state.comparison_data[brand_name] = results
             
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
-            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
+            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False, user_id=st.session_state.get("user_id"))
+            if "error" in multi_results:
+                st.error(multi_results["error"])
+                st.stop()
             st.session_state.multi_model_results = multi_results
 
             confidence = results.get("confidence_score", 0.0)
@@ -939,6 +960,9 @@ if st.session_state.audit_results:
             comp_data = get_competitor_data(brand_name_val, category_val)
             fig_multi = create_multi_model_chart(comp_data, brand_name_val, is_dark=(st.session_state.theme == "Dark"))
             render_chart_with_explain_button(fig_multi, 'Multi-Model Benchmark', {'type': 'multi_model'}, 'Audit Tool', use_container_width=True, config={'displayModeBar': False})
+
+            from geo_audit_agent.auth.user import render_tier_upgrade_prompt
+            render_tier_upgrade_prompt(st.session_state.get("user_id"))
 
             st.markdown("#### 📝 AI Search Intelligence Summary")
             raw_response = html.escape(res.get("llm_response", "No response content."))

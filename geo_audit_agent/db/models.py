@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import List, Dict, Any, Optional
 from sqlmodel import Field, SQLModel, Relationship
@@ -50,6 +50,10 @@ class UserProfile(SQLModel, table=True):
     display_name: Optional[str] = Field(default=None, max_length=100)
     plan_tier: str = Field(default="free", max_length=20)
     monthly_audit_quota: int = Field(default=10)
+    tier: str = Field(default="free", max_length=50)
+    tier_expires_at: Optional[datetime] = None
+    stripe_customer_id: Optional[str] = Field(default=None, max_length=255)
+    stripe_subscription_id: Optional[str] = Field(default=None, max_length=255)
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
@@ -478,3 +482,35 @@ class ImprovementProposal(SQLModel, table=True):
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
+class BillingHistory(SQLModel, table=True):
+    __tablename__ = "billing_history"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    tier: str = Field(max_length=50)
+    amount: float
+    currency: str = Field(default="usd", max_length=3)
+    payment_method: str = Field(default="card", max_length=20)
+    status: str = Field(max_length=20)
+    stripe_invoice_id: Optional[str] = Field(default=None, max_length=255)
+    stripe_payment_intent_id: Optional[str] = Field(default=None, max_length=255)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class AuditUsage(SQLModel, table=True):
+    __tablename__ = "audit_usage"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    audit_date: date = Field(default_factory=date.today)
+    count: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class InvoiceRequest(SQLModel, table=True):
+    __tablename__ = "invoice_requests"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    tier: str = Field(max_length=50)
+    amount: float
+    status: str = Field(default="pending", max_length=20)  # pending, sent, paid, cancelled
+    invoice_sent_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)

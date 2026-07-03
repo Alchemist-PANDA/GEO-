@@ -13,7 +13,7 @@ import random
 import hashlib
 
 
-def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool = False) -> dict:
+def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool = False, user_id: str = None) -> dict:
     """
     Run GEO audit across multiple AI models.
 
@@ -22,28 +22,51 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
         category: Business category
         city: City location
         use_real: If True, attempt live API calls. If False, use simulated responses.
+        user_id: The ID of the user running the audit (for tier checks).
 
     Returns:
         Dictionary with per-model results and cross-model summary
     """
+    from geo_audit_agent.auth.user import get_available_models, is_model_real, get_user_tier, can_run_audit, increment_audit_usage
 
-    models = [
+    if user_id and not can_run_audit(user_id):
+        return {"error": "Audit limit reached. Please upgrade your plan."}
+
+    all_models = [
         {"name": "ChatGPT", "provider": "openai", "style": "structured"},
         {"name": "Gemini", "provider": "google", "style": "concise"},
         {"name": "Meta.ai", "provider": "meta", "style": "verbose"},
         {"name": "Claude.ai", "provider": "anthropic", "style": "structured"},
-        {"name": "DeepSeek", "provider": "deepseek", "style": "citation_heavy"}
+        {"name": "DeepSeek", "provider": "deepseek", "style": "citation_heavy"},
+        {"name": "Perplexity", "provider": "perplexity", "style": "structured"},
+        {"name": "Grok", "provider": "x", "style": "concise"}
     ]
+
+    tier = get_user_tier(user_id) if user_id else "free"
+    allowed_models = get_available_models(user_id)
+    
+    # If free tier, show all standard models but force mock
+    if tier == "free" or not allowed_models:
+        allowed_models = ["ChatGPT", "Gemini", "Meta.ai", "Claude.ai", "DeepSeek"]
 
     results = []
 
-    for model_info in models:
-        if use_real:
+    for model_info in all_models:
+        if model_info["name"] not in allowed_models:
+            continue
+            
+        can_use_real = is_model_real(model_info["name"]) and tier != "free"
+        
+        if use_real and can_use_real:
             result = _run_real_audit(brand, category, city, model_info)
         else:
             result = _run_simulated_audit(brand, category, city, model_info)
 
         results.append(result)
+
+    # Record usage
+    if user_id:
+        increment_audit_usage(user_id)
 
     summary = _generate_summary(results, brand, use_real)
 
