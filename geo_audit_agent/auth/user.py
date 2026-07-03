@@ -1,6 +1,6 @@
 import streamlit as st
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import List, Dict
 from geo_audit_agent.db.session import get_session
 from geo_audit_agent.db.models import UserProfile, AuditUsage
 from sqlmodel import select
