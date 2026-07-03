@@ -1,4 +1,5 @@
 import streamlit as st
+import textwrap
 import logging
 import os
 import hashlib
@@ -35,7 +36,7 @@ def load_css(file_name="style.css"):
 
 def render_bloom_login():
     # Inject Bloom CSS (liquid glass, fonts, layout)
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <style>
         /* ----- Fonts ----- */
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;1,500&display=swap');
@@ -158,21 +159,21 @@ def render_bloom_login():
         header { visibility: hidden; }
         .stApp > header { display: none; }
     </style>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # --- Video Background ---
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <video id="bloom-bg-video" autoplay loop muted playsinline>
         <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260315_073750_51473149-4350-4920-ae24-c8214286f323.mp4" type="video/mp4" />
     </video>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # --- Two-panel layout using Streamlit columns ---
     col_left, col_right = st.columns([0.52, 0.48], gap="large")
 
     # ----- LEFT PANEL (Hero) -----
     with col_left:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
         <div class="bloom-left-panel">
             <div class="glass-overlay liquid-glass-strong"></div>
             <div style="position:relative; z-index:20; display:flex; flex-direction:column; height:100%; padding: 0.5rem 1rem;">
@@ -212,16 +213,16 @@ def render_bloom_login():
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     # ----- RIGHT PANEL (Login/Signup) -----
     with col_right:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
         <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; padding:1.5rem 0.5rem;">
             <div class="liquid-glass-strong" style="width:100%; max-width:400px; padding:2rem 1.5rem; border-radius:1.5rem; text-align:center;">
                 <h2 style="color:white; font-weight:500; margin-top:0; margin-bottom:0.5rem;">Welcome to Bloom</h2>
                 <p style="color:rgba(255,255,255,0.6); font-size:0.9rem; margin-bottom:1.5rem;">Sign in to access your GEO dashboard</p>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         # --- Streamlit Auth Forms ---
         tab_login, tab_signup = st.tabs(["Log in", "Create account"])
@@ -260,11 +261,11 @@ def render_bloom_login():
                     else:
                         st.warning("Please fill in all fields.")
 
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
                 <p style="color:rgba(255,255,255,0.4); font-size:0.7rem; margin-top:1rem;">Secured by Supabase Auth • RLS enforced</p>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
 # ==============================================
 # DASHBOARD (shown only when user is logged in)
@@ -362,11 +363,11 @@ if not st.session_state.tracked_keywords:
 # --- Custom CSS (Modernized) ---
 def apply_theme():
     # Font imports
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     if st.session_state.theme == "Dark":
         bg_style = "radial-gradient(circle at 50% 0%, #1c1140 0%, #0A0A0F 65%, #050508 100%)"

@@ -6,6 +6,7 @@ import os
 import re
 import hashlib
 import plotly.graph_objects as go
+import textwrap
 from datetime import datetime
 from geo_audit_agent.agent import build_geo_audit_agent
 from multi_model import run_multi_model_audit
@@ -124,11 +125,11 @@ if st.session_state.multi_model_results:
 # --- Custom CSS (Modernized) ---
 def apply_theme():
     # Font imports
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     if st.session_state.theme == "Dark":
         bg_style = "radial-gradient(circle at 50% 0%, #1c1140 0%, #0A0A0F 65%, #050508 100%)"
@@ -694,7 +695,7 @@ def generate_markdown_report(res, approved_items):
 
 # --- Authentication ---
 def login_screen():
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
         <div class="geo-shape geo-shape-1"></div>
         <div class="geo-shape geo-shape-2"></div>
         <div class="geo-shape geo-shape-3"></div>
@@ -714,17 +715,17 @@ def login_screen():
                 background: linear-gradient(135deg, #F8FAFC 0%, #EDE9FE 30%, #DBEAFE 60%, #FCE7F3 100%) !important;
             }
         </style>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1.2, 1.5, 1.2])
     with col2:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
             <div class="login-card">
                 <div class="login-logo">🌍</div>
                 <div class="login-title">BrandSight GEO</div>
                 <div class="login-subtitle">AI-Powered Generative Engine Optimization</div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         with st.form("login_form"):
             username = st.text_input("Username", placeholder="admin")
