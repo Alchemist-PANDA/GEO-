@@ -55,7 +55,7 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
         if model_info["name"] not in allowed_models:
             continue
             
-        can_use_real = is_model_real(model_info["name"]) and tier != "free"
+        can_use_real = is_model_real(user_id, model_info["name"]) and tier != "free"
         
         if use_real and can_use_real:
             result = _run_real_audit(brand, category, city, model_info)
