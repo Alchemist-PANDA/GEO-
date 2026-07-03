@@ -5,7 +5,7 @@ Add these two lines at the very top, before any other Streamlit calls.
 
 import streamlit as st
 
-from auth import current_user, require_login, sign_out
+from auth import require_login, sign_out
 
 st.set_page_config(page_title="BrandSight GEO", layout="wide")
 
