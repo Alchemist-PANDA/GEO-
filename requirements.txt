@@ -53,3 +53,4 @@ anthropic==0.69.0
 # Ensure tokenizers uses pre-built wheel for Python 3.14
 tokenizers>=0.20.0
 transformers>=4.45.0
+supabase

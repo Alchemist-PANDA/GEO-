@@ -17,6 +17,7 @@ dependencies = [
     "pydantic",
     "tenacity",
     "anthropic>=0.52.0",
+    "supabase",
 ]
 
 [project.optional-dependencies]
