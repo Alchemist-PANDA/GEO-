@@ -58,16 +58,18 @@ class AuthedUser:
         return getattr(self, key, default)
 
 
+def _is_cloud_environment() -> bool:
+    import os
+    return os.getenv("STREAMLIT_CLOUD", "").lower() == "true" or "STREAMLIT_APP" in os.environ
+
+
 def _get_client() -> Client | None:
     import os
     try:
         url = st.secrets["supabase"]["url"]
         key = st.secrets["supabase"]["anon_key"]
     except (KeyError, AttributeError, FileNotFoundError):
-        if os.getenv("DEV_MODE", "false").lower() == "true":
-            if "supabase_warning_shown" not in st.session_state:
-                st.info("🔧 DEV_MODE – using dummy user.")
-                st.session_state.supabase_warning_shown = True
+        if _is_cloud_environment() or os.getenv("DEV_MODE", "false").lower() == "true":
             return None
         st.error("⚠️ Supabase secrets not configured. Please add them to Streamlit Cloud secrets.")
         return None
@@ -111,7 +113,10 @@ def current_user() -> AuthedUser | None:
 
     client = _get_client()
     if client is None:
-        if os.getenv("DEV_MODE", "false").lower() == "true":
+        if _is_cloud_environment() or os.getenv("DEV_MODE", "false").lower() == "true":
+            if "supabase_warning_shown" not in st.session_state:
+                st.info("🔧 Development mode – using dummy user (no Supabase).")
+                st.session_state.supabase_warning_shown = True
             dummy = AuthedUser(id="dev-user", email="dev@example.com")
             st.session_state.authed_user = dummy
             return dummy
