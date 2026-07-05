@@ -66,7 +66,7 @@ def _get_client() -> Client | None:
     except (KeyError, AttributeError, FileNotFoundError):
         if os.getenv("DEV_MODE", "false").lower() == "true":
             if "supabase_warning_shown" not in st.session_state:
-                st.warning("🔧 DEV_MODE: Supabase secrets missing – authentication bypassed.")
+                st.info("🔧 DEV_MODE – using dummy user.")
                 st.session_state.supabase_warning_shown = True
             return None
         st.error("⚠️ Supabase secrets not configured. Please add them to Streamlit Cloud secrets.")
