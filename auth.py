@@ -58,20 +58,11 @@ class AuthedUser:
         return getattr(self, key, default)
 
 
-def _is_cloud_environment() -> bool:
-    import os
-    return os.getenv("STREAMLIT_CLOUD", "").lower() == "true" or "STREAMLIT_APP" in os.environ
-
-
 def _get_client() -> Client | None:
-    import os
     try:
         url = st.secrets["supabase"]["url"]
         key = st.secrets["supabase"]["anon_key"]
     except (KeyError, AttributeError, FileNotFoundError):
-        if _is_cloud_environment() or os.getenv("DEV_MODE", "false").lower() == "true":
-            return None
-        st.error("⚠️ Supabase secrets not configured. Please add them to Streamlit Cloud secrets.")
         return None
 
     if "sb_client" not in st.session_state:
@@ -107,20 +98,17 @@ def _restore_session(client: Client | None, cookies: dict) -> AuthedUser | None:
 
 def current_user() -> AuthedUser | None:
     """Returns the logged-in user, or None. Call this at the top of every page."""
-    import os
     if "authed_user" in st.session_state:
         return st.session_state.authed_user
 
     client = _get_client()
     if client is None:
-        if _is_cloud_environment() or os.getenv("DEV_MODE", "false").lower() == "true":
-            if "supabase_warning_shown" not in st.session_state:
-                st.info("🔧 Development mode – using dummy user (no Supabase).")
-                st.session_state.supabase_warning_shown = True
-            dummy = AuthedUser(id="dev-user", email="dev@example.com")
-            st.session_state.authed_user = dummy
-            return dummy
-        return None
+        if "supabase_warning_shown" not in st.session_state:
+            st.info("🔧 No Supabase credentials – using development user.")
+            st.session_state.supabase_warning_shown = True
+        dummy = AuthedUser(id="dev-user", email="dev@example.com")
+        st.session_state.authed_user = dummy
+        return dummy
 
     cookie_mgr = _get_cookie_manager()
     cookies = cookie_mgr.get_all()
