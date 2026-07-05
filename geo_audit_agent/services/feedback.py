@@ -46,7 +46,7 @@ class FeedbackPersistenceManager:
             def hgetall(self, key: str) -> Dict[bytes, bytes]:
                 return self.db.get(key, {})
 
-        self.r = None
+        self.r: Any = MockRedisClient()
         if REDIS_MODULE_AVAILABLE:
             try:
                 if redis_url:
@@ -65,8 +65,6 @@ class FeedbackPersistenceManager:
             except Exception as e:
                 logger.warning(f"Redis is not available for feedback (using in-memory fallback): {e}")
                 self.r = MockRedisClient()  # type: ignore
-        else:
-            self.r = MockRedisClient()  # type: ignore
             
     def submit_feedback(self, run_id: str, brand_name: str, score_nps: int, rating_verdict: str, user_comment: str = "") -> bool:
         """

@@ -45,7 +45,8 @@ async def audit_event_stream(audit_id: str, user_id: str):
     if not redis_url:
         redis_url = os.getenv("REDIS_URL")
 
-    r = None
+    from typing import Any
+    r: Any = None
     if REDIS_ASYNC_AVAILABLE and redis_url:
         try:
             r = aioredis.from_url(redis_url)
