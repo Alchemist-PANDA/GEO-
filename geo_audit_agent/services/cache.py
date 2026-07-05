@@ -15,21 +15,36 @@ logger = logging.getLogger(__name__)
 # Fallback in-memory cache to support local testing without a live Redis container
 IN_MEMORY_CACHE: dict[str, str] = {}
 
-REDIS_AVAILABLE = False
-r = None
-
-if REDIS_MODULE_AVAILABLE:
+def get_redis_client():
+    """Return Redis client or None if not configured."""
+    if not REDIS_MODULE_AVAILABLE:
+        logger.info("redis package not installed – using in-memory cache fallback.")
+        return None
+    import os
+    redis_url = None
     try:
-        # Attempt to initialize Redis connection pool
-        pool = redis.ConnectionPool(host="localhost", port=6379, db=0, socket_timeout=2.0)  # type: ignore[name-defined]
-        r = redis.Redis(connection_pool=pool)  # type: ignore[name-defined]
-        r.ping()
-        REDIS_AVAILABLE = True
+        import streamlit as st
+        redis_url = st.secrets.get("redis_url")
+    except Exception:
+        pass
+    if not redis_url:
+        redis_url = os.getenv("REDIS_URL")
+
+    if not redis_url:
+        logger.info("Redis URL not configured – using in-memory cache fallback.")
+        return None
+
+    try:
+        client = redis.from_url(redis_url, socket_timeout=2.0)  # type: ignore
+        client.ping()
         logger.info("Connected to Redis caching server successfully.")
+        return client
     except Exception as e:
-        logger.warning(f"Redis is not available (using in-memory fallback): {e}")
-else:
-    logger.info("redis package not installed – using in-memory cache fallback.")
+        logger.warning(f"Redis connection failed (using in-memory fallback): {e}")
+        return None
+
+r = get_redis_client()
+REDIS_AVAILABLE = r is not None
 
 def get_cache_key(tier: str, prompt: str) -> str:
     payload = json.dumps({"tier": tier, "prompt": prompt}, sort_keys=True)
@@ -42,7 +57,9 @@ def get_cached_response(tier: str, prompt: str) -> Optional[str]:
             assert r is not None
             val = r.get(key)
             if val:
-                return val.decode("utf-8")  # type: ignore
+                if isinstance(val, bytes):
+                    return val.decode("utf-8")
+                return val
         except Exception as e:
             logger.warning(f"Failed to read from Redis cache: {e}")
     return IN_MEMORY_CACHE.get(key)

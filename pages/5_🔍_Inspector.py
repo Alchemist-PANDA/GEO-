@@ -1,4 +1,5 @@
 import streamlit as st
+from sqlmodel import select
 from geo_audit_agent.db.session import get_session
 from geo_audit_agent.db.models import InspectorCheck, GuardrailViolation, ImprovementProposal
 
@@ -8,7 +9,7 @@ st.title("🔍 Inspector Dashboard")
 st.markdown("### Recent Inspector Checks")
 try:
     with get_session() as s:
-        checks = s.query(InspectorCheck).order_by(InspectorCheck.created_at.desc()).limit(10).all()
+        checks = s.exec(select(InspectorCheck).order_by(InspectorCheck.created_at.desc()).limit(10)).all()
         if checks:
             st.dataframe([{
                 "Time": c.created_at,
@@ -25,7 +26,7 @@ except Exception as e:
 st.markdown("### Guardrail Violations")
 try:
     with get_session() as s:
-        violations = s.query(GuardrailViolation).order_by(GuardrailViolation.created_at.desc()).limit(10).all()
+        violations = s.exec(select(GuardrailViolation).order_by(GuardrailViolation.created_at.desc()).limit(10)).all()
         if violations:
             st.dataframe([{
                 "Time": v.created_at,
@@ -42,7 +43,7 @@ except Exception as e:
 st.markdown("### Action Proposals (Self Improvement)")
 try:
     with get_session() as s:
-        proposals = s.query(ImprovementProposal).filter_by(status="pending").order_by(ImprovementProposal.created_at.desc()).limit(10).all()
+        proposals = s.exec(select(ImprovementProposal).where(ImprovementProposal.status == "pending").order_by(ImprovementProposal.created_at.desc()).limit(10)).all()
         if proposals:
             for p in proposals:
                 with st.expander(f"Proposal for {p.agent_id}: {p.proposal_type}"):

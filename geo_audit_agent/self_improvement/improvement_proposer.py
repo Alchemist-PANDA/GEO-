@@ -1,13 +1,18 @@
 """Claude reads winning vs losing traces and proposes ONE scoped change."""
+from sqlmodel import select
 from geo_audit_agent.llm import gateway
 from geo_audit_agent.db.session import get_session
 from geo_audit_agent.db.models import AgentTrace, ImprovementProposal
 
 def propose(agent_id: str, limit: int = 40) -> dict | None:
     with get_session() as s:
-        traces = (s.query(AgentTrace).filter(AgentTrace.agent_id == agent_id)
-                  .filter(AgentTrace.score.isnot(None))  # type: ignore
-                  .order_by(AgentTrace.created_at.desc()).limit(limit).all())  # type: ignore
+        traces = s.exec(
+            select(AgentTrace)
+            .where(AgentTrace.agent_id == agent_id)
+            .where(AgentTrace.score.isnot(None))  # type: ignore
+            .order_by(AgentTrace.created_at.desc())  # type: ignore
+            .limit(limit)
+        ).all()
     if len(traces) < 10:
         return None
     wins = [t for t in traces if (t.score or 0) >= 0.8]

@@ -17,35 +17,55 @@ class FeedbackPersistenceManager:
     """Manages user feedback collection (thumbs, NPS) and telemetry persistence in Redis."""
     
     def __init__(self, host: str = "localhost", port: int = 6379, db: int = 0, password: Optional[str] = None):
+        import os
+        redis_url = None
+        try:
+            import streamlit as st
+            redis_url = st.secrets.get("redis_url")
+        except Exception:
+            pass
+        if not redis_url:
+            redis_url = os.getenv("REDIS_URL")
+
+        class MockRedisClient:
+            def __init__(self):
+                self.db: Dict[str, Any] = {}
+                self.index: List[bytes] = []
+            def hset(self, key: str, mapping: Dict[str, Any]) -> int:
+                self.db[key] = {
+                    k.encode("utf-8") if isinstance(k, str) else k:
+                    (v.encode("utf-8") if isinstance(v, str) else str(v).encode("utf-8") if isinstance(v, int) else v)
+                    for k, v in mapping.items()
+                }
+                return 1
+            def lpush(self, key: str, value: str) -> int:
+                self.index.insert(0, value.encode("utf-8"))
+                return len(self.index)
+            def lrange(self, key: str, start: int, end: int) -> List[bytes]:
+                return self.index
+            def hgetall(self, key: str) -> Dict[bytes, bytes]:
+                return self.db.get(key, {})
+
+        self.r = None
         if REDIS_MODULE_AVAILABLE:
-            self.pool = redis.ConnectionPool(  # type: ignore
-                host=host, 
-                port=port, 
-                db=db, 
-                password=password, 
-                max_connections=10
-            )
-            self.r = redis.Redis(connection_pool=self.pool)  # type: ignore
+            try:
+                if redis_url:
+                    self.r = redis.from_url(redis_url, socket_timeout=2.0)  # type: ignore
+                else:
+                    self.pool = redis.ConnectionPool(  # type: ignore
+                        host=host, 
+                        port=port, 
+                        db=db, 
+                        password=password, 
+                        max_connections=10
+                    )
+                    self.r = redis.Redis(connection_pool=self.pool)  # type: ignore
+                self.r.ping()
+                logger.info("Connected to Redis feedback server successfully.")
+            except Exception as e:
+                logger.warning(f"Redis is not available for feedback (using in-memory fallback): {e}")
+                self.r = MockRedisClient()  # type: ignore
         else:
-            self.pool = None  # type: ignore[assignment]
-            class MockRedisClient:
-                def __init__(self):
-                    self.db: Dict[str, Any] = {}
-                    self.index: List[bytes] = []
-                def hset(self, key: str, mapping: Dict[str, Any]) -> int:
-                    self.db[key] = {
-                        k.encode("utf-8") if isinstance(k, str) else k:
-                        (v.encode("utf-8") if isinstance(v, str) else str(v).encode("utf-8") if isinstance(v, int) else v)
-                        for k, v in mapping.items()
-                    }
-                    return 1
-                def lpush(self, key: str, value: str) -> int:
-                    self.index.insert(0, value.encode("utf-8"))
-                    return len(self.index)
-                def lrange(self, key: str, start: int, end: int) -> List[bytes]:
-                    return self.index
-                def hgetall(self, key: str) -> Dict[bytes, bytes]:
-                    return self.db.get(key, {})
             self.r = MockRedisClient()  # type: ignore
             
     def submit_feedback(self, run_id: str, brand_name: str, score_nps: int, rating_verdict: str, user_comment: str = "") -> bool:

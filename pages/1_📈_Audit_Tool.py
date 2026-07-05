@@ -739,13 +739,14 @@ def login_screen():
                     st.session_state.authenticated = True
                     
                     try:
+                        from sqlmodel import select
                         from geo_audit_agent.db.session import get_session
                         from geo_audit_agent.db.models import UserProfile
                         import uuid
                         
                         admin_email = f"{username}@brandsightgeo.com"
                         with get_session() as s:
-                            user = s.query(UserProfile).filter(UserProfile.email == admin_email).first()
+                            user = s.exec(select(UserProfile).where(UserProfile.email == admin_email)).first()
                             if not user:
                                 user = UserProfile(id=uuid.uuid4(), email=admin_email, display_name=username, tier="free")
                                 s.add(user)

@@ -34,7 +34,41 @@ router = APIRouter()
 
 
 async def audit_event_stream(audit_id: str, user_id: str):
-    r = aioredis.from_url("redis://localhost:6379/0")
+    import os
+    import logging
+    redis_url = None
+    try:
+        import streamlit as st
+        redis_url = st.secrets.get("redis_url")
+    except Exception:
+        pass
+    if not redis_url:
+        redis_url = os.getenv("REDIS_URL")
+
+    r = None
+    if REDIS_ASYNC_AVAILABLE and redis_url:
+        try:
+            r = aioredis.from_url(redis_url)
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to connect to Redis at {redis_url}: {e}")
+            r = None
+
+    if r is None:
+        class MockPubSub:
+            async def subscribe(self, *args, **kwargs):
+                pass
+            async def unsubscribe(self, *args, **kwargs):
+                pass
+            async def listen(self):
+                if False:
+                    yield None
+        class MockClient:
+            def pubsub(self):
+                return MockPubSub()
+            async def aclose(self):
+                pass
+        r = MockClient()
+
     pubsub = r.pubsub()
     await pubsub.subscribe(f"audit:{audit_id}")
 
