@@ -5,7 +5,7 @@ Fixes: dashboard.py:291 raw f-string prompt injection vulnerability
 """
 import logging
 from dataclasses import dataclass
-from typing import Optional
+
 from geo_audit_agent.services.llm_router import query_provider
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ Respond with ONLY a JSON object:
 @dataclass
 class GuardrailResult:
     classification: str  # "safe" or "unsafe"
-    category: Optional[str] = None
+    category: str | None = None
 
 
 def classify_input(input_text: str) -> GuardrailResult:

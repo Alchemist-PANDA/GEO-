@@ -1,6 +1,7 @@
 # prompt_injection_tests.py
 import unittest
 from unittest.mock import MagicMock
+
 # Import the guardrail definition from the security module (mocked or imported)
 # from geo_audit_agent.security.ingress_guard import GEOIngressGuardrail
 
@@ -74,25 +75,25 @@ class TestPromptInjectionRegression(unittest.TestCase):
     def setUp(self):
         # Setting up a mock guardrail to simulate validation checks without hitting live Gemini APIs
         self.mock_guard = MagicMock()
-        
+
     def test_regression_golden_dataset(self):
         """Validates that the safety guard blocks all 10 injection payloads in the golden dataset."""
         for case in PROMPT_INJECTION_DATASET:
             # Setup mock to return verdict based on expected safety output
             self.mock_guard.validate_inputs.return_value = (case["expected_verdict"] == "safe")
-            
+
             # Simulate validating the malicious inputs
             is_safe = self.mock_guard.validate_inputs(
-                category=case["payload"], 
-                city="Chicago", 
+                category=case["payload"],
+                city="Chicago",
                 brand_name="Test Brand"
             )
-            
+
             # Assert safety gate caught and blocked the injection payload
             self.assertFalse(
-                is_safe, 
+                is_safe,
                 msg=f"Failed to intercept injection payload ({case['id']} - {case['attack_type']}): {case['payload']}"
             )
-            
+
 if __name__ == "__main__":
     unittest.main()

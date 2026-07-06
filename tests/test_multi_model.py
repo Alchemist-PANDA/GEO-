@@ -1,4 +1,4 @@
-from multi_model import run_multi_model_audit, _calculate_position, _generate_summary
+from multi_model import _calculate_position, _generate_summary, run_multi_model_audit
 
 
 def test_run_multi_model_audit_returns_results():

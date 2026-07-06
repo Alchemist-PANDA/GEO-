@@ -1,7 +1,6 @@
 import os
 import re
 from datetime import datetime
-from typing import Optional
 
 
 def slugify(text: str) -> str:
@@ -12,7 +11,7 @@ def slugify(text: str) -> str:
     return text.strip('-')
 
 
-def generate_markdown_report(audit_result: dict, lift_report: Optional[dict] = None) -> str:
+def generate_markdown_report(audit_result: dict, lift_report: dict | None = None) -> str:
     """
     Generate a markdown report from audit results and optional lift report.
 
@@ -398,7 +397,7 @@ AI recommendation algorithms evolve continuously, so regular monitoring is recom
 
 def save_markdown_report(
     audit_result: dict,
-    lift_report: Optional[dict] = None,
+    lift_report: dict | None = None,
     output_dir: str = "reports"
 ) -> str:
     """

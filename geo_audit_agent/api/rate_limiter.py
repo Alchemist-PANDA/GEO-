@@ -1,6 +1,6 @@
-import time
 import logging
-from typing import Tuple, Dict, Optional
+import time
+
 import redis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -16,13 +16,13 @@ class RedisRateLimiter:
                  db: int = 1, limit: int = 100, window: int = 3600):
         self.limit = limit
         self.window = window
-        self.redis: Optional[redis.Redis] = None
+        self.redis: redis.Redis | None = None
         try:
             self.redis = redis.Redis(host=host, port=port, db=db, socket_timeout=3)
         except Exception as e:
             logger.error(f"Redis rate limiter connection failed: {e}")
 
-    def is_allowed(self, client_key: str) -> Tuple[bool, Dict[str, str]]:
+    def is_allowed(self, client_key: str) -> tuple[bool, dict[str, str]]:
         import uuid as _uuid
         now = int(time.time())
         if not self.redis:

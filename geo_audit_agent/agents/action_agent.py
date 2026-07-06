@@ -1,6 +1,7 @@
 import importlib
-from geo_audit_agent.actions.mapper import map_gaps_to_actions
+
 from geo_audit_agent.actions import tracker
+from geo_audit_agent.actions.mapper import map_gaps_to_actions
 from geo_audit_agent.guardrails.manager import check_phase
 from geo_audit_agent.observability.langfuse_tracer import trace_span
 

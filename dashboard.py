@@ -1,14 +1,16 @@
+import hashlib
 import html
-import streamlit as st
 import logging
 import os
-import hashlib
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from geo_audit_agent.agent import build_geo_audit_agent
-from multi_model import run_multi_model_audit
+
+import plotly.graph_objects as go
+import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot, copilot_icon_button
+
+from geo_audit_agent.agent import build_geo_audit_agent
+from geo_audit_agent.ui.chart_wrapper import copilot_icon_button, render_chart_with_copilot
+from multi_model import run_multi_model_audit
 
 # Import modernized dashboard components
 
@@ -20,7 +22,7 @@ logger = logging.getLogger(__name__)
 # --- Load CSS ---
 def load_css(file_name="style.css"):
     if os.path.exists(file_name):
-        with open(file_name, "r") as f:
+        with open(file_name) as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # --- Page Configuration ---
@@ -378,10 +380,10 @@ def create_circular_gauge(score, is_dark=True):
 def get_competitor_data(brand_name, category):
     import hashlib
     import random
-    
+
     # Seed competitor brands based on category
     category_lower = category.lower()
-    
+
     if "suv" in category_lower or "car" in category_lower or "vehicle" in category_lower or "automotive" in category_lower:
         competitors = ["Mercedes", "BMW", "Lexus", "Audi", "Porsche", "Land Rover", "Cadillac", "Lincoln", "Tesla", "Volvo"]
     elif "food" in category_lower or "burger" in category_lower or "restaurant" in category_lower or "cafe" in category_lower:
@@ -389,26 +391,26 @@ def get_competitor_data(brand_name, category):
     else:
         # Generic SaaS or tech/brand competitors
         competitors = [brand_name, "Brand Alpha", "Brand Beta", "Brand Gamma", "Brand Delta", "Brand Epsilon", "Brand Zeta"]
-        
+
     # Ensure brand_name is in the list
     if brand_name not in competitors:
         if len(competitors) > 4:
             competitors[4] = brand_name
         else:
             competitors.append(brand_name)
-            
+
     # Remove duplicates preserving order
     seen = set()
     competitors = [x for x in competitors if not (x in seen or seen.add(x))]
-    
+
     actual_results = {}
 
     if st.session_state.multi_model_results and brand_name.lower() == st.session_state.audit_results.get("brand_name", "").lower():
         for r in st.session_state.multi_model_results["results"]:
             actual_results[r["model"]] = int(r["confidence"] * 100) if r["mentioned"] else int(random.Random(r["model"]).randint(15, 35))
-            
+
     model_names = ["ChatGPT", "Gemini", "Meta.ai", "Claude.ai", "DeepSeek"]
-    
+
     data = []
     for b in competitors:
         b_scores = {}
@@ -425,7 +427,7 @@ def get_competitor_data(brand_name, category):
                     b_scores[m] = 65 + (seed % 31)
                 else:
                     b_scores[m] = 15 + (seed % 31)
-                    
+
         # Calculate Average
         b_scores["Average"] = int(sum(b_scores[m] for m in model_names) / len(model_names))
         b_scores["brand"] = b
@@ -546,7 +548,7 @@ def rolling_average(values, window=3):
 def create_multi_model_chart(data, selected_brand, is_dark=True):
     # Sort data by Average score descending
     data_sorted = sorted(data, key=lambda x: x["Average"], reverse=False)
-    
+
     brands = [d["brand"] for d in data_sorted]
     chatgpt_scores = [d["ChatGPT"] for d in data_sorted]
     gemini_scores = [d["Gemini"] for d in data_sorted]
@@ -554,9 +556,9 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
     claude_scores = [d["Claude.ai"] for d in data_sorted]
     deepseek_scores = [d["DeepSeek"] for d in data_sorted]
     avg_scores = [d["Average"] for d in data_sorted]
-    
+
     fig = go.Figure()
-    
+
     colors = {
         "ChatGPT": "#FF9F43",   # Warm Orange
         "Gemini": "#EC4899",    # Vibrant Pink
@@ -564,7 +566,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         "Claude.ai": "#60A5FA",  # Light Blue
         "DeepSeek": "#0D9488",  # Deep Teal
     }
-    
+
     # Add grouped horizontal bars
     fig.add_trace(go.Bar(
         y=brands,
@@ -648,7 +650,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
                     symbol='diamond'),
         hovertemplate="<b>%{y}</b><br>Average: %{x:.1f}<extra></extra>"
     ))
-    
+
     # Highlight the selected brand row
     selected_brand_normalized = selected_brand.lower()
     brands_lower = [b.lower() for b in brands]
@@ -668,7 +670,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             line=dict(color=highlight_border, width=1.5),
             layer="below"
         )
-        
+
     fig.update_layout(
         barmode='group',
         height=500,
@@ -702,7 +704,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             gridcolor='rgba(0,0,0,0)'
         )
     )
-    
+
     return fig
 
 # --- Helper Functions ---
@@ -884,7 +886,7 @@ if run_audit:
             results = agent.invoke(inputs)
             st.session_state.audit_results = results
             st.session_state.comparison_data[brand_name] = results
-            
+
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
             multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
             st.session_state.multi_model_results = multi_results
@@ -1001,11 +1003,11 @@ else:
     citations_val = int(total_resp * (cr_val / 100))
     mentions_text = f"{mentions_val} mentions out of {total_resp} total"
     citations_text = f"{citations_val} citations in {total_resp} responses"
-    
+
     pos_count = int(total_resp * (sent_val / 100))
     neg_count = int((total_resp - pos_count) * 0.1)
     neu_count = total_resp - pos_count - neg_count
-    
+
     sentiment_text = f"""
         <div style="display: flex; gap: 12px; justify-content: center; align-items: center; font-size: 0.85rem; font-weight: 700; margin-top: 6px;">
             <span style="color: #10B981; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg> {pos_count}</span>
@@ -1087,7 +1089,7 @@ with col_g3:
 with col_pb:
     # Platform breakdown progress bars
     rows_html = ""
-    for idx, p in enumerate(platform_scores):
+    for p in platform_scores:
         rows_html += f"""
         <div class="bv2-platform-item" style="padding: 6px 0;">
             <div class="bv2-platform-name" style="width: 120px; font-size: 0.85rem; font-weight: 600; color: #1E293B;">{p['platform']}</div>
@@ -1136,7 +1138,7 @@ with trend_col1:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     fig_bv_trend = go.Figure()
     fig_bv_trend.add_trace(go.Scatter(
         x=bv_dates, y=bv_values, mode='lines+markers', name='Visibility',
@@ -1172,7 +1174,7 @@ with trend_col2:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     fig_cr_trend = go.Figure()
     fig_cr_trend.add_trace(go.Scatter(
         x=cr_dates, y=cr_values, mode='lines+markers', name='Citation Rate',

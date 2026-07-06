@@ -49,7 +49,9 @@ pytest-cov>=4.1.0
 
 # Web Scraping / Auditing
 beautifulsoup4
-extruct
+# extruct is optional: its jstyleson dependency fails to build on modern
+# setuptools. fingerprint_generator falls back to BeautifulSoup JSON-LD
+# parsing when extruct is absent. Install manually if needed: pip install extruct
 
 # Utils
 numpy

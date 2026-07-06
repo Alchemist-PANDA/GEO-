@@ -1,6 +1,7 @@
 """sentence-transformers wrapper, lazy-loaded, mock-safe."""
-import os
 import hashlib
+import os
+
 _model = None
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from run_lift_simulation import simulate_improved_audit, run_lift_simulation
+from run_lift_simulation import run_lift_simulation, simulate_improved_audit
 
 
 class TestIndustryRemediationRouting:

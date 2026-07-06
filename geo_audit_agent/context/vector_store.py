@@ -1,6 +1,7 @@
 """Qdrant retrieval with metadata filters."""
-import os
 import logging
+import os
+
 from geo_audit_agent.context.embeddings import embed
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def search(query: str, *, brand: str | None = None, industry: str | None = None,
     client = _client_or_none()
     if client is None:
         return []
-    from qdrant_client.models import Filter, FieldCondition, MatchValue, Range
+    from qdrant_client.models import FieldCondition, Filter, MatchValue, Range
     must = [FieldCondition(key="trust_score", range=Range(gte=min_trust))]
     if brand:
         must.append(FieldCondition(key="brand", match=MatchValue(value=brand)))

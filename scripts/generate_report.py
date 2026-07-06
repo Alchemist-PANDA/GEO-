@@ -1,10 +1,11 @@
 import json
 
+
 def main():
     try:
-        with open('kfc_prediction.json', 'r') as f:
+        with open('kfc_prediction.json') as f:
             kfc = json.load(f)
-        
+
         print("-" * 50)
         print("GEO POTENTIAL SCORE REPORT")
         print("-" * 50)

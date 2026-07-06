@@ -1,6 +1,7 @@
 import json
 import os
 
+
 def save_fingerprint_json(fingerprint: dict):
     """Saves fingerprint to data directory."""
     data_dir = "data/fingerprints"

@@ -3,7 +3,7 @@ import html
 import re
 
 _PROMPT_INJECTION_PATTERNS = [
-    re.compile(r"ignore\s+(all\s+)?previous\s+instructions", re.IGNORECASE),
+    re.compile(r"ignore\s+(?:all\s+)?(?:previous\s+)?(?:prior\s+)?instructions", re.IGNORECASE),
     re.compile(r"you\s+are\s+now\s+(?:a|an)\s+", re.IGNORECASE),
     re.compile(r"system\s*:\s*", re.IGNORECASE),
     re.compile(r"<\|(?:im_start|im_end|system)\|>", re.IGNORECASE),

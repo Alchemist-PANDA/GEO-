@@ -1,9 +1,11 @@
 import json
 import os
+
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session
+
 from geo_audit_agent.api.auth import get_current_user
 from geo_audit_agent.db.models import Audit, Brand
 from geo_audit_agent.db.session import get_async_session

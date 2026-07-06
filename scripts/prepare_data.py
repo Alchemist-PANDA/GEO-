@@ -1,17 +1,19 @@
 import json
 import os
+
 import pandas as pd
 
+
 def extract_features(audit_file, competition_level, brand_age, backlinks, semantic_score):
-    with open(audit_file, 'r') as f:
+    with open(audit_file) as f:
         audit = json.load(f)
-    
+
     # Simulate feature detection (in real app, this would be parsed from the audit analysis/metadata)
     # For Burger Hub, we know the status from the previous steps
     has_json_ld = 1 if 'post' in audit_file else 0
     has_whitepaper = 1 if 'post' in audit_file else 0
     has_reviews = 1 # Burger Hub has reviews
-    
+
     return {
         'brand_name': audit.get('brand_name', 'Unknown'),
         'has_json_ld': has_json_ld,
@@ -26,15 +28,15 @@ def extract_features(audit_file, competition_level, brand_age, backlinks, semant
 
 def main():
     records = []
-    
+
     # Record 1: Pre-remediation
     if os.path.exists('pre_remediation_audit.json'):
         records.append(extract_features('pre_remediation_audit.json', 1, 24, 150, 0.6))
-    
+
     # Record 2: Post-remediation
     if os.path.exists('post_remediation_audit.json'):
         records.append(extract_features('post_remediation_audit.json', 1, 24, 150, 0.85))
-    
+
     # Since we only have 2 records, we'll add some simulated variations to make the model trainable
     # This fulfills the "insufficient real data" instruction
     simulated_data = [
@@ -43,7 +45,7 @@ def main():
         {'brand_name': 'Sim3', 'has_json_ld': 1, 'has_technical_whitepaper': 1, 'has_reviews': 1, 'competition_level': 2, 'brand_age_months': 48, 'backlink_count': 500, 'semantic_score': 0.9, 'confidence_score': 0.95},
     ]
     records.extend(simulated_data)
-    
+
     df = pd.DataFrame(records)
     os.makedirs('data', exist_ok=True)
     df.to_csv('data/training_data.csv', index=False)

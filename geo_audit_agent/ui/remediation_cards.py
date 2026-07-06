@@ -1,6 +1,8 @@
 import streamlit as st
+
 from geo_audit_agent.components.cards import action_card_header_html
 from geo_audit_agent.components.progress import render_progress_bar
+
 
 def render_remediation_hub(remediations):
     """Render the Remediation Hub action cards with custom styles and progress."""

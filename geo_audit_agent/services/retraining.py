@@ -1,7 +1,8 @@
 # continuous_retraining.py
-import os
-import pandas as pd
 import logging
+import os
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +23,11 @@ except ImportError:
 
 class ModelRetrainingPipeline:
     """Automates model retraining based on user-approved audit feedback records."""
-    
+
     def __init__(self, data_path: str = "data/training_data.csv", mlflow_tracking_uri: str = "http://localhost:5000"):
         self.data_path = data_path
         self.features = [
-            'has_json_ld', 'has_technical_whitepaper', 'has_reviews', 
+            'has_json_ld', 'has_technical_whitepaper', 'has_reviews',
             'competition_level', 'brand_age_months', 'backlink_count', 'semantic_score'
         ]
         self.target = 'confidence_score'
@@ -38,7 +39,7 @@ class ModelRetrainingPipeline:
                 logger.warning(f"Failed to initialize MLflow tracking: {e}")
         else:
             logger.info("MLflow is not installed. Tracking is disabled.")
-        
+
     def extract_features_from_feedback(self, feedback_payload: dict, audit_payload: dict) -> dict:
         """Transforms a user-submitted feedback run state into model training columns."""
         # Convert state variables to numeric binary values
@@ -53,18 +54,18 @@ class ModelRetrainingPipeline:
             # Use the actual G-Eval or human nps-informed score (scaled to 0-1) as target confidence
             "confidence_score": float(feedback_payload.get("score_nps", 8)) / 10.0
         }
-        
+
     def append_new_training_data(self, new_records: list[dict]):
         """Appends new feature vectors to the CSV training database."""
         df_new = pd.DataFrame(new_records)
-        
+
         if os.path.exists(self.data_path):
             df_old = pd.read_csv(self.data_path)
             df_combined = pd.concat([df_old, df_new], ignore_index=True)
         else:
             df_combined = df_new
             os.makedirs(os.path.dirname(self.data_path), exist_ok=True)
-            
+
         df_combined.to_csv(self.data_path, index=False)
         logger.info(f"Appended {len(new_records)} records to {self.data_path}")
 
@@ -73,15 +74,15 @@ class ModelRetrainingPipeline:
         if not os.path.exists(self.data_path):
             logger.error("No training data found to retrain the model.")
             return False
-            
+
         df = pd.read_csv(self.data_path)
         if len(df) < 20:  # Minimum dataset requirement
             logger.info("Dataset size too small for statistical validation. Retraining skipped.")
             return False
-            
+
         X = df[self.features]
         y = df[self.target]
-        
+
         if not HAS_SKLEARN:
             logger.warning("scikit-learn is not installed. Mocking successful retraining.")
             logger.info("Mock retraining successful. R2 Score: 0.8500")
@@ -89,34 +90,34 @@ class ModelRetrainingPipeline:
 
         # Test-train split
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
-        
+
         if HAS_MLFLOW:
             try:
                 with mlflow.start_run():
                     mlflow.sklearn.autolog()
-                    
+
                     # Train RandomForest Model
                     model = RandomForestRegressor(n_estimators=100, max_depth=6, random_state=42)
                     model.fit(X_train, y_train)
-                    
+
                     # Predict validation targets
                     val_preds = model.predict(X_val)
                     r2 = r2_score(y_val, val_preds)
-                    
+
                     mlflow.log_metric("validation_r2", r2)
-                    
+
                     # Validation quality gate check (minimum r2 score of 0.60 required)
                     if r2 < 0.60:
                         logger.warning(f"Quality gate validation failed. Model R2 score ({r2:.4f}) below baseline threshold 0.60. Rollback triggered.")
                         return False
-                        
+
                     # Log and register model to Mlflow Registry
                     mlflow.sklearn.log_model(
                         sk_model=model,
                         artifact_path="model",
                         registered_model_name="GEO_Potential_Predictor"
                     )
-                    
+
                     # Promote to production tag
                     client = mlflow.tracking.MlflowClient()
                     client.set_registered_model_tag("GEO_Potential_Predictor", "production", "true")
@@ -124,7 +125,7 @@ class ModelRetrainingPipeline:
                     return True
             except Exception as e:
                 logger.error(f"Error during MLflow tracked training: {e}. Falling back to untracked local training.")
-        
+
         # Fallback local training without MLflow
         try:
             model = RandomForestRegressor(n_estimators=100, max_depth=6, random_state=42)

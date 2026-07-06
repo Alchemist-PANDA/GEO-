@@ -1,5 +1,7 @@
 import os
+
 import mlflow
+
 
 def setup_mlflow():
     """Sets up MLflow tracking URI and experiment."""

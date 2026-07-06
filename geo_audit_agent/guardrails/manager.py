@@ -1,8 +1,10 @@
 """Routes a phase to its handlers, aggregates violations, persists, decides."""
 from __future__ import annotations
+
 import logging
-from geo_audit_agent.guardrails.types import GuardrailDecision, Violation, Severity
+
 from geo_audit_agent.guardrails import handlers as H
+from geo_audit_agent.guardrails.types import GuardrailDecision, Severity, Violation
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,7 @@ def check_phase(phase: str, payload: dict, *, agent_id: str = "system",
     _persist(violations, phase, agent_id, trace_id)
     allowed = not any(v.severity in _BLOCKING for v in violations)
     try:
-        from geo_audit_agent.observability.metrics import GUARDRAIL_EVENTS, GUARDRAIL_BLOCKS
+        from geo_audit_agent.observability.metrics import GUARDRAIL_BLOCKS, GUARDRAIL_EVENTS
         GUARDRAIL_EVENTS.labels(classification="safe" if allowed else "blocked").inc()
         for v in violations:
             GUARDRAIL_BLOCKS.labels(type=v.guardrail_type, severity=v.severity.value,
@@ -52,8 +54,8 @@ def _persist(violations, phase, agent_id, trace_id):
     if not violations:
         return
     try:
-        from geo_audit_agent.db.session import get_session
         from geo_audit_agent.db.models import GuardrailViolation
+        from geo_audit_agent.db.session import get_session
         with get_session() as s:
             for v in violations:
                 blocked = v.severity in _BLOCKING

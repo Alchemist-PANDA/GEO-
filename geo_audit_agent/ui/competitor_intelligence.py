@@ -1,5 +1,5 @@
-import streamlit as st
 import plotly.graph_objects as go
+import streamlit as st
 
 from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
 
@@ -123,7 +123,7 @@ def render_competitor_intelligence(competitor_data):
                 ("🔗 Schema", scores.get("schema_coverage", 0)),
                 ("📱 Platforms", scores.get("platform_presence", 0)),
             ]
-            for col, (label, val) in zip(score_cols, score_items):
+            for col, (label, val) in zip(score_cols, score_items, strict=False):
                 with col:
                     color = "#10B981" if val >= 70 else "#F59E0B" if val >= 50 else "#EF4444"
                     st.markdown(f"""

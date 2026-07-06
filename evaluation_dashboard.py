@@ -1,27 +1,29 @@
 # evaluation_dashboard.py
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+
 
 # Mock data generator simulating evaluation and cache logs
 def generate_metric_logs():
     np.random.seed(42)
     dates = [datetime.utcnow() - timedelta(days=i) for i in range(30, 0, -1)]
-    
+
     # G-Eval faithfulness scores (0.0 to 5.0) with custom regression drop on Day 20
     geval_scores = np.random.uniform(4.2, 4.8, size=30)
     geval_scores[20:25] = geval_scores[20:25] - 0.9  # Mock prompt modification error
-    
+
     # Caching hit rate (percentage 0 to 100)
     cache_hit_rates = np.random.uniform(75, 92, size=30)
     cache_hit_rates[10:15] = cache_hit_rates[10:15] - 40 # Dynamic variable injection error
-    
+
     # Latencies (p95 milliseconds)
     p95_latencies = np.random.uniform(1200, 1800, size=30)
     p95_latencies[10:15] = p95_latencies[10:15] + 2500  # Caching failure latency increase
-    
+
     df = pd.DataFrame({
         "Date": dates,
         "G_Eval_Score": geval_scores,

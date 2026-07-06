@@ -3,10 +3,12 @@ Deterministic checks inline; semantic checks call NeMo / the LLM gateway."""
 import os
 import re
 from urllib.parse import urlparse
-from geo_audit_agent.guardrails.types import Violation, Severity as S
+
+from geo_audit_agent.guardrails.types import Severity as S
+from geo_audit_agent.guardrails.types import Violation
 
 # ---- 1. INPUT GUARDRAIL (full) ----
-_INJECTION = re.compile(r"(ignore (all|previous) instructions|system prompt|"
+_INJECTION = re.compile(r"(ignore\s+(?:all\s+)?(?:previous\s+)?(?:prior\s+)?instructions|system prompt|"
     r"you are now|disregard|reveal your|base64|<script|--\s*$|union select)", re.I)
 _SQLI = re.compile(r"('|\")\s*(or|and)\s*\d+=\d+|;\s*drop\s+table", re.I)
 

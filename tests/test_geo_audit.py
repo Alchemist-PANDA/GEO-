@@ -1,9 +1,9 @@
 """Tests for GEO audit agent."""
 
-from geo_audit_agent.audit import run_audit, detect_sentiment, extract_competitors
-from geo_audit_agent.measurement import measure_lift, calculate_visibility_score
-from geo_audit_agent.remediation import generate_remediation
+from geo_audit_agent.audit import detect_sentiment, extract_competitors, run_audit
 from geo_audit_agent.industry_templates import get_template
+from geo_audit_agent.measurement import calculate_visibility_score, measure_lift
+from geo_audit_agent.remediation import generate_remediation
 
 
 class TestSentimentDetection:

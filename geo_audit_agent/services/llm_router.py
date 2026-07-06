@@ -1,8 +1,10 @@
 # llm_router.py
-import os
 import logging
+import os
+
 from google import genai
 from google.genai import types
+
 from geo_audit_agent.llm_client import call_proxy_llm
 
 logger = logging.getLogger(__name__)
@@ -18,17 +20,17 @@ def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = ""
     """Routes prompt queries to the appropriate LLM provider depending on the tier constraint."""
     api_key = os.getenv("GOOGLE_API_KEY")
     messages = [{"role": "user", "content": prompt}]
-    
+
     if api_key:
         try:
             logger.info("Routing to Google Gemini API for %s tier (Correlation ID: %s)", tier, correlation_id)
             client = genai.Client(api_key=api_key)
-            
+
             # Map tier constraints to target models
             model_name = "gemini-2.0-flash-lite"
             if tier == "deep":
                 model_name = "gemini-2.0-flash"
-                
+
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt,
@@ -46,7 +48,7 @@ def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = ""
             )
         except Exception as e:
             logger.warning("Google GenAI routing failed, falling back to legacy proxy: %s", e)
-            
+
     # Legacy proxy fallback
     try:
         logger.info("Routing to fallback legacy proxy client (Correlation ID: %s)", correlation_id)

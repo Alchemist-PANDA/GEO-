@@ -4,7 +4,8 @@ Addresses: PE-OS Law 10 (Durable Execution Persistence)
 Replaces: wait_and_rerun.py time.sleep() pattern
 """
 from datetime import timedelta
-from temporalio import workflow, activity
+
+from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 
 
@@ -12,8 +13,8 @@ from temporalio.common import RetryPolicy
 async def execute_audit_pipeline(audit_id: str, user_id: str) -> dict:
     from geo_audit_agent.agent.graph import audit_graph
     from geo_audit_agent.agent.state import AuditState
-    from geo_audit_agent.db.session import get_session
     from geo_audit_agent.db.models import Audit, Brand
+    from geo_audit_agent.db.session import get_session
 
     with get_session() as session:
         audit = session.get(Audit, audit_id)
@@ -35,9 +36,10 @@ async def execute_audit_pipeline(audit_id: str, user_id: str) -> dict:
 
 @activity.defn
 async def persist_audit_results(audit_id: str, report: dict) -> None:
-    from geo_audit_agent.db.session import get_session
-    from geo_audit_agent.db.models import Audit, AuditStatus
     from datetime import datetime
+
+    from geo_audit_agent.db.models import Audit, AuditStatus
+    from geo_audit_agent.db.session import get_session
 
     with get_session() as session:
         audit = session.get(Audit, audit_id)

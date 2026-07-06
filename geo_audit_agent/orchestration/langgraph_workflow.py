@@ -1,10 +1,11 @@
-from langgraph.graph import StateGraph, END
-from geo_audit_agent.orchestration.state import AgenticState
-from geo_audit_agent.guardrails.manager import check_phase
-from geo_audit_agent.policy.engine import PolicyEngine
+from langgraph.graph import END, StateGraph
+
 from geo_audit_agent.agents.action_agent import ActionAgent
 from geo_audit_agent.agents.inspector_agent import InspectorAgent
 from geo_audit_agent.context import build_context
+from geo_audit_agent.guardrails.manager import check_phase
+from geo_audit_agent.orchestration.state import AgenticState
+from geo_audit_agent.policy.engine import PolicyEngine
 
 
 def _node_input_guard(state: AgenticState) -> AgenticState:

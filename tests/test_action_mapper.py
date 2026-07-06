@@ -1,4 +1,5 @@
 import os
+
 os.environ["FORCE_MOCK"] = "true"
 
 from geo_audit_agent.actions.mapper import map_gaps_to_actions

@@ -1,9 +1,10 @@
 import os
+
 os.environ["FORCE_MOCK"] = "true"
 
-from geo_audit_agent.evaluation.metrics import runtime_scores, aggregate
 from geo_audit_agent.evaluation.deep_eval import evaluate_case
 from geo_audit_agent.evaluation.golden_set import load
+from geo_audit_agent.evaluation.metrics import aggregate, runtime_scores
 
 
 def test_runtime_scores_clean():

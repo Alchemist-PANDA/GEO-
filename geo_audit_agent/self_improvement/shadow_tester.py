@@ -1,6 +1,6 @@
 """Replay the proposed variant against the golden set; promote only if
 aggregate score does not regress."""
-from geo_audit_agent.evaluation import golden_set, deep_eval
+from geo_audit_agent.evaluation import deep_eval, golden_set
 
 
 def shadow_test(apply_variant) -> dict:

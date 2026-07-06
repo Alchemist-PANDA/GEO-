@@ -11,7 +11,7 @@ class LLMLinguaCompressor:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.compressor = None
         self.model_name = model_name
-        
+
     def _lazy_load_compressor(self):
         """Lazy loads PromptCompressor to minimize warm-up latency on system start."""
         if self.compressor is None:
@@ -25,7 +25,7 @@ class LLMLinguaCompressor:
             except ImportError:
                 logger.error("LLMLingua package not found. Run: pip install llmlingua")
                 raise
-                
+
     def compress_context(self, raw_context: str, target_rate: float = 0.30) -> str:
         """
         Compresses input context by target rate.
@@ -34,9 +34,9 @@ class LLMLinguaCompressor:
         if not raw_context or len(raw_context.split()) < 50:
             # Skip compression on short contents to save processing overhead
             return raw_context
-            
+
         self._lazy_load_compressor()
-        
+
         try:
             # Run compression
             assert self.compressor is not None
@@ -46,11 +46,11 @@ class LLMLinguaCompressor:
                 force_tokens=["[", "]", "{", "}", "schema", "brand"],  # Keep syntax elements preserved
                 drop_consecutive=True
             )
-            
+
             compressed_prompt = result.get("compressed_prompt", "")
             original_tokens = result.get("origin_tokens", len(raw_context.split()))
             compressed_tokens = result.get("compressed_tokens", len(compressed_prompt.split()))
-            
+
             logger.info(f"Context compressed successfully from {original_tokens} to {compressed_tokens} tokens.")
             return compressed_prompt
         except Exception as e:

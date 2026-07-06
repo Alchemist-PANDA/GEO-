@@ -1,6 +1,12 @@
-from geo_audit_agent.context import (intent_classifier, vector_store, reranker,
-                                     fusion_layer, compression_layer,
-                                     validation_layer, prompt_builder)
+from geo_audit_agent.context import (
+    compression_layer,
+    fusion_layer,
+    intent_classifier,
+    prompt_builder,
+    reranker,
+    validation_layer,
+    vector_store,
+)
 
 
 def build_context(query: str, *, brand=None, industry=None, memory=None,

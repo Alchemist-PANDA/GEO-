@@ -1,7 +1,7 @@
 """Declarative business rules. condition is a pure predicate over a flat
 context dict — no eval(), no string DSL (those are injection risks)."""
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass(frozen=True)

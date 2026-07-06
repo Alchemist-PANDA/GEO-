@@ -1,9 +1,10 @@
 """Unified LLM gateway. All model access goes through here so provider,
 cost accounting, and mock-mode live in exactly one place."""
 from __future__ import annotations
+
 import json
-import os
 import logging
+import os
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ def parse_json(text: str) -> dict:
 
 def _record_metrics(result: LLMResult, model: str, cache_hit: bool = False):
     try:
-        from geo_audit_agent.observability.metrics import LLM_REQUESTS, LLM_TOKENS, LLM_COST
+        from geo_audit_agent.observability.metrics import LLM_COST, LLM_REQUESTS, LLM_TOKENS
         LLM_REQUESTS.labels(provider=result.provider, model=model, cache_hit=str(cache_hit)).inc()
         if result.input_tokens:
             LLM_TOKENS.labels(provider=result.provider, direction="input").inc(result.input_tokens)

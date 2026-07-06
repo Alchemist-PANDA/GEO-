@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List
+
 from dotenv import load_dotenv
 
 # Import shared LLM client (Issue #6: single source of truth)
@@ -13,7 +13,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # TOOL 1: generate_json_ld
-def generate_json_ld(brand_name: str, product_info: Dict) -> str:
+def generate_json_ld(brand_name: str, product_info: dict) -> str:
     """
     Generates valid JSON-LD for LocalBusiness or Product using schema.org.
     No LLM required.
@@ -57,7 +57,7 @@ def generate_json_ld(brand_name: str, product_info: Dict) -> str:
     return json.dumps(schema, indent=2)
 
 # TOOL 2: draft_technical_whitepaper
-def draft_technical_whitepaper(brand_name: str, topic: str, key_features: List[str]) -> str:
+def draft_technical_whitepaper(brand_name: str, topic: str, key_features: list[str]) -> str:
     """
     Generates a ~300-word AI-friendly technical whitepaper.
 

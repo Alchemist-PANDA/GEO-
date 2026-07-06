@@ -1,5 +1,6 @@
 """Claude reads winning vs losing traces and proposes ONE scoped change."""
 import logging
+
 from geo_audit_agent.llm import gateway
 
 logger = logging.getLogger(__name__)
@@ -7,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 def propose(agent_id: str, limit: int = 40) -> dict | None:
     try:
-        from geo_audit_agent.db.session import get_session
         from geo_audit_agent.db.models import AgentTrace
+        from geo_audit_agent.db.session import get_session
         with get_session() as s:
             traces = (s.query(AgentTrace).filter(AgentTrace.agent_id == agent_id)
                       .filter(AgentTrace.score.isnot(None))
@@ -31,8 +32,8 @@ def propose(agent_id: str, limit: int = 40) -> dict | None:
     if not data.get("description"):
         return None
     try:
-        from geo_audit_agent.db.session import get_session
         from geo_audit_agent.db.models import ImprovementProposal
+        from geo_audit_agent.db.session import get_session
         from geo_audit_agent.observability.metrics import IMPROVEMENT_PROPOSALS
         IMPROVEMENT_PROPOSALS.labels(agent=agent_id, status="proposed").inc()
         with get_session() as s:

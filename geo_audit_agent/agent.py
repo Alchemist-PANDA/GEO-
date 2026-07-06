@@ -1,19 +1,19 @@
-import os
 import json
 import logging
+import os
 import re
-from typing import TypedDict, Optional, List, Dict
+from typing import TypedDict
+
 from dotenv import load_dotenv
-from langgraph.graph import StateGraph, END
 from google import genai
+from langgraph.graph import END, StateGraph
+
+# Import remediation tools
+from .geo_remediation_tools import generate_review_template
 
 # Import shared LLM client (Issue #6: single source of truth)
 from .llm_client import call_proxy_llm
 
-# Import remediation tools
-from .geo_remediation_tools import (
-    generate_review_template
-)
 # Backward compatibility alias
 create_review_snippet = generate_review_template
 
@@ -45,24 +45,24 @@ class AgentState(TypedDict):
     brand_name: str
     category: str
     city: str
-    llm_response: Optional[str]
-    is_cited: Optional[bool]
-    confidence_score: Optional[float]
-    sentiment: Optional[str]
-    competitors: Optional[List[str]]
-    strengths: Optional[List[Dict]]
-    gaps: List[Dict]
-    planned_actions: List[Dict]
-    remediation: List[Dict]  # New industry-aware remediation
-    remediation_results: List[Dict]  # Legacy format
-    business_context: Optional[Dict]
-    template_used: Optional[str]  # Industry template used
+    llm_response: str | None
+    is_cited: bool | None
+    confidence_score: float | None
+    sentiment: str | None
+    competitors: list[str] | None
+    strengths: list[dict] | None
+    gaps: list[dict]
+    planned_actions: list[dict]
+    remediation: list[dict]  # New industry-aware remediation
+    remediation_results: list[dict]  # Legacy format
+    business_context: dict | None
+    template_used: str | None  # Industry template used
     # Advanced features state
-    enable_prediction: Optional[bool]
-    enable_anomalies: Optional[bool]
-    geo_potential_score: Optional[float]
-    anomalies: Optional[List[Dict]]
-    force_mock: Optional[bool]
+    enable_prediction: bool | None
+    enable_anomalies: bool | None
+    geo_potential_score: float | None
+    anomalies: list[dict] | None
+    force_mock: bool | None
 
 # 2. Nodes
 
@@ -253,17 +253,17 @@ def gap_analyst(state: AgentState) -> AgentState:
     config_path = os.getenv("GAP_CHECKLIST_PATH") or "gap_checklist.json"
     if os.path.exists(config_path):
         try:
-            with open(config_path, "r") as f:
+            with open(config_path) as f:
                 all_checklists = json.load(f)
             # Override business_context with the configured values for this brand
             brand_config = all_checklists.get(brand) or all_checklists.get("default") or {}
-            
+
             # Map legacy/config keys to business_context expected keys
             if "has_json_ld" in brand_config:
                 brand_config["has_schema"] = brand_config["has_json_ld"]
             if "recent_reviews" in brand_config:
                 brand_config["review_count"] = 10 if brand_config["recent_reviews"] else 0
-                
+
             business_context = {**business_context, **brand_config}
             logger.info(f"Loaded gap checklist configuration for {brand}")
         except Exception as e:
@@ -322,7 +322,7 @@ def gap_analyst(state: AgentState) -> AgentState:
     for gap in gaps:
         raw_severity = gap.get('severity') or gap.get('priority') or 'medium'
         severity_title = raw_severity.capitalize()  # "high" -> "High", "medium" -> "Medium", etc.
-        
+
         normalized_gap = {
             'gap_type': gap.get('gap_type') or gap.get('title') or gap.get('type') or 'Visibility Gap',
             'type': gap.get('type') or gap.get('gap_type') or 'generic',

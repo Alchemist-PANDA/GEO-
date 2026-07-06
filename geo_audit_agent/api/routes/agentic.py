@@ -1,7 +1,9 @@
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session
+
 from geo_audit_agent.api.auth import get_current_user
 from geo_audit_agent.db.session import get_async_session
 
@@ -49,7 +51,7 @@ async def run_agentic_workflow(
         result = graph.invoke(state)
     except Exception as e:
         logger.exception("Agentic workflow failed: %s", e)
-        raise HTTPException(status_code=500, detail="Workflow execution failed")
+        raise HTTPException(status_code=500, detail="Workflow execution failed") from e
 
     return AgenticResponse(
         trace_id=result.get("trace_id", ""),
@@ -83,7 +85,7 @@ async def check_guardrails(
     decision = check_phase(req.phase, req.payload)
     return GuardrailCheckResponse(
         allowed=decision.allowed,
-        violations=[{"phase": v.phase, "rule": v.rule, "severity": v.severity.value,
+        violations=[{"guardrail_type": v.guardrail_type, "rule": v.rule, "severity": v.severity.value,
                       "message": v.message} for v in decision.violations],
     )
 

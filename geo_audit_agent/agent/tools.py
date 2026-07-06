@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -72,7 +73,7 @@ class ReviewTemplateTool(BaseTool):
             return ToolResult(success=False, output=None, error=str(e))
 
 
-TOOL_REGISTRY: Dict[str, BaseTool] = {
+TOOL_REGISTRY: dict[str, BaseTool] = {
     "generate_json_ld": JSONLDTool(),
     "draft_technical_whitepaper": WhitepaperTool(),
     "generate_review_template": ReviewTemplateTool(),

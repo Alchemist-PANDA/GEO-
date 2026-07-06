@@ -1,4 +1,5 @@
 import os
+
 os.environ["FORCE_MOCK"] = "true"
 
 from geo_audit_agent.policy.engine import PolicyEngine

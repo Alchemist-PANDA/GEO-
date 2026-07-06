@@ -1,7 +1,8 @@
 import os
+
 os.environ["FORCE_MOCK"] = "true"
 
-from geo_audit_agent.llm.gateway import claude, router, parse_json, _mock
+from geo_audit_agent.llm.gateway import _mock, claude, parse_json, router
 
 
 def test_mock_returns_result():

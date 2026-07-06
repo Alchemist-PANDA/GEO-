@@ -1,5 +1,7 @@
 import streamlit as st
+
 from geo_audit_agent.components.cards import priority_card_html
+
 
 def render_gap_matrix(gaps):
     """Render the gaps in a 2x2 visual priority matrix."""

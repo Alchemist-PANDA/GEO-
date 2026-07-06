@@ -1,5 +1,6 @@
 from geo_audit_agent.components.badges import severity_badge, status_badge
 
+
 def priority_card_html(title: str, description: str, severity: str) -> str:
     """Generate HTML for a priority card with color coding and glassmorphism."""
     sev = severity.title()

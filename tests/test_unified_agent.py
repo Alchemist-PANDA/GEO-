@@ -6,9 +6,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from geo_audit_agent.agents.unified_competitor_agent import (
-    run_competitor_scan,
-    _generate_competitor_scores,
     _deterministic_score,
+    _generate_competitor_scores,
+    run_competitor_scan,
 )
 
 
@@ -113,5 +113,5 @@ class TestRunCompetitorScan:
         r1 = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
         r2 = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
         assert r1["brand_scores"] == r2["brand_scores"]
-        for c1, c2 in zip(r1["competitors"], r2["competitors"]):
+        for c1, c2 in zip(r1["competitors"], r2["competitors"], strict=False):
             assert c1["scores"] == c2["scores"]

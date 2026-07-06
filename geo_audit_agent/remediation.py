@@ -1,10 +1,10 @@
 """Remediation generation for GEO audit gaps."""
 
-from typing import List, Dict, Optional
+
 from .industry_templates import get_template
 
 
-def generate_remediation(gaps: List[Dict], category: str, city: str, brand_name: str, business_data: Optional[dict] = None) -> List[Dict]:
+def generate_remediation(gaps: list[dict], category: str, city: str, brand_name: str, business_data: dict | None = None) -> list[dict]:
     """
     Generate remediation recommendations for identified gaps.
 

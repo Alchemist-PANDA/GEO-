@@ -1,6 +1,7 @@
 # guardrail_golden_tests.py
 import unittest
 from unittest.mock import MagicMock
+
 # Import the guardrail definition from the security module (mocked or imported)
 # from geo_audit_agent.security.ingress_guard import GEOIngressGuardrail
 
@@ -96,24 +97,24 @@ class TestGuardrailGoldenDataset(unittest.TestCase):
     def setUp(self):
         # Setting up a mock guardrail to simulate validation checks without hitting live Gemini APIs
         self.mock_guard = MagicMock()
-        
+
     def test_guardrail_golden_dataset(self):
         """Validates that safe inputs are allowed and unsafe inputs are correctly blocked."""
         for case in GUARDRAIL_GOLDEN_DATASET:
             # Setup mock to return the expected safety outcome for test assertion validation
             self.mock_guard.validate_inputs.return_value = case["expected_safety"]
-            
+
             is_safe = self.mock_guard.validate_inputs(
-                category=case["category"], 
-                city=case["city"], 
+                category=case["category"],
+                city=case["city"],
                 brand_name=case["brand_name"]
             )
-            
+
             self.assertEqual(
-                is_safe, 
+                is_safe,
                 case["expected_safety"],
                 msg=f"Guardrail misidentified case {case['id']} ({case['description']}). Expected: {case['expected_safety']}, Got: {is_safe}"
             )
-            
+
 if __name__ == "__main__":
     unittest.main()

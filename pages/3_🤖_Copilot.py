@@ -135,7 +135,7 @@ with chat_col:
             ("🏆 Competitors", "Show me the competitive landscape"),
             ("🌐 Visibility", "Where am I visible across AI platforms?"),
         ]
-        for col, (label, prompt) in zip(qa_cols, quick_actions):
+        for col, (label, prompt) in zip(qa_cols, quick_actions, strict=False):
             with col:
                 if st.button(label, use_container_width=True, key=f"qa_{label}"):
                     conv = _new_conversation()
@@ -165,7 +165,7 @@ with chat_col:
             ("⚔️ Compare", "Compare me against competitors"),
             ("📈 Trends", "Explain my visibility trend"),
         ]
-        for col, (label, prompt) in zip(fq_cols, followups):
+        for col, (label, prompt) in zip(fq_cols, followups, strict=False):
             with col:
                 if st.button(label, use_container_width=True, key=f"fq_{active_conv['id']}_{label}"):
                     _ask(active_conv, prompt)

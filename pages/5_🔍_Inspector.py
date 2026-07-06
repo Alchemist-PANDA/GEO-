@@ -8,8 +8,8 @@ if not st.session_state.get("authenticated"):
 st.title("🔍 Inspector Dashboard")
 
 try:
+    from geo_audit_agent.db.models import GuardrailViolation, ImprovementProposal, InspectorCheck
     from geo_audit_agent.db.session import get_session
-    from geo_audit_agent.db.models import InspectorCheck, GuardrailViolation, ImprovementProposal
 
     with get_session() as s:
         recent_checks = s.query(InspectorCheck).order_by(

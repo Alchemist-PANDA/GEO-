@@ -1,6 +1,7 @@
 """Inspector Agent — 12 checks. Deterministic checks gate the expensive
 LLM checks (skip LLM if a hard check already failed)."""
 from dataclasses import dataclass, field
+
 from geo_audit_agent.llm import gateway
 from geo_audit_agent.observability.langfuse_tracer import trace_span
 
@@ -116,8 +117,8 @@ class InspectorAgent:
 
     def _persist(self, agent_id, trace_id, verdict):
         try:
-            from geo_audit_agent.db.session import get_session
             from geo_audit_agent.db.models import InspectorCheck
+            from geo_audit_agent.db.session import get_session
             with get_session() as s:
                 s.add(InspectorCheck(agent_id=agent_id, trace_id=trace_id,
                     check_type="full", result={"checks": verdict.checks,

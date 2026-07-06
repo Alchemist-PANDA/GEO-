@@ -1,8 +1,8 @@
 """Versioned config in Redis. 5% traffic -> variant; instant rollback flag."""
-import os
-import json
 import hashlib
+import json
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 _r = None

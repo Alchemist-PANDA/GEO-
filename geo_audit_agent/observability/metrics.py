@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, Gauge, Info
+from prometheus_client import Counter, Gauge, Histogram, Info
 
 AUDIT_REQUESTS = Counter(
     "geo_audit_requests_total",

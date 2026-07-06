@@ -2,13 +2,13 @@
 Shared LLM proxy client for the GEO Audit Agent.
 Single source of truth for all LLM API calls.
 """
-import os
+import hashlib
 import json
 import logging
-import hashlib
+import os
 from collections import OrderedDict
+
 import requests
-from typing import List, Dict
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -30,13 +30,13 @@ class _LRUCache(OrderedDict):
 _llm_cache: _LRUCache = _LRUCache()
 
 
-def _cache_key(model: str, messages: List[Dict], max_tokens: int, temperature: float) -> str:
+def _cache_key(model: str, messages: list[dict], max_tokens: int, temperature: float) -> str:
     """Generate a deterministic cache key for LLM requests."""
     payload = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}, sort_keys=True)
     return hashlib.md5(payload.encode()).hexdigest()
 
 
-def call_proxy_llm(model: str, messages: List[Dict], max_tokens: int = 300, temperature: float = 0.2, use_cache: bool = True) -> str:
+def call_proxy_llm(model: str, messages: list[dict], max_tokens: int = 300, temperature: float = 0.2, use_cache: bool = True) -> str:
     """
     Call the LLM proxy API.
 
@@ -62,7 +62,7 @@ def call_proxy_llm(model: str, messages: List[Dict], max_tokens: int = 300, temp
         base_url = "http://localhost:20128/v1"
 
     if not api_key:
-        raise EnvironmentError(
+        raise OSError(
             "ANTHROPIC_AUTH_TOKEN is not set. "
             "Add it to your .env file: ANTHROPIC_AUTH_TOKEN=your_key_here"
         )

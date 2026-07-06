@@ -1,7 +1,7 @@
+import argparse
 import json
 import logging
 import os
-import argparse
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ def deploy_remediation(file_path: str):
         logger.error(f"Remediation file {file_path} not found!")
         return
 
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         data = json.load(f)
 
     brand = data.get("brand", "Unknown Brand")

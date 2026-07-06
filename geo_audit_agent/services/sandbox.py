@@ -15,6 +15,7 @@ class SandboxExecutor:
     def validate_html(self, html_content: str) -> dict:
         try:
             import base64
+
             from e2b_code_interpreter import Sandbox
             encoded = base64.b64encode(html_content.encode()).decode()
             with Sandbox(timeout=self.timeout_ms) as sandbox:

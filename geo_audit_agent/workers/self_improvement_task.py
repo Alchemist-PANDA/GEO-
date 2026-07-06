@@ -1,5 +1,6 @@
 """Celery task that runs the self-improvement loop periodically."""
 import logging
+
 from geo_audit_agent.workers.celery_app import celery_app
 
 logger = logging.getLogger(__name__)

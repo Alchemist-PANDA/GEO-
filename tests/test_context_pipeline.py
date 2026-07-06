@@ -1,10 +1,11 @@
 import os
+
 os.environ["FORCE_MOCK"] = "true"
 
 from geo_audit_agent.context import build_context
-from geo_audit_agent.context.validation_layer import validate
-from geo_audit_agent.context.fusion_layer import fuse
 from geo_audit_agent.context.compression_layer import compress
+from geo_audit_agent.context.fusion_layer import fuse
+from geo_audit_agent.context.validation_layer import validate
 
 
 def test_build_context_returns_valid_bundle():

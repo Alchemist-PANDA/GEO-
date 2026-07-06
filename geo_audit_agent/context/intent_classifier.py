@@ -1,6 +1,7 @@
 """Cheap, deterministic-first intent routing. Keyword router covers the
 common cases for free; LLM fallback only for genuinely ambiguous input."""
 import re
+
 from geo_audit_agent.llm import gateway
 
 INTENTS = ["audit", "recommend", "compare", "deploy", "explain_chart",

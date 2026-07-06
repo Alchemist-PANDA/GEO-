@@ -1,6 +1,6 @@
 import hashlib
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +10,7 @@ def _deterministic_score(brand: str, competitor: str, metric: str) -> int:
     return int(seed[:2], 16) % 61 + 30
 
 
-def _generate_competitor_scores(brand_name: str, competitor: str) -> Dict[str, Any]:
+def _generate_competitor_scores(brand_name: str, competitor: str) -> dict[str, Any]:
     return {
         "competitor": competitor,
         "geo_score": _deterministic_score(brand_name, competitor, "geo"),
@@ -21,7 +21,7 @@ def _generate_competitor_scores(brand_name: str, competitor: str) -> Dict[str, A
     }
 
 
-def _build_explanations(brand_name: str, competitor: str, scores: Dict[str, Any]) -> List[Dict[str, str]]:
+def _build_explanations(brand_name: str, competitor: str, scores: dict[str, Any]) -> list[dict[str, str]]:
     explanations = []
     if scores["schema_coverage"] > 70:
         explanations.append({
@@ -60,8 +60,8 @@ def run_competitor_scan(
     brand_name: str,
     category: str,
     city: str,
-    competitors: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    competitors: list[str] | None = None,
+) -> dict[str, Any]:
     """Run a competitor intelligence scan and return structured results."""
     if not competitors:
         base_names = {
@@ -104,7 +104,7 @@ def run_competitor_scan(
     }
 
 
-def _rank_brand(brand_scores: Dict, competitor_scores: List[Dict]) -> int:
+def _rank_brand(brand_scores: dict, competitor_scores: list[dict]) -> int:
     all_geo = sorted(
         [brand_scores["geo_score"]] + [c["geo_score"] for c in competitor_scores],
         reverse=True,
@@ -112,7 +112,7 @@ def _rank_brand(brand_scores: Dict, competitor_scores: List[Dict]) -> int:
     return all_geo.index(brand_scores["geo_score"]) + 1
 
 
-def _top_opportunity(brand_scores: Dict, competitor_results: List[Dict]) -> str:
+def _top_opportunity(brand_scores: dict, competitor_results: list[dict]) -> str:
     metrics = ["citation_rate", "content_depth", "schema_coverage", "platform_presence"]
     worst_gap = ""
     worst_diff = 0

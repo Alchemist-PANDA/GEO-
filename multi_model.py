@@ -8,7 +8,6 @@ IMPORTANT: This module supports both Live API Mode and Simulated Demo Mode.
 Simulated mode uses deterministic sample outputs for demonstration purposes only.
 """
 
-from typing import List
 import hashlib
 
 
@@ -211,7 +210,7 @@ def _calculate_position(position_score: float) -> int:
         return 5
 
 
-def _generate_summary(results: List[dict], brand: str, use_real: bool = False) -> dict:
+def _generate_summary(results: list[dict], brand: str, use_real: bool = False) -> dict:
     """Generate cross-model summary and insight with data source labeling."""
     models_tested = len(results)
     models_mentioned = sum(1 for r in results if r["mentioned"])

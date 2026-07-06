@@ -1,24 +1,26 @@
-import streamlit as st
-import json
+import hashlib
 import html
+import json
 import logging
 import os
 import re
-import hashlib
-import plotly.graph_objects as go
 from datetime import datetime
+
+import plotly.graph_objects as go
+import streamlit as st
+
 from geo_audit_agent.agent import build_geo_audit_agent
-from multi_model import run_multi_model_audit
+from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
+from geo_audit_agent.ui.brand_visibility import render_brand_visibility
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
+from geo_audit_agent.ui.competitor_intelligence import render_competitor_intelligence
 
 # Import modernized dashboard components
 from geo_audit_agent.ui.gap_matrix import render_gap_matrix
-from geo_audit_agent.ui.remediation_cards import render_remediation_hub
 from geo_audit_agent.ui.lift_simulator import render_lift_simulator
-from geo_audit_agent.ui.brand_visibility import render_brand_visibility
 from geo_audit_agent.ui.live_ticker import render_live_ticker
-from geo_audit_agent.ui.competitor_intelligence import render_competitor_intelligence
-from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
-from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
+from geo_audit_agent.ui.remediation_cards import render_remediation_hub
+from multi_model import run_multi_model_audit
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 def load_css(file_name="style.css"):
     css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), file_name)
     if os.path.exists(css_path):
-        with open(css_path, "r") as f:
+        with open(css_path) as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # --- Page Configuration ---
@@ -388,33 +390,33 @@ def create_circular_gauge(score, is_dark=True):
 
 def get_competitor_data(brand_name, category):
     import random
-    
+
     category_lower = category.lower()
-    
+
     if "suv" in category_lower or "car" in category_lower or "vehicle" in category_lower or "automotive" in category_lower:
         competitors = ["Mercedes", "BMW", "Lexus", "Audi", "Porsche", "Land Rover", "Cadillac", "Lincoln", "Tesla", "Volvo"]
     elif "food" in category_lower or "burger" in category_lower or "restaurant" in category_lower or "cafe" in category_lower:
         competitors = ["McDonald's", "KFC", "Burger King", "Subway", "Burger Hub", "Pizza Hut", "Hardee's", "Domino's", "Five Guys", "Wendy's"]
     else:
         competitors = [brand_name, "Brand Alpha", "Brand Beta", "Brand Gamma", "Brand Delta", "Brand Epsilon", "Brand Zeta"]
-        
+
     if brand_name not in competitors:
         if len(competitors) > 4:
             competitors[4] = brand_name
         else:
             competitors.append(brand_name)
-            
+
     seen = set()
     competitors = [x for x in competitors if not (x in seen or seen.add(x))]
-    
+
     actual_results = {}
 
     if st.session_state.multi_model_results and brand_name.lower() == st.session_state.audit_results.get("brand_name", "").lower():
         for r in st.session_state.multi_model_results["results"]:
             actual_results[r["model"]] = int(r["confidence"] * 100) if r["mentioned"] else int(random.Random(r["model"]).randint(15, 35))
-            
+
     model_names = ["ChatGPT", "Gemini", "Meta.ai", "Claude.ai", "DeepSeek"]
-    
+
     data = []
     for b in competitors:
         b_scores = {}
@@ -430,7 +432,7 @@ def get_competitor_data(brand_name, category):
                     b_scores[m] = 65 + (seed % 31)
                 else:
                     b_scores[m] = 15 + (seed % 31)
-                    
+
         b_scores["Average"] = int(sum(b_scores[m] for m in model_names) / len(model_names))
         b_scores["brand"] = b
         data.append(b_scores)
@@ -480,7 +482,7 @@ def get_keyword_monitoring_data(keyword, brand_name):
 
 def create_multi_model_chart(data, selected_brand, is_dark=True):
     data_sorted = sorted(data, key=lambda x: x["Average"], reverse=False)
-    
+
     brands = [d["brand"] for d in data_sorted]
     chatgpt_scores = [d["ChatGPT"] for d in data_sorted]
     gemini_scores = [d["Gemini"] for d in data_sorted]
@@ -488,9 +490,9 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
     claude_scores = [d["Claude.ai"] for d in data_sorted]
     deepseek_scores = [d["DeepSeek"] for d in data_sorted]
     avg_scores = [d["Average"] for d in data_sorted]
-    
+
     fig = go.Figure()
-    
+
     colors = {
         "ChatGPT": "#FF9F43",
         "Gemini": "#EC4899",
@@ -498,7 +500,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
         "Claude.ai": "#60A5FA",
         "DeepSeek": "#0D9488",
     }
-    
+
     fig.add_trace(go.Bar(
         y=brands,
         x=chatgpt_scores,
@@ -580,7 +582,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
                     symbol='diamond'),
         hovertemplate="<b>%{y}</b><br>Average: %{x:.1f}<extra></extra>"
     ))
-    
+
     selected_brand_normalized = selected_brand.lower()
     brands_lower = [b.lower() for b in brands]
     if selected_brand_normalized in brands_lower:
@@ -599,7 +601,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             line=dict(color=highlight_border, width=1.5),
             layer="below"
         )
-        
+
     fig.update_layout(
         barmode='group',
         height=500,
@@ -633,7 +635,7 @@ def create_multi_model_chart(data, selected_brand, is_dark=True):
             gridcolor='rgba(0,0,0,0)'
         )
     )
-    
+
     return fig
 
 # --- Helper Functions ---
@@ -791,7 +793,7 @@ if run_audit:
             results = agent.invoke(inputs)
             st.session_state.audit_results = results
             st.session_state.comparison_data[brand_name] = results
-            
+
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
             multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
             st.session_state.multi_model_results = multi_results
@@ -861,7 +863,7 @@ if st.session_state.audit_results:
         cov_score = st.session_state.multi_model_results['summary']['geo_coverage_score'] if st.session_state.multi_model_results else int(res.get("confidence_score", 0.0) * 100)
         is_dark = st.session_state.theme == "Dark"
         icon_color = "#a5b4fc" if is_dark else "#7C3AED"
-        
+
         with m_col1:
             st.markdown(f"""
             <div class="metric-card">
@@ -880,7 +882,7 @@ if st.session_state.audit_results:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            
+
         with m_col2:
             is_cited = res.get("is_cited", False)
             status_label = "Cited" if is_cited else "Not Cited"
@@ -904,7 +906,7 @@ if st.session_state.audit_results:
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            
+
         with m_col3:
             confidence_pct = int(res.get("confidence_score", 0.0) * 100)
             st.markdown(f"""
