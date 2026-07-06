@@ -33,7 +33,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.warning(f"🔧 Debug Mode | Render Loop Counter: {st.session_state.render_count}")
+# st.warning(f"🔧 Debug Mode | Render Loop Counter: {st.session_state.render_count}")
 print("[DEBUG] => Page config and initial warning displayed")
 
 # --- Load custom styling for the dashboard (used later) ---
