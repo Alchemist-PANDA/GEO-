@@ -1,16 +1,25 @@
 import streamlit as st
+
+# --- DEBUGGING PRINTS ---
+print("[DEBUG] => Starting execution of dashboard.py")
+
+if "render_count" not in st.session_state:
+    st.session_state.render_count = 0
+st.session_state.render_count += 1
+print(f"[DEBUG] => Render count: {st.session_state.render_count}")
+
 import textwrap
 import logging
 import os
 import hashlib
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from geo_audit_agent.agent import build_geo_audit_agent
-from multi_model import run_multi_model_audit
 from streamlit_autorefresh import st_autorefresh
 
 # --- NEW AUTH IMPORTS ---
 from auth import current_user, sign_in, sign_up, sign_out
+
+print("[DEBUG] => Auth imports completed")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,6 +33,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+st.warning(f"🔧 Debug Mode | Render Loop Counter: {st.session_state.render_count}")
+print("[DEBUG] => Page config and initial warning displayed")
+
 # --- Load custom styling for the dashboard (used later) ---
 def load_css(file_name="style.css"):
     if os.path.exists(file_name):
@@ -31,10 +43,10 @@ def load_css(file_name="style.css"):
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ==============================================
-# BLOOM LOGIN PAGE (shown if user is not logged in)
+# BRANDSIGHT GEO LOGIN PAGE (shown if user is not logged in)
 # ==============================================
 
-def render_bloom_login():
+def render_brandsight_login():
     # Inject Bloom CSS (liquid glass, fonts, layout)
     st.markdown(textwrap.dedent("""
     <style>
@@ -124,22 +136,23 @@ def render_bloom_login():
         .text-white\\/60 { color: rgba(255,255,255,0.6); }
         .text-white\\/50 { color: rgba(255,255,255,0.5); }
         .bg-white\\/15 { background-color: rgba(255,255,255,0.15); }
-        .bloom-left-panel {
+
+        .brandsight-left-panel {
             position: relative;
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
         }
-        .bloom-left-panel .glass-overlay {
+        .brandsight-left-panel .glass-overlay {
             position: absolute;
             inset: 1.5rem;
             border-radius: 1.5rem;
         }
         @media (min-width: 1024px) {
-            .bloom-left-panel .glass-overlay { inset: 1.5rem; }
+            .brandsight-left-panel .glass-overlay { inset: 1.5rem; }
         }
-        .bloom-hero {
+        .brandsight-hero {
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -150,10 +163,10 @@ def render_bloom_login():
             padding: 2rem 0;
         }
         @media (min-width: 1024px) {
-            .bloom-hero { align-items: flex-start; text-align: left; }
+            .brandsight-hero { align-items: flex-start; text-align: left; }
         }
 
-        /* Hide Streamlit branding on Bloom page */
+        /* Hide Streamlit branding on login page */
         #MainMenu { visibility: hidden; }
         footer { visibility: hidden; }
         header { visibility: hidden; }
@@ -174,30 +187,30 @@ def render_bloom_login():
     # ----- LEFT PANEL (Hero) -----
     with col_left:
         st.markdown(textwrap.dedent("""
-        <div class="bloom-left-panel">
+        <div class="brandsight-left-panel">
             <div class="glass-overlay liquid-glass-strong"></div>
             <div style="position:relative; z-index:20; display:flex; flex-direction:column; height:100%; padding: 0.5rem 1rem;">
                 <!-- Nav -->
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='white' opacity='0.3'/%3E%3Cpath d='M16 6 L18 12 L24 12 L19 16 L21 22 L16 18 L11 22 L13 16 L8 12 L14 12 Z' fill='white' opacity='0.9'/%3E%3C/svg%3E" style="width:32px; height:32px;" />
-                        <span style="font-size:1.5rem; font-weight:600; letter-spacing:-0.05em; color:white;">bloom</span>
+                        <span style="font-size:1.75rem;">🌍</span>
+                        <span style="font-size:1.5rem; font-weight:600; letter-spacing:-0.05em; color:white;">BrandSight GEO</span>
                     </div>
                     <div class="liquid-glass" style="padding:0.5rem 1.5rem; border-radius:9999px; cursor:default;">
                         <span style="color:rgba(255,255,255,0.8); font-size:0.875rem;">Menu</span>
                     </div>
                 </div>
                 <!-- Hero -->
-                <div class="bloom-hero">
-                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='40' cy='40' r='36' fill='white' opacity='0.15'/%3E%3Cpath d='M40 12 L44 26 L58 26 L48 34 L52 48 L40 40 L28 48 L32 34 L22 26 L36 26 Z' fill='white' opacity='0.9'/%3E%3C/svg%3E" style="width:80px; height:80px;" />
+                <div class="brandsight-hero">
+                    <span style="font-size:3.5rem;">🌍</span>
                     <h1 style="font-size:3.5rem; font-weight:500; letter-spacing:-0.05em; line-height:1.2; color:white; margin:0;">
                         Innovating the <br />
-                        <span class="serif-italic text-white/80">spirit of bloom AI</span>
+                        <span class="serif-italic text-white/80">spirit of AI search</span>
                     </h1>
                     <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center;">
-                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">Artistic Gallery</div>
-                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">AI Generation</div>
-                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">3D Structures</div>
+                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">Generative Engine Optimization</div>
+                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">Brand Visibility</div>
+                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">AI Audits</div>
                     </div>
                     <div style="margin-top:1rem; max-width:28rem;">
                         <div style="font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:0.25rem;">VISIONARY DESIGN</div>
@@ -220,7 +233,7 @@ def render_bloom_login():
         st.markdown(textwrap.dedent("""
         <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; padding:1.5rem 0.5rem;">
             <div class="liquid-glass-strong" style="width:100%; max-width:400px; padding:2rem 1.5rem; border-radius:1.5rem; text-align:center;">
-                <h2 style="color:white; font-weight:500; margin-top:0; margin-bottom:0.5rem;">Welcome to Bloom</h2>
+                <h2 style="color:white; font-weight:500; margin-top:0; margin-bottom:0.5rem;">Welcome to BrandSight GEO</h2>
                 <p style="color:rgba(255,255,255,0.6); font-size:0.9rem; margin-bottom:1.5rem;">Sign in to access your GEO dashboard</p>
         """), unsafe_allow_html=True)
 
@@ -228,9 +241,9 @@ def render_bloom_login():
         tab_login, tab_signup = st.tabs(["Log in", "Create account"])
 
         with tab_login:
-            with st.form("bloom_login_form", clear_on_submit=False):
-                login_email = st.text_input("Email", placeholder="you@example.com", key="bloom_login_email")
-                login_password = st.text_input("Password", type="password", placeholder="••••••••", key="bloom_login_pass")
+            with st.form("brandsight_login_form", clear_on_submit=False):
+                login_email = st.text_input("Email", placeholder="you@example.com", key="brandsight_login_email")
+                login_password = st.text_input("Password", type="password", placeholder="••••••••", key="brandsight_login_pass")
                 submitted_login = st.form_submit_button("Log in", use_container_width=True)
                 if submitted_login:
                     if login_email and login_password:
@@ -244,9 +257,9 @@ def render_bloom_login():
                         st.warning("Please enter both email and password.")
 
         with tab_signup:
-            with st.form("bloom_signup_form", clear_on_submit=False):
-                signup_email = st.text_input("Email", placeholder="you@example.com", key="bloom_signup_email")
-                signup_password = st.text_input("Password", type="password", placeholder="min 8 characters", key="bloom_signup_pass")
+            with st.form("brandsight_signup_form", clear_on_submit=False):
+                signup_email = st.text_input("Email", placeholder="you@example.com", key="brandsight_signup_email")
+                signup_password = st.text_input("Password", type="password", placeholder="min 8 characters", key="brandsight_signup_pass")
                 submitted_signup = st.form_submit_button("Create account", use_container_width=True)
                 if submitted_signup:
                     if signup_email and signup_password:
@@ -275,12 +288,13 @@ def render_bloom_login():
 user = current_user()
 
 if user is None:
-    # Show Bloom login page
-    render_bloom_login()
+    # Show BrandSight GEO login page
+    render_brandsight_login()
     # Stop execution here so the dashboard doesn't render
     st.stop()
 
 # --- If we reach here, the user is logged in ---
+print("[DEBUG] => User is logged in, proceeding to render dashboard")
 # Load dashboard CSS and proceed with the normal dashboard
 load_css("style.css")
 
@@ -333,6 +347,7 @@ if st.session_state.audit_results is None:
         "llm_response": "Burger Hub has emerging visibility in Islamabad's fast food category. While it is cited in local listings, there is a lack of structured LocalBusiness schema and technical entity backlinks, which creates a critical information gap for generative engines."
     }
     st.session_state.audit_results = mock_inputs
+    from multi_model import run_multi_model_audit
     st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False, user_id=st.session_state.get("user_id"))
     st.session_state.comparison_data["Burger Hub"] = mock_inputs
     st.session_state.remediations = [
@@ -1051,6 +1066,7 @@ if run_audit:
     with st.status(f"Conducting GEO Audit: {brand_name} in {city}", expanded=True) as status:
         try:
             st.write("🔄 Initializing BrandSight Intelligence Engine...")
+            from geo_audit_agent.agent import build_geo_audit_agent
             agent = build_geo_audit_agent()
             inputs = {
                 "brand_name": brand_name,
@@ -1066,6 +1082,7 @@ if run_audit:
             st.session_state.comparison_data[brand_name] = results
             
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
+            from multi_model import run_multi_model_audit
             multi_results = run_multi_model_audit(brand_name, category, city, use_real=False, user_id=st.session_state.get("user_id"))
             if "error" in multi_results:
                 st.error(multi_results["error"])
@@ -1389,7 +1406,7 @@ with trend_col2:
 
 # Live Ticker activity feed at the bottom
 st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
-st_autorefresh(interval=5000, key="bv_ticker_refresh")
+# st_autorefresh(interval=5000, key="bv_ticker_refresh")
 
 ticker_mentions = int(bv_val * 26.63) + (_bv_seed(f"{brand_name_val}:{datetime.now().strftime('%Y%m%d%H%M%S')[:13]}") % 7)
 ticker_citations = int(cr_val * 26.63) + (_bv_seed(f"{brand_name_val}:c:{datetime.now().strftime('%Y%m%d%H%M%S')[:13]}") % 5)
