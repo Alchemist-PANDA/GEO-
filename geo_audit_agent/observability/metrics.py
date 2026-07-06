@@ -65,3 +65,42 @@ BUILD_INFO = Info(
     "geo_build",
     "Build information",
 )
+
+# ── Agentic system metrics ──
+
+AGENT_NODE_DURATION = Histogram(
+    "geo_agent_node_duration_seconds",
+    "Per-node execution time",
+    ["node", "agent"],
+    buckets=[0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+)
+
+GUARDRAIL_BLOCKS = Counter(
+    "geo_guardrail_blocks_total",
+    "Guardrail violations",
+    ["type", "severity", "blocked"],
+)
+
+POLICY_BLOCKS = Counter(
+    "geo_policy_blocks_total",
+    "Policy blocks",
+    ["rule_id"],
+)
+
+INSPECTOR_RESULTS = Counter(
+    "geo_inspector_results_total",
+    "Inspector verdicts",
+    ["agent", "passed", "risk"],
+)
+
+ACTION_EXECUTIONS = Counter(
+    "geo_action_executions_total",
+    "Action executions",
+    ["action_id", "status"],
+)
+
+IMPROVEMENT_PROPOSALS = Counter(
+    "geo_improvement_proposals_total",
+    "Self-improvement proposals",
+    ["agent", "status"],
+)

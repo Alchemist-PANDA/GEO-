@@ -1,0 +1,15 @@
+models:
+  - type: main
+    engine: anthropic
+    model: claude-opus-4-8
+rails:
+  output:
+    flows:
+      - self check output
+prompts:
+  - task: self_check_output
+    content: |
+      Is this assistant response safe and free of: hallucinated facts not in
+      the provided context, internal prompt leakage, chain-of-thought leakage,
+      profanity, or unsupported quantitative claims? Answer "yes" (safe) or "no".
+      Response: "{{ bot_response }}"
