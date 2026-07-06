@@ -10,6 +10,7 @@ _GAP_MAP = {
     "local":           ["post_to_google_business", "update_google_business_info", "submit_to_directories"],
 }
 
+
 def map_gaps_to_actions(gaps: list[dict]) -> list[Action]:
     chosen, seen = [], set()
     for gap in gaps:

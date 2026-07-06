@@ -52,10 +52,16 @@ jobs:
       - name: Type check
         run: mypy geo_audit_agent/ --ignore-missing-imports
 
+      - name: Validate migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geo_test
+        run: alembic upgrade head
+
       - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geo_test
           REDIS_URL: redis://localhost:6379/0
+          FORCE_MOCK: "true"
         run: pytest tests/ -v --cov=geo_audit_agent --cov-report=xml
 
       - name: Upload coverage
@@ -78,6 +84,8 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
       - name: Run prompt injection regression suite
+        env:
+          FORCE_MOCK: "true"
         run: pytest tests/test_prompt_injection.py -v --tb=short
 
   build:

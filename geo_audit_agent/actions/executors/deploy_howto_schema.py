@@ -1,12 +1,16 @@
-# Auto-generated executor for deploy_howto_schema
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "WordPress"
-    artifact_content = f"# Generated deploy_howto_schema for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this deploy_howto_schema artifact to {platform}."}
+    import json
+    brand = ctx.get("brand", "Brand")
+    category = ctx.get("category", "service")
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": f"How to get started with {brand}",
+        "step": [
+            {"@type": "HowToStep", "text": f"Visit {brand}'s website or location"},
+            {"@type": "HowToStep", "text": f"Browse available {category} services"},
+            {"@type": "HowToStep", "text": "Contact us to schedule a consultation"},
+        ]
+    }
+    return {"status": "fallback", "platform": "file", "artifact": json.dumps(schema, indent=2),
+            "instructions": "Add this HowTo schema to relevant service pages."}

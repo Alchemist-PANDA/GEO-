@@ -1,35 +1,23 @@
 import os
-from sqlmodel import create_engine, Session
 from contextlib import contextmanager
 
-try:
-    import psycopg2  # noqa: F401
-    PSYCOPG2_AVAILABLE = True
-except ImportError:
-    PSYCOPG2_AVAILABLE = False
+from sqlmodel import Session, create_engine
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "sqlite:///geo_saas.db"
 )
 
-if DATABASE_URL.startswith("postgresql") and not PSYCOPG2_AVAILABLE:
-    DATABASE_URL = "sqlite:///geo_saas.db"
-
-if DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(
-        DATABASE_URL,
-        echo=False,
-    )
-else:
-    engine = create_engine(
-        DATABASE_URL,
-        echo=False,
+_engine_kwargs: dict = {"echo": False}
+if not DATABASE_URL.startswith("sqlite"):
+    _engine_kwargs.update(
         pool_size=20,
         max_overflow=10,
         pool_pre_ping=True,
         pool_recycle=300,
     )
+
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
 
 @contextmanager

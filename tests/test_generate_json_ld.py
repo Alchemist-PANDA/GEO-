@@ -1,6 +1,8 @@
 """Tests for the generate_json_ld tool."""
 import json
+
 import pytest
+
 from geo_audit_agent.geo_remediation_tools import generate_json_ld
 
 

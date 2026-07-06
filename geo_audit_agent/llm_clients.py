@@ -4,9 +4,9 @@ LLM client module with lazy loading and fallback support.
 Supports multiple providers with graceful degradation to simulated mode.
 """
 
-import os
 import logging
-from typing import Dict, Optional
+import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -30,7 +30,7 @@ def get_groq_client():
         return None
 
 
-def call_groq(prompt: str, model: Optional[str] = None) -> Dict:
+def call_groq(prompt: str, model: str | None = None) -> dict:
     """
     Call Groq API with fallback to simulated mode.
 
@@ -102,7 +102,7 @@ These options consistently receive positive feedback and are well-regarded in th
     return "This is a simulated response for demonstration purposes. Configure GROQ_API_KEY for live API responses."
 
 
-def call_provider(provider: str, prompt: str, model: Optional[str] = None) -> Dict:
+def call_provider(provider: str, prompt: str, model: str | None = None) -> dict:
     """
     Call any supported provider with unified interface.
 

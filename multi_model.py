@@ -8,8 +8,6 @@ IMPORTANT: This module supports both Live API Mode and Simulated Demo Mode.
 Simulated mode uses deterministic sample outputs for demonstration purposes only.
 """
 
-from typing import List
-import random
 import hashlib
 
 
@@ -92,7 +90,7 @@ def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> d
         varied_audit = _apply_model_variation(audit, model_info, brand)
 
         mentioned = varied_audit["citation_found"]
-        position = _calculate_position(varied_audit["citation_position_score"]) if mentioned else None
+        position = _calculate_position(varied_audit.get("citation_position_score", 0.5)) if mentioned else None
 
         # Evidence trace
         if mentioned:
@@ -126,7 +124,6 @@ def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> d
 def _run_simulated_audit(brand: str, category: str, city: str, model_info: dict) -> dict:
     """Generate deterministic simulated audit result for demonstration purposes."""
     seed = _get_deterministic_seed(brand, model_info["name"])
-    random.seed(seed)
 
     mentioned = seed % 100 >= 30
 
@@ -183,7 +180,6 @@ def _apply_model_variation(audit: dict, model_info: dict, brand: str) -> dict:
     """Apply controlled variation to make each model behave differently."""
     varied = audit.copy()
     seed = _get_deterministic_seed(brand, model_info["name"])
-    random.seed(seed)
 
     if seed % 100 < 30:
         varied["citation_found"] = False
@@ -192,7 +188,8 @@ def _apply_model_variation(audit: dict, model_info: dict, brand: str) -> dict:
         varied["sentiment"] = "none"
     else:
         position_variance = (seed % 20) / 100
-        varied["citation_position_score"] = min(1.0, max(0.0, audit["citation_position_score"] + position_variance - 0.1))
+        base_position = audit.get("citation_position_score", 0.5)
+        varied["citation_position_score"] = min(1.0, max(0.0, base_position + position_variance - 0.1))
 
         if seed % 3 == 0 and audit["sentiment"] == "positive":
             varied["sentiment"] = "neutral"
@@ -236,7 +233,7 @@ def _calculate_position(position_score: float) -> int:
         return 5
 
 
-def _generate_summary(results: List[dict], brand: str, use_real: bool = False) -> dict:
+def _generate_summary(results: list[dict], brand: str, use_real: bool = False) -> dict:
     """Generate cross-model summary and insight with data source labeling."""
     models_tested = len(results)
     models_mentioned = sum(1 for r in results if r["mentioned"])

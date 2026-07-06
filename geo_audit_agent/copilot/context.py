@@ -1,51 +1,33 @@
-import json
-from typing import Dict, Any
+"""Builds a flat, JSON-friendly context dict from Streamlit session state.
 
-def build_copilot_context(session_state: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Assemble context from Streamlit session state for the Copilot.
-    """
-    context = {
-        "current_tab": session_state.get("active_tab", "unknown"),
-        "brand_name": session_state.get("brand_name", ""),
-        "category": session_state.get("category", ""),
-        "city": session_state.get("city", ""),
-        "chart_title": session_state.get("chart_title", ""),
-        "chart_data": session_state.get("chart_data", ""),
+Both the mock engine and the live (Anthropic) engine consume this same
+shape, so the Copilot's knowledge of the app never drifts between modes.
+"""
+
+import streamlit as st
+
+
+def build_context() -> dict:
+    audit_results = st.session_state.get("audit_results") or {}
+    multi_model_results = st.session_state.get("multi_model_results") or {}
+    competitor_data = st.session_state.get("competitor_data") or {}
+
+    brand_scores = competitor_data.get("brand_scores", {}) if competitor_data else {}
+    summary = competitor_data.get("summary", {}) if competitor_data else {}
+
+    return {
+        "brand_name": audit_results.get("brand_name") or st.session_state.get("brand_name", "Your Brand"),
+        "category": audit_results.get("category", ""),
+        "city": audit_results.get("city", ""),
+        "confidence_score": audit_results.get("confidence_score"),
+        "is_cited": audit_results.get("is_cited"),
+        "gaps": audit_results.get("gaps", []),
+        "geo_coverage_score": (multi_model_results.get("summary") or {}).get("geo_coverage_score"),
+        "model_results": multi_model_results.get("results", []) if multi_model_results else [],
+        "competitor_summary": summary,
+        "competitors": competitor_data.get("competitors", []) if competitor_data else [],
+        "brand_scores": brand_scores,
+        "chart_title": None,
+        "chart_data": None,
+        "fig_json": None,
     }
-
-    # Audit data (if an audit has been run)
-    audit = session_state.get("audit_result")
-    if audit:
-        # Check if audit is a dict or string
-        if isinstance(audit, str):
-            try:
-                audit = json.loads(audit)
-            except Exception:
-                audit = {}
-        if isinstance(audit, dict):
-            report = audit.get("report", {}) or {}
-            context["geo_score"] = report.get("geo_score")
-            context["citation_rate"] = report.get("citation_rate")
-            context["gaps"] = audit.get("gaps", [])
-            context["remediations"] = audit.get("remediations", {})
-            context["sentiment"] = audit.get("sentiment")
-
-    # Competitor data (if a scan has been run)
-    competitor = session_state.get("competitor_data")
-    if competitor:
-        if isinstance(competitor, str):
-            try:
-                competitor = json.loads(competitor)
-            except Exception:
-                competitor = {}
-        if isinstance(competitor, dict):
-            context["brand_scores"] = competitor.get("brand_scores")
-            competitors_list = competitor.get("competitors", []) or []
-            context["competitors"] = [
-                {"name": c.get("scores", {}).get("competitor"), "geo_score": c.get("scores", {}).get("geo_score")}
-                for c in competitors_list if isinstance(c, dict)
-            ]
-            context["brand_rank"] = competitor.get("summary", {}).get("brand_rank")
-
-    return context

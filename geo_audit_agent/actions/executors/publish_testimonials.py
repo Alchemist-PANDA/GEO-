@@ -1,12 +1,10 @@
-# Auto-generated executor for publish_testimonials
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "WordPress"
-    artifact_content = f"# Generated publish_testimonials for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this publish_testimonials artifact to {platform}."}
+    brand = ctx.get("brand", "Brand")
+    category = ctx.get("category", "business")
+    content = (f"# Customer Testimonials — {brand}\n\n"
+               f"> \"{brand} transformed our {category} experience. Highly recommended!\"\n"
+               f"> — Satisfied Customer\n\n"
+               f"> \"Professional service and great results.\"\n"
+               f"> — Happy Client\n")
+    return {"status": "fallback", "platform": "WordPress", "artifact": content,
+            "instructions": "Add these testimonials to your website's testimonials page."}

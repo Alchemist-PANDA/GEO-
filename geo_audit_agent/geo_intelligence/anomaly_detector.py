@@ -1,14 +1,14 @@
-import os
 import json
 import logging
-from typing import List, Dict, Optional
-from google import genai
+import os
+
 import numpy as np
+from google import genai
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-def query_llms_for_anomalies(queries: List[str], client: genai.Client):
+def query_llms_for_anomalies(queries: list[str], client: genai.Client):
     """Queries Gemini to find cited brands for a list of queries."""
     results = {}
     for query in queries:
@@ -24,7 +24,7 @@ def query_llms_for_anomalies(queries: List[str], client: genai.Client):
             results[query] = []
     return results
 
-def check_factual_correctness(brand_name: str, expected_city: str, expected_category: str, client: Optional[genai.Client] = None):
+def check_factual_correctness(brand_name: str, expected_city: str, expected_category: str, client: genai.Client | None = None):
     """Uses LLM as a factual verifier."""
     if not client:
         return True, "No client provided for verification"
@@ -61,7 +61,7 @@ def compute_semantic_similarity(brand_description: str, query: str):
             return 0.0
         return float(len(intersection) / len(union))
 
-def flag_anomalies(audit_results: Dict, city: str, category: str, client: Optional[genai.Client] = None):
+def flag_anomalies(audit_results: dict, city: str, category: str, client: genai.Client | None = None):
     """Identifies and logs citation anomalies."""
     anomalies = []
     cited_brands = audit_results.get("cited_brands", [])
@@ -89,7 +89,7 @@ def flag_anomalies(audit_results: Dict, city: str, category: str, client: Option
 
     try:
         if os.path.exists(log_file):
-            with open(log_file, "r") as f:
+            with open(log_file) as f:
                 history = json.load(f)
         else:
             history = []

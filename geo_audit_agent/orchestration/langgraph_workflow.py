@@ -1,12 +1,18 @@
-from langgraph.graph import StateGraph, END
-from geo_audit_agent.orchestration.state import AgenticState
-from geo_audit_agent.guardrails.manager import check_phase
-from geo_audit_agent.policy.engine import PolicyEngine
+from langgraph.graph import END, StateGraph
+
 from geo_audit_agent.agents.action_agent import ActionAgent
 from geo_audit_agent.agents.inspector_agent import InspectorAgent
 from geo_audit_agent.context import build_context
+from geo_audit_agent.guardrails.manager import check_phase
+from geo_audit_agent.orchestration.state import AgenticState
+from geo_audit_agent.policy.engine import PolicyEngine
+
 
 def _node_input_guard(state: AgenticState) -> AgenticState:
+    from geo_audit_agent.utils.sanitize import sanitize_brand_name, sanitize_category, sanitize_city
+    state.brand_name = sanitize_brand_name(state.brand_name)
+    state.category = sanitize_category(state.category)
+    state.city = sanitize_city(state.city)
     d = check_phase("input", {"user_message": state.user_message,
         "brand_name": state.brand_name}, trace_id=state.trace_id)
     if d.blocked:
@@ -14,11 +20,13 @@ def _node_input_guard(state: AgenticState) -> AgenticState:
         state.block_reason = "; ".join(v.message for v in d.violations)
     return state
 
+
 def _node_context(state: AgenticState) -> AgenticState:
     ctx = build_context(state.user_message, brand=state.brand_name, industry=state.category)
     state.context = ctx
     state.intent = ctx["intent"]
     return state
+
 
 def _node_policy(state: AgenticState) -> AgenticState:
     res = PolicyEngine().enforce({"intent": state.intent, "brand_known": bool(state.brand_name),
@@ -30,13 +38,15 @@ def _node_policy(state: AgenticState) -> AgenticState:
         state.block_reason = "; ".join(b["message"] for b in res["blocking"])
     return state
 
+
 def _route_after_policy(state: AgenticState) -> str:
     if state.blocked:
-        return "inspector"          # inspector still logs the block
+        return "inspector"
     return {"audit": "audit", "compare": "competitor", "deploy": "action"
             }.get(state.intent, "copilot")
 
-def _node_audit(state):       # wraps existing audit agent
+
+def _node_audit(state):
     from geo_audit_agent.agent import build_geo_audit_agent
     out = build_geo_audit_agent().invoke({"brand": state.brand_name,
         "category": state.category, "city": state.city, "force_mock": True})
@@ -44,12 +54,16 @@ def _node_audit(state):       # wraps existing audit agent
     state.next_agent = "inspector"
     return state
 
-def _node_competitor(state):  # wraps existing competitor agent
+
+def _node_competitor(state):
     from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
-    state.competitor_data = run_competitor_scan(state.brand_name, state.category, state.city) \
-        if False else {}          # call the real entrypoint; mock-safe
+    try:
+        state.competitor_data = run_competitor_scan(state.brand_name, state.category, state.city)
+    except Exception:
+        state.competitor_data = {}
     state.next_agent = "inspector"
     return state
+
 
 def _node_copilot(state):
     from geo_audit_agent.copilot import engine
@@ -58,12 +72,14 @@ def _node_copilot(state):
     state.next_agent = "inspector"
     return state
 
+
 def _node_action(state):
     a = ActionAgent()
     state = a.plan(state)
     state = a.execute(state)
     state.next_agent = "inspector"
     return state
+
 
 def _node_inspector(state):
     output = {"text": state.copilot_answer or state.block_reason or str(state.action_results),
@@ -74,6 +90,7 @@ def _node_inspector(state):
     state.inspector_verdict = {"passed": verdict.passed, "issues": verdict.issues,
         "risk": verdict.risk}
     return state
+
 
 def build_agentic_graph():
     g = StateGraph(AgenticState)

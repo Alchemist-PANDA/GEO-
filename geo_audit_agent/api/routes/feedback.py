@@ -1,6 +1,7 @@
 # feedback_route.py
-import uuid
 import logging
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
@@ -30,18 +31,18 @@ async def submit_audit_feedback(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Audit not found"
         )
-        
+
     brand = session.get(Brand, audit.brand_id)
     if not brand or str(brand.user_id) != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this audit record."
         )
-        
+
     # Scale NPS or thumbs rating values
     nps_score = payload.nps_score if payload.nps_score is not None else (10 if payload.feedback_type == "thumbs_up" else 0)
     comment = payload.comment or ""
-    
+
     success = feedback_manager.submit_feedback(
         run_id=str(audit_id),
         brand_name=brand.name,
@@ -49,13 +50,13 @@ async def submit_audit_feedback(
         rating_verdict=payload.feedback_type,
         user_comment=comment
     )
-    
+
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to record feedback."
         )
-        
+
     # Trigger model retraining feature logging if nps score is positive
     if nps_score >= 8:
         try:
@@ -74,5 +75,5 @@ async def submit_audit_feedback(
             retraining_pipeline.append_new_training_data([features])
         except Exception as e:
             logger.warning(f"Failed to log retraining payload: {e}")
-            
+
     return {"message": "Feedback submitted successfully."}

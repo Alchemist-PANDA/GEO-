@@ -1,7 +1,7 @@
 """GEO audit logic with industry-specific templates."""
 
 import re
-from typing import Optional
+
 from .industry_templates import get_template
 
 
@@ -101,7 +101,7 @@ def extract_competitors(raw_response: str, brand_name: str) -> list:
     return competitors
 
 
-def run_audit(brand_name: str, category: str, city: str, business_data: Optional[dict] = None) -> dict:
+def run_audit(brand_name: str, category: str, city: str, business_data: dict | None = None) -> dict:
     """
     Run GEO audit for a business.
 

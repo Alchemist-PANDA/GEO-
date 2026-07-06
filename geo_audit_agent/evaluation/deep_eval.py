@@ -1,9 +1,9 @@
-"""DeepEval harness. Offline → deterministic proxy metrics; online → LLM judges."""
+"""DeepEval harness. Offline -> deterministic proxy metrics; online -> LLM judges."""
 import os
+
 
 def evaluate_case(*, input_text, actual_output, expected_output=None, context=None):
     if os.getenv("FORCE_MOCK") == "true" or not os.getenv("ANTHROPIC_API_KEY"):
-        # deterministic proxy: token overlap with expected (if any)
         if expected_output:
             a, b = set(actual_output.lower().split()), set(expected_output.lower().split())
             return {"answer_relevancy": len(a & b) / max(len(b), 1)}

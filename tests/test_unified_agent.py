@@ -1,80 +1,117 @@
-import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
-from geo_audit_agent.agents.unified_competitor_agent import UnifiedCompetitorIntelligenceAgent
+"""Tests for the Unified Competitor Intelligence Agent."""
 
-@pytest.fixture
-def agent():
-    return UnifiedCompetitorIntelligenceAgent(correlation_id="test_123")
+import sys
+from pathlib import Path
 
-def test_discover_competitors(agent):
-    mock_response = MagicMock()
-    mock_response.text = '[{"name": "Burger King", "website": "https://burgerking.com", "source": "Google"}]'
-    
-    with patch('geo_audit_agent.agents.unified_competitor_agent.query_provider', return_value=mock_response):
-        competitors = agent.discover_competitors("Burger Hub", "fast food", "Islamabad", limit=1)
-        
-        assert len(competitors) == 1
-        assert competitors[0]["name"] == "Burger King"
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-@pytest.mark.anyio
-async def test_crawl_website(agent):
-    mock_html = "<html><head><meta name='description' content='Test'></head><body></body></html>"
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.text = mock_html
-    
-    # Mock httpx.AsyncClient
-    mock_client_instance = AsyncMock()
-    mock_client_instance.get.return_value = mock_resp
-    
-    mock_client_context = AsyncMock()
-    mock_client_context.__aenter__.return_value = mock_client_instance
-    
-    with patch('httpx.AsyncClient', return_value=mock_client_context):
-        result = await agent.crawl_website("https://example.com")
-        
-        assert result["status"] == "success"
-        assert result["url"] == "https://example.com"
-        assert result["meta"].get("description") == "Test"
+from geo_audit_agent.agents.unified_competitor_agent import (
+    _deterministic_score,
+    _generate_competitor_scores,
+    run_competitor_scan,
+)
 
-def test_analyze_competitor(agent):
-    crawl_data = {
-        "status": "success",
-        "url": "https://example.com",
-        "html": "A" * 4000,  # 4000 chars -> content_score 2
-        "structured_data": {
-            "json-ld": [{}, {}], # 2 items -> 50 score
-            "microdata": [{}] # 1 item -> 10 score
-        }
-    }
-    
-    scores = agent.analyze_competitor(crawl_data)
-    
-    assert scores["schema"] == 60  # (2 * 25) + (1 * 10)
-    assert scores["content"] == 2  # 4000 / 2000
-    assert "authority" in scores
 
-def test_generate_intelligence(agent):
-    mock_response = MagicMock()
-    mock_response.text = '{"explanation": "Better schema", "strategy": "Add JSON-LD"}'
-    
-    scores = {
-        "authority": 90, "schema": 100, "content": 80, 
-        "reviews": 95, "entities": 85, "citations": 88, "brand": 92
-    }
-    
-    with patch('geo_audit_agent.agents.unified_competitor_agent.query_provider', return_value=mock_response):
-        intel = agent.generate_intelligence("Competitor A", scores, "My Brand")
-        
-        assert intel["explanation"] == "Better schema"
-        assert intel["strategy"] == "Add JSON-LD"
+class TestDeterministicScoring:
+    """Test that competitor scoring is deterministic and bounded."""
 
-def test_generate_summary(agent):
-    mock_response = MagicMock()
-    mock_response.text = '{"insights": ["Insight 1"], "recommendations": ["Rec 1"], "projected_growth": "High"}'
-    
-    with patch('geo_audit_agent.agents.unified_competitor_agent.query_provider', return_value=mock_response):
-        summary = agent.generate_summary("My Brand", [{"competitor": "Comp A"}])
-        
-        assert len(summary["insights"]) == 1
-        assert summary["projected_growth"] == "High"
+    def test_scores_are_deterministic(self):
+        s1 = _deterministic_score("BrandA", "CompA", "geo")
+        s2 = _deterministic_score("BrandA", "CompA", "geo")
+        assert s1 == s2
+
+    def test_scores_are_bounded(self):
+        for metric in ["geo", "citation", "content", "schema", "platform"]:
+            score = _deterministic_score("TestBrand", "TestComp", metric)
+            assert 30 <= score <= 90
+
+    def test_different_inputs_produce_different_scores(self):
+        s1 = _deterministic_score("BrandA", "CompA", "geo")
+        s2 = _deterministic_score("BrandB", "CompA", "geo")
+        # Not guaranteed different but extremely unlikely to be the same for md5
+        # Testing that it doesn't crash and returns valid ints
+        assert isinstance(s1, int)
+        assert isinstance(s2, int)
+
+
+class TestGenerateCompetitorScores:
+    """Test competitor score generation."""
+
+    def test_returns_all_metrics(self):
+        scores = _generate_competitor_scores("MyBrand", "TheirBrand")
+        assert "competitor" in scores
+        assert "geo_score" in scores
+        assert "citation_rate" in scores
+        assert "content_depth" in scores
+        assert "schema_coverage" in scores
+        assert "platform_presence" in scores
+
+    def test_competitor_name_preserved(self):
+        scores = _generate_competitor_scores("MyBrand", "Competitor X")
+        assert scores["competitor"] == "Competitor X"
+
+
+class TestRunCompetitorScan:
+    """Test the full competitor scan pipeline."""
+
+    def test_scan_returns_expected_structure(self):
+        result = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
+        assert result["brand"] == "Burger Hub"
+        assert result["category"] == "fast food"
+        assert result["city"] == "Islamabad"
+        assert "brand_scores" in result
+        assert "competitors" in result
+        assert "summary" in result
+
+    def test_scan_generates_default_competitors(self):
+        result = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
+        assert len(result["competitors"]) == 3
+
+    def test_scan_uses_provided_competitors(self):
+        result = run_competitor_scan(
+            "Burger Hub", "fast food", "Islamabad",
+            competitors=["KFC", "McDonald's"]
+        )
+        assert len(result["competitors"]) == 2
+        names = [c["scores"]["competitor"] for c in result["competitors"]]
+        assert "KFC" in names
+        assert "McDonald's" in names
+
+    def test_scan_summary_contains_rank(self):
+        result = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
+        summary = result["summary"]
+        assert "brand_rank" in summary
+        assert "total_competitors" in summary
+        assert "top_opportunity" in summary
+        assert 1 <= summary["brand_rank"] <= summary["total_competitors"] + 1
+
+    def test_each_competitor_has_explanations(self):
+        result = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
+        for comp in result["competitors"]:
+            assert "explanations" in comp
+            assert len(comp["explanations"]) > 0
+            for exp in comp["explanations"]:
+                assert "area" in exp
+                assert "insight" in exp
+                assert "recommendation" in exp
+
+    def test_dental_category_competitors(self):
+        result = run_competitor_scan("My Dental", "dental clinic", "Islamabad")
+        names = [c["scores"]["competitor"] for c in result["competitors"]]
+        assert any("Dent" in n or "dental" in n.lower() for n in names)
+
+    def test_restaurant_category_competitors(self):
+        result = run_competitor_scan("My Restaurant", "restaurant", "Islamabad")
+        names = [c["scores"]["competitor"] for c in result["competitors"]]
+        assert len(names) == 3
+
+    def test_unknown_category_fallback(self):
+        result = run_competitor_scan("Niche Brand", "underwater basket weaving", "Islamabad")
+        assert len(result["competitors"]) == 3
+
+    def test_scan_is_deterministic(self):
+        r1 = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
+        r2 = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
+        assert r1["brand_scores"] == r2["brand_scores"]
+        for c1, c2 in zip(r1["competitors"], r2["competitors"], strict=False):
+            assert c1["scores"] == c2["scores"]

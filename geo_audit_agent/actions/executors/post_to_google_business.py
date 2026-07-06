@@ -1,12 +1,13 @@
-# Auto-generated executor for post_to_google_business
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "Google Business"
-    artifact_content = f"# Generated post_to_google_business for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this post_to_google_business artifact to {platform}."}
+    from geo_audit_agent.llm import gateway
+    brand = ctx.get("brand", "Brand")
+    category = ctx.get("category", "business")
+    city = ctx.get("city", "")
+    res = gateway.router(
+        f"Write a Google Business Profile post for {brand}, a {category} in {city}. "
+        f"Keep it under 300 words. Include a call to action.", tier="balanced")
+    content = res.text if not res.text.startswith("{") else (
+        f"Looking for the best {category} in {city}? {brand} has you covered! "
+        f"Visit us today to learn more about our services.")
+    return {"status": "fallback", "platform": "Google Business", "artifact": content,
+            "instructions": "Post this content to your Google Business Profile."}

@@ -1,75 +1,22 @@
 import json
-try:
-    import redis.asyncio as aioredis
-    REDIS_ASYNC_AVAILABLE = True
-except ImportError:
-    REDIS_ASYNC_AVAILABLE = False
+import os
 
-if not REDIS_ASYNC_AVAILABLE:
-    class MockAioRedis:
-        @classmethod
-        def from_url(cls, *args, **kwargs):
-            class MockPubSub:
-                async def subscribe(self, *args, **kwargs):
-                    pass
-                async def unsubscribe(self, *args, **kwargs):
-                    pass
-                async def listen(self):
-                    # Yield nothing
-                    if False:
-                        yield None
-            class MockClient:
-                def pubsub(self):
-                    return MockPubSub()
-                async def aclose(self):
-                    pass
-            return MockClient()
-    aioredis = MockAioRedis()  # type: ignore
-
-from fastapi import APIRouter, Depends
+import redis.asyncio as aioredis
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from sqlmodel import Session
+
 from geo_audit_agent.api.auth import get_current_user
+from geo_audit_agent.db.models import Audit, Brand
+from geo_audit_agent.db.session import get_async_session
 
 router = APIRouter()
 
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
 
 async def audit_event_stream(audit_id: str, user_id: str):
-    import os
-    import logging
-    redis_url = None
-    try:
-        import streamlit as st
-        redis_url = st.secrets.get("redis_url")
-    except Exception:
-        pass
-    if not redis_url:
-        redis_url = os.getenv("REDIS_URL")
-
-    from typing import Any
-    r: Any = None
-    if REDIS_ASYNC_AVAILABLE and redis_url:
-        try:
-            r = aioredis.from_url(redis_url)
-        except Exception as e:
-            logging.getLogger(__name__).warning(f"Failed to connect to Redis at {redis_url}: {e}")
-            r = None
-
-    if r is None:
-        class MockPubSub:
-            async def subscribe(self, *args, **kwargs):
-                pass
-            async def unsubscribe(self, *args, **kwargs):
-                pass
-            async def listen(self):
-                if False:
-                    yield None
-        class MockClient:
-            def pubsub(self):
-                return MockPubSub()
-            async def aclose(self):
-                pass
-        r = MockClient()
-
+    r = aioredis.from_url(REDIS_URL)
     pubsub = r.pubsub()
     await pubsub.subscribe(f"audit:{audit_id}")
 
@@ -91,7 +38,15 @@ async def audit_event_stream(audit_id: str, user_id: str):
 async def stream_audit(
     audit_id: str,
     user_id: str = Depends(get_current_user),
+    session: Session = Depends(get_async_session),
 ):
+    audit = session.get(Audit, audit_id)
+    if not audit:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    brand = session.get(Brand, audit.brand_id)
+    if not brand or str(brand.user_id) != user_id:
+        raise HTTPException(status_code=404, detail="Audit not found")
+
     return StreamingResponse(
         audit_event_stream(audit_id, user_id),
         media_type="text/event-stream",

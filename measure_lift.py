@@ -1,9 +1,10 @@
 import json
 
+
 def calculate_lift(pre_file, post_file):
-    with open(pre_file, 'r') as f:
+    with open(pre_file) as f:
         pre = json.load(f)
-    with open(post_file, 'r') as f:
+    with open(post_file) as f:
         post = json.load(f)
 
     pre_cited = pre.get('is_cited', False)

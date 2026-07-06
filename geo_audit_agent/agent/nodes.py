@@ -1,10 +1,12 @@
 import json
 import logging
-import re
 import os
-from typing import Any
+import re
 from datetime import datetime
+from typing import Any
+
 from google import genai
+
 from geo_audit_agent.agent.state import AuditState
 from geo_audit_agent.services.cache import get_cached_response, set_cached_response
 from geo_audit_agent.services.guardrails import classify_input
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def guardrail_node(state: AuditState) -> AuditState:
     """Ingress guardrail: classifies user input for safety.
-    
+
     Addresses: Audit 3 §2.A (LlamaGuard), PE-OS Law 3 (Autonomy-Failure Scaling)
     """
     combined_input = f"{state.brand_name} {state.category} {state.city}"
@@ -35,7 +37,7 @@ def guardrail_node(state: AuditState) -> AuditState:
 
 def query_llm_node(state: AuditState) -> AuditState:
     """Queries target LLM with the brand visibility question.
-    
+
     Existing: agent.py:query_llm (lines 40-80)
     Addresses: PE-OS Law 4 (Prompt Cache Economics), Law 9 (Paged Attention)
     """
@@ -54,7 +56,7 @@ def query_llm_node(state: AuditState) -> AuditState:
             state.llm_response = f"If you want food in {city}, here are the options:\n1. KFC\n2. McDonald's\n3. Burger Hub - Local favorite with great burgers."
         else:
             state.llm_response = f"For the best {category} in {city}, you should check out:\n1. {brand} - Outstanding service and quality.\n2. Comp1\n3. Comp2"
-        
+
         state.mode = "simulated"
         state.step_log.append({
             "node": "query_llm",
@@ -98,7 +100,7 @@ def query_llm_node(state: AuditState) -> AuditState:
             state.llm_response = f"If you want food in {city}, here are the options:\n1. KFC\n2. McDonald's\n3. Burger Hub - Local favorite with great burgers."
         else:
             state.llm_response = f"For the best {category} in {city}, you should check out:\n1. {brand} - Outstanding service and quality.\n2. Comp1\n3. Comp2"
-        
+
         state.mode = "simulated"
         state.step_log.append({
             "node": "query_llm",
@@ -111,7 +113,7 @@ def query_llm_node(state: AuditState) -> AuditState:
 
 def check_citation_node(state: AuditState) -> AuditState:
     """Validates brand citation with semantic analysis.
-    
+
     Existing: agent.py:check_citation (lines 82-140)
     Upgrade: Replaces substring matching with semantic verification
     Addresses: PE-OS Law 2 (Verifiable Trust), Audit 3 §2.B
@@ -177,7 +179,7 @@ def check_citation_node(state: AuditState) -> AuditState:
 
 def gap_analyst_node(state: AuditState) -> AuditState:
     """Identifies visibility gaps using industry-specific templates.
-    
+
     Existing: agent.py:gap_analyst (lines 142-200)
     Addresses: PE-OS Law 1 (External Memory)
     """
@@ -206,15 +208,15 @@ def gap_analyst_node(state: AuditState) -> AuditState:
     config_path = os.getenv("GAP_CHECKLIST_PATH") or "gap_checklist.json"
     if os.path.exists(config_path):
         try:
-            with open(config_path, "r") as f:
+            with open(config_path) as f:
                 all_checklists = json.load(f)
             brand_config = all_checklists.get(brand) or all_checklists.get("default") or {}
-            
+
             if "has_json_ld" in brand_config:
                 brand_config["has_schema"] = brand_config["has_json_ld"]
             if "recent_reviews" in brand_config:
                 brand_config["review_count"] = 10 if brand_config["recent_reviews"] else 0
-                
+
             business_data.update(brand_config)
         except Exception:
             pass
@@ -265,7 +267,7 @@ def gap_analyst_node(state: AuditState) -> AuditState:
     for gap in gaps:
         raw_severity = gap.get('severity') or gap.get('priority') or 'medium'
         severity_title = raw_severity.capitalize()
-        
+
         normalized_gap = {
             'gap_type': gap.get('gap_type') or gap.get('title') or gap.get('type') or 'Visibility Gap',
             'type': gap.get('type') or gap.get('gap_type') or 'generic',
@@ -293,7 +295,7 @@ def gap_analyst_node(state: AuditState) -> AuditState:
 
 def planner_node(state: AuditState) -> AuditState:
     """LLM-based action planning with tool selection.
-    
+
     Existing: agent.py:planner (lines 202-280)
     Addresses: PE-OS Law 5 (Feedback Loop Autonomy)
     """
@@ -335,6 +337,10 @@ def planner_node(state: AuditState) -> AuditState:
         state.planned_actions = actions
         state.total_tokens += response.total_tokens
         state.total_cost_usd += response.cost_usd
+        state.step_log.append({
+            "node": "planner",
+            "action_count": len(actions),
+        })
     except Exception as e:
         logger.warning(f"Real planner query failed, falling back to mock planner: {e}")
         planned_actions = []
@@ -354,21 +360,19 @@ def planner_node(state: AuditState) -> AuditState:
             "fallback_due_to_error": str(e),
         })
 
-    state.step_log.append({
-        "node": "planner",
-        "action_count": len(actions),
-    })
     return state
 
 
 def remediation_handler_node(state: AuditState) -> AuditState:
     """Executes remediation actions with validation.
-    
+
     Existing: agent.py:remediation_handler (lines 282-380)
     Upgrade: Adds validator-repair loop (Law 6: Agent Execution Integrity)
     """
     from geo_audit_agent.geo_remediation_tools import (
-        generate_json_ld, draft_technical_whitepaper, generate_review_template
+        draft_technical_whitepaper,
+        generate_json_ld,
+        generate_review_template,
     )
     from geo_audit_agent.remediation import generate_remediation
 
@@ -410,7 +414,12 @@ def remediation_handler_node(state: AuditState) -> AuditState:
                 "correlation_id": state.correlation_id,
                 "audit_id": state.audit_id,
             })
-            results[tool_name] = {"error": str(e)}
+            result_key = {
+                "generate_json_ld": "json_ld",
+                "draft_technical_whitepaper": "whitepaper",
+                "generate_review_template": "review_template",
+            }.get(tool_name, tool_name)
+            results[result_key] = {"error": str(e)}
 
     state.remediation_outputs = results
 
@@ -441,7 +450,7 @@ def remediation_handler_node(state: AuditState) -> AuditState:
 
 def validate_output_node(state: AuditState) -> AuditState:
     """Validates generated artifacts locally before persistence.
-    
+
     NEW node: Implements PE-OS Law 5 (Feedback Loop) and Law 6 (Execution Integrity)
     Addresses: Audit 1 §2 (Law 5, Law 6, Law 8)
     """
@@ -470,7 +479,7 @@ def validate_output_node(state: AuditState) -> AuditState:
 
 def generate_report_node(state: AuditState) -> AuditState:
     """Compiles final audit report from all pipeline outputs.
-    
+
     Existing: agent.py:generate_report (lines 382-440)
     """
     # ── Predict GEO score ──
@@ -494,11 +503,11 @@ def generate_report_node(state: AuditState) -> AuditState:
     try:
         from geo_audit_agent.geo_intelligence.anomaly_detector import flag_anomalies
         cited_brands = re.findall(r"['\"]([^'\"]+)['\"]", state.llm_response) if state.llm_response else []
-        
+
         # Lazy load client helper
         api_key = os.getenv("GOOGLE_API_KEY")
         client = genai.Client(api_key=api_key) if api_key else None
-        
+
         state.anomalies = flag_anomalies(
             {"cited_brands": cited_brands},
             state.city,

@@ -22,12 +22,29 @@ celery>=5.3.0
 
 # LLM
 google-genai>=0.1.0
-# anthropic is optional – the app runs in mock mode without it.
-# Uncomment below only when you have a live ANTHROPIC_API_KEY and want live LLM mode:
-# anthropic>=0.52.0
+anthropic>=0.52.0
 
-# Monitoring
+# Celery
+celery>=5.3.0
+
+# Observability
+langfuse>=2.0.0
 prometheus-client>=0.17.0
+
+# Vector Search
+qdrant-client>=1.9.0
+
+# Memory
+mem0ai>=0.1.0
+
+# Embeddings
+sentence-transformers>=2.2.0
+
+# Evaluation
+deepeval>=0.21.0
+
+# Database
+psycopg2-binary>=2.9.0
 
 # Testing
 pytest>=7.0.0
@@ -35,7 +52,9 @@ pytest-cov>=4.1.0
 
 # Web Scraping / Auditing
 beautifulsoup4
-extruct
+# extruct is optional: its jstyleson dependency fails to build on modern
+# setuptools. fingerprint_generator falls back to BeautifulSoup JSON-LD
+# parsing when extruct is absent. Install manually if needed: pip install extruct
 
 # Utils
 numpy

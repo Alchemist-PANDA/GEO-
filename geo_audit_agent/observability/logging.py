@@ -1,7 +1,7 @@
-import logging
 import json
-from datetime import datetime
+import logging
 from contextvars import ContextVar
+from datetime import datetime
 
 correlation_id_var: ContextVar[str] = ContextVar("correlation_id", default="")
 

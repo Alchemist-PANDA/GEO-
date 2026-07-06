@@ -9,6 +9,6 @@ def fuse(*, query: str, retrieved: list[dict], memory: list[dict],
         "memory": memory,
         "business_rules": business_rules,
         "live_metrics": live_metrics,
-        "history": history[-6:],             # last 3 turns
+        "history": history[-6:],
         "agent_state": agent_state,
     }

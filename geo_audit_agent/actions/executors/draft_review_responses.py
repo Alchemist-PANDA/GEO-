@@ -1,12 +1,14 @@
-# Auto-generated executor for draft_review_responses
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "file"
-    artifact_content = f"# Generated draft_review_responses for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this draft_review_responses artifact to {platform}."}
+    from geo_audit_agent.llm import gateway
+    brand = ctx.get("brand", "Brand")
+    res = gateway.router(
+        f"Draft 3 professional review response templates for {brand}: "
+        f"one for a positive review, one for a neutral review, and one for a negative review. "
+        f"Format as markdown with ## headings.", tier="balanced")
+    content = res.text if not res.text.startswith("{") else (
+        f"# Review Response Templates — {brand}\n\n"
+        f"## Positive Review Response\nThank you for your kind words!\n\n"
+        f"## Neutral Review Response\nThank you for your feedback.\n\n"
+        f"## Negative Review Response\nWe're sorry to hear about your experience.\n")
+    return {"status": "complete", "platform": "file", "artifact": content,
+            "filename": f"review_responses_{brand.lower().replace(' ', '_')}.md"}

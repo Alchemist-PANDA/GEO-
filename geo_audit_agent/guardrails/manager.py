@@ -1,12 +1,13 @@
 """Routes a phase to its handlers, aggregates violations, persists, decides."""
 from __future__ import annotations
+
 import logging
-from geo_audit_agent.guardrails.types import GuardrailDecision, Violation, Severity
+
 from geo_audit_agent.guardrails import handlers as H
+from geo_audit_agent.guardrails.types import GuardrailDecision, Severity, Violation
 
 logger = logging.getLogger(__name__)
 
-# phase -> ordered handler callables (deterministic first, semantic last)
 _PHASES = {
     "input":          [H.input_guardrail],
     "context":        [H.context_guardrail],
@@ -22,7 +23,6 @@ _PHASES = {
     "human_approval": [H.human_approval_guardrail],
 }
 
-# severities that BLOCK execution (others warn + log only)
 _BLOCKING = {Severity.HIGH, Severity.CRITICAL}
 
 
@@ -32,13 +32,21 @@ def check_phase(phase: str, payload: dict, *, agent_id: str = "system",
     for handler in _PHASES.get(phase, []):
         try:
             violations.extend(handler(payload))
-        except Exception as e:                      # a broken guardrail must FAIL CLOSED for security phases
+        except Exception as e:
             logger.error("guardrail %s crashed: %s", handler.__name__, e)
             if phase in ("security", "human_approval", "business"):
                 violations.append(Violation(phase, "handler_error",
                     Severity.CRITICAL, f"guardrail crashed: {e}"))
     _persist(violations, phase, agent_id, trace_id)
     allowed = not any(v.severity in _BLOCKING for v in violations)
+    try:
+        from geo_audit_agent.observability.metrics import GUARDRAIL_BLOCKS, GUARDRAIL_EVENTS
+        GUARDRAIL_EVENTS.labels(classification="safe" if allowed else "blocked").inc()
+        for v in violations:
+            GUARDRAIL_BLOCKS.labels(type=v.guardrail_type, severity=v.severity.value,
+                                    blocked=str(v.severity in _BLOCKING)).inc()
+    except Exception:
+        pass
     return GuardrailDecision(allowed=allowed, violations=violations)
 
 
@@ -46,9 +54,8 @@ def _persist(violations, phase, agent_id, trace_id):
     if not violations:
         return
     try:
-        from geo_audit_agent.db.session import get_session
         from geo_audit_agent.db.models import GuardrailViolation
-        from geo_audit_agent.observability.metrics import GUARDRAIL_BLOCKS
+        from geo_audit_agent.db.session import get_session
         with get_session() as s:
             for v in violations:
                 blocked = v.severity in _BLOCKING
@@ -56,8 +63,6 @@ def _persist(violations, phase, agent_id, trace_id):
                     guardrail_type=v.guardrail_type, agent_id=agent_id,
                     trace_id=trace_id, severity=v.severity.value,
                     blocked=blocked, violation_details={"rule": v.rule, "message": v.message, **v.details}))
-                GUARDRAIL_BLOCKS.labels(type=v.guardrail_type,
-                    severity=v.severity.value, blocked=str(blocked)).inc()
             s.commit()
     except Exception as e:
         logger.warning("guardrail persist failed (non-fatal): %s", e)

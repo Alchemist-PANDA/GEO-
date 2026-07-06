@@ -1,6 +1,7 @@
 """Cheap, deterministic-first intent routing. Keyword router covers the
 common cases for free; LLM fallback only for genuinely ambiguous input."""
 import re
+
 from geo_audit_agent.llm import gateway
 
 INTENTS = ["audit", "recommend", "compare", "deploy", "explain_chart",
@@ -18,6 +19,7 @@ _RULES = [
     ("help",          r"\b(help|what can you|how does this work)\b"),
 ]
 
+
 def classify(message: str) -> str:
     m = (message or "").lower().strip()
     if not m:
@@ -25,7 +27,6 @@ def classify(message: str) -> str:
     for intent, pat in _RULES:
         if re.search(pat, m):
             return intent
-    # ambiguous → one cheap LLM call (mock returns "help" offline)
     res = gateway.claude(
         system="Classify the user's intent into exactly one of: " + ", ".join(INTENTS),
         user=message, model="claude-opus-4-8", max_tokens=20, force_json=True)

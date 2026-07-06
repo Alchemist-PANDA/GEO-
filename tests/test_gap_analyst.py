@@ -1,7 +1,8 @@
 """Tests for the gap_analyst node logic."""
-import os
 import json
+import os
 import tempfile
+
 from geo_audit_agent.agent import gap_analyst
 
 

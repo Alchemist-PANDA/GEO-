@@ -1,12 +1,14 @@
-# Auto-generated executor for post_to_linkedin
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "LinkedIn"
-    artifact_content = f"# Generated post_to_linkedin for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this post_to_linkedin artifact to {platform}."}
+    from geo_audit_agent.llm import gateway
+    brand = ctx.get("brand", "Brand")
+    category = ctx.get("category", "business")
+    city = ctx.get("city", "")
+    res = gateway.router(
+        f"Write a LinkedIn post for {brand}, a {category} in {city}. "
+        f"Professional tone, under 200 words, include relevant hashtags.", tier="balanced")
+    content = res.text if not res.text.startswith("{") else (
+        f"Excited to share how {brand} is innovating in {city}'s {category} industry! "
+        f"Our commitment to excellence drives everything we do.\n\n"
+        f"#GEO #{category.replace(' ', '')} #{city.replace(' ', '')}")
+    return {"status": "fallback", "platform": "LinkedIn", "artifact": content,
+            "instructions": "Post this content to your LinkedIn company page."}

@@ -1,10 +1,11 @@
-from typing import Dict, List, Any, Optional
+from typing import Any
+
 from pydantic import BaseModel, Field, model_validator
 
 
 class AuditState(BaseModel):
     """LangGraph state model for the GEO audit pipeline.
-    
+
     Maps to the existing agent.py state dict but adds type safety
     and validation boundaries per PE-OS Law 6 (Execution Integrity).
     """
@@ -28,7 +29,7 @@ class AuditState(BaseModel):
 
     # LLM query results
     llm_response: str = ""
-    llm_responses: Dict[str, str] = Field(default_factory=dict)
+    llm_responses: dict[str, str] = Field(default_factory=dict)
 
     # Citation analysis
     is_cited: bool = False
@@ -36,30 +37,30 @@ class AuditState(BaseModel):
     sentiment: str = "neutral"
 
     # Gap analysis
-    gaps: List[Dict[str, Any]] = Field(default_factory=list)
-    strengths: List[Any] = Field(default_factory=list)
-    competitors: List[str] = Field(default_factory=list)
+    gaps: list[dict[str, Any]] = Field(default_factory=list)
+    strengths: list[Any] = Field(default_factory=list)
+    competitors: list[str] = Field(default_factory=list)
 
     # Planning & remediation
-    planned_actions: List[Dict[str, Any]] = Field(default_factory=list)
+    planned_actions: list[dict[str, Any]] = Field(default_factory=list)
     remediation: Any = Field(default_factory=list)
-    remediation_outputs: Dict[str, Any] = Field(default_factory=dict)
-    remediation_results: List[Dict[str, Any]] = Field(default_factory=list)
+    remediation_outputs: dict[str, Any] = Field(default_factory=dict)
+    remediation_results: list[dict[str, Any]] = Field(default_factory=list)
 
     # Validation loop tracking (Law 5: Feedback Loop Autonomy)
-    validation_errors: List[str] = Field(default_factory=list)
+    validation_errors: list[str] = Field(default_factory=list)
     repair_attempts: int = 0
     max_repairs: int = 3
 
     # Anomaly detection
-    anomalies: Dict[str, Any] = Field(default_factory=dict)
-    predicted_geo_score: Optional[float] = None
+    anomalies: dict[str, Any] = Field(default_factory=dict)
+    predicted_geo_score: float | None = None
 
     # Report
-    report: Dict[str, Any] = Field(default_factory=dict)
+    report: dict[str, Any] = Field(default_factory=dict)
 
     # Observability
-    step_log: List[Dict[str, Any]] = Field(default_factory=list)
+    step_log: list[dict[str, Any]] = Field(default_factory=list)
     total_tokens: int = 0
     total_cost_usd: float = 0.0
     correlation_id: str = ""
@@ -80,7 +81,7 @@ class AuditState(BaseModel):
             data["brand_name"] = brand
             data["brand"] = brand
             data["business_name"] = brand
-            
+
             # Default values
             if "category" not in data:
                 data["category"] = "business"

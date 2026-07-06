@@ -1,7 +1,8 @@
 """Declarative business rules. condition is a pure predicate over a flat
 context dict — no eval(), no string DSL (those are injection risks)."""
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+
 
 @dataclass(frozen=True)
 class PolicyRule:
@@ -10,6 +11,7 @@ class PolicyRule:
     action: str            # "BLOCK" | "WARN"
     message: str
     condition: Callable[[dict], bool]   # returns True when VIOLATED
+
 
 RULES: list[PolicyRule] = [
     PolicyRule("POL-001", "Deployment requires successful audit", "BLOCK",

@@ -1,12 +1,14 @@
-# Auto-generated executor for create_best_of_listicle
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "file"
-    artifact_content = f"# Generated create_best_of_listicle for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this create_best_of_listicle artifact to {platform}."}
+    from geo_audit_agent.llm import gateway
+    brand = ctx.get("brand", "Brand")
+    category = ctx.get("category", "business")
+    city = ctx.get("city", "")
+    res = gateway.router(
+        f"Write a 'Best of {city}' listicle for {category} that features {brand} "
+        f"prominently. Include 5-7 entries. Format as markdown.",
+        tier="balanced")
+    content = res.text if not res.text.startswith("{") else (
+        f"# Best {category} in {city}\n\n"
+        f"## 1. {brand}\nThe top choice for {category} in {city}.\n")
+    return {"status": "complete", "platform": "file", "artifact": content,
+            "filename": f"best_of_{city.lower().replace(' ', '_')}.md"}

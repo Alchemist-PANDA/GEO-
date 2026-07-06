@@ -1,8 +1,10 @@
 # llm_router.py
-import os
 import logging
+import os
+
 from google import genai
 from google.genai import types
+
 from geo_audit_agent.llm_client import call_proxy_llm
 
 logger = logging.getLogger(__name__)
@@ -18,17 +20,17 @@ def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = ""
     """Routes prompt queries to the appropriate LLM provider depending on the tier constraint."""
     api_key = os.getenv("GOOGLE_API_KEY")
     messages = [{"role": "user", "content": prompt}]
-    
+
     if api_key:
         try:
-            logger.info(f"Routing to Google Gemini API for {tier} tier (Correlation ID: {correlation_id})")
+            logger.info("Routing to Google Gemini API for %s tier (Correlation ID: %s)", tier, correlation_id)
             client = genai.Client(api_key=api_key)
-            
+
             # Map tier constraints to target models
             model_name = "gemini-2.0-flash-lite"
             if tier == "deep":
                 model_name = "gemini-2.0-flash"
-                
+
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt,
@@ -45,11 +47,11 @@ def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = ""
                 provider="google"
             )
         except Exception as e:
-            logger.warning(f"Google GenAI routing failed, falling back to legacy proxy: {e}")
-            
+            logger.warning("Google GenAI routing failed, falling back to legacy proxy: %s", e)
+
     # Legacy proxy fallback
     try:
-        logger.info(f"Routing to fallback legacy proxy client (Correlation ID: {correlation_id})")
+        logger.info("Routing to fallback legacy proxy client (Correlation ID: %s)", correlation_id)
         text = call_proxy_llm(
             model="gc/gemini-3-flash-preview",
             messages=messages,
@@ -63,9 +65,9 @@ def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = ""
             provider="proxy_fallback"
         )
     except Exception as e:
-        logger.error(f"Fallback proxy call failed: {e}")
+        logger.error("Fallback proxy call failed: %s", e)
         # Deterministic simulation fallback to prevent pipeline crashes
-        simulated_text = f"Simulated visibility response for prompt: {prompt[:50]}..."
+        simulated_text = "Simulated visibility response (fallback mode)"
         return LLMProviderResponse(
             text=simulated_text,
             total_tokens=10,

@@ -2,9 +2,10 @@
 Test brand/brand_name key compatibility to prevent KeyError in production.
 """
 
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))

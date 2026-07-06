@@ -1,13 +1,15 @@
 """Langfuse tracing. @trace_span wraps any node; falls back to no-op offline."""
 from __future__ import annotations
+
 import functools
+import logging
 import os
 import time
 import uuid
-import logging
 
 logger = logging.getLogger(__name__)
 _client = None
+
 
 def _lf():
     global _client
@@ -37,10 +39,11 @@ def trace_span(name: str, agent_id: str = "system"):
     exposing `.trace_id`, `.tokens`, `.cost_usd` (optional)."""
     def deco(fn):
         @functools.wraps(fn)
-        def wrap(state, *a, **kw):
+        def wrap(state_or_self, *a, **kw):
+            state = a[0] if a and hasattr(a[0], "trace_id") else state_or_self
             client = _lf()
             tid = getattr(state, "trace_id", None) or new_trace_id()
-            if hasattr(state, "trace_id"):
+            if hasattr(state, "trace_id") and not getattr(state, "trace_id", None):
                 state.trace_id = tid
             t0 = time.time()
             span = None
@@ -51,7 +54,7 @@ def trace_span(name: str, agent_id: str = "system"):
                 except Exception:
                     span = None
             try:
-                result = fn(state, *a, **kw)
+                result = fn(state_or_self, *a, **kw)
                 return result
             finally:
                 dur = time.time() - t0
@@ -64,7 +67,6 @@ def trace_span(name: str, agent_id: str = "system"):
                         })
                     except Exception:
                         pass
-                # Always emit a Prometheus duration sample (see §18)
                 try:
                     from geo_audit_agent.observability.metrics import AGENT_NODE_DURATION
                     AGENT_NODE_DURATION.labels(node=name, agent=agent_id).observe(dur)

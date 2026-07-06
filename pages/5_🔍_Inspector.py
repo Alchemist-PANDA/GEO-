@@ -1,60 +1,79 @@
 import streamlit as st
-from sqlmodel import select
-from geo_audit_agent.db.session import get_session
-from geo_audit_agent.db.models import InspectorCheck, GuardrailViolation, ImprovementProposal
 
 st.set_page_config(page_title="Inspector Dashboard", page_icon="🔍", layout="wide")
+if not st.session_state.get("authenticated"):
+    st.warning("Please log in from the main dashboard first.")
+    st.stop()
+
 st.title("🔍 Inspector Dashboard")
 
-st.markdown("### Recent Inspector Checks")
 try:
-    with get_session() as s:
-        checks = s.exec(select(InspectorCheck).order_by(InspectorCheck.created_at.desc()).limit(10)).all()
-        if checks:
-            st.dataframe([{
-                "Time": c.created_at,
-                "Agent": c.agent_id,
-                "Passed": c.passed,
-                "Risk": c.result.get("risk", "N/A"),
-                "Issues": ", ".join(c.result.get("issues", []))
-            } for c in checks], use_container_width=True)
-        else:
-            st.info("No inspector checks recorded yet.")
-except Exception as e:
-    st.error(f"Could not load Inspector Checks: {e}")
+    from geo_audit_agent.db.models import GuardrailViolation, ImprovementProposal, InspectorCheck
+    from geo_audit_agent.db.session import get_session
 
-st.markdown("### Guardrail Violations")
-try:
     with get_session() as s:
-        violations = s.exec(select(GuardrailViolation).order_by(GuardrailViolation.created_at.desc()).limit(10)).all()
-        if violations:
-            st.dataframe([{
-                "Time": v.created_at,
-                "Agent": v.agent_id,
-                "Type": v.guardrail_type,
-                "Severity": v.severity,
-                "Blocked": v.blocked
-            } for v in violations], use_container_width=True)
-        else:
-            st.info("No guardrail violations recorded yet.")
-except Exception as e:
-    st.error(f"Could not load Guardrail Violations: {e}")
+        recent_checks = s.query(InspectorCheck).order_by(
+            InspectorCheck.created_at.desc()).limit(50).all()
+        recent_violations = s.query(GuardrailViolation).order_by(
+            GuardrailViolation.created_at.desc()).limit(50).all()
+        pending_proposals = s.query(ImprovementProposal).filter(
+            ImprovementProposal.status == "pending").order_by(
+            ImprovementProposal.created_at.desc()).limit(20).all()
 
-st.markdown("### Action Proposals (Self Improvement)")
-try:
-    with get_session() as s:
-        proposals = s.exec(select(ImprovementProposal).where(ImprovementProposal.status == "pending").order_by(ImprovementProposal.created_at.desc()).limit(10)).all()
-        if proposals:
-            for p in proposals:
-                with st.expander(f"Proposal for {p.agent_id}: {p.proposal_type}"):
-                    st.write(p.description)
-                    st.json(p.payload)
-                    c1, c2 = st.columns(2)
-                    if c1.button("✅ Approve", key=f"appr_prop_{p.id}"):
-                        p.status = "approved"; s.commit(); st.rerun()
-                    if c2.button("❌ Reject", key=f"rej_prop_{p.id}"):
-                        p.status = "rejected"; s.commit(); st.rerun()
-        else:
-            st.info("No pending improvement proposals.")
+    col1, col2, col3 = st.columns(3)
+    total_checks = len(recent_checks)
+    passed = sum(1 for c in recent_checks if c.passed)
+    col1.metric("Inspector Checks", total_checks)
+    col2.metric("Pass Rate", f"{(passed/total_checks*100):.0f}%" if total_checks else "N/A")
+    col3.metric("Guardrail Violations", len(recent_violations))
+
+    st.subheader("Recent Inspector Results")
+    if recent_checks:
+        for check in recent_checks[:10]:
+            status = "✅" if check.passed else "❌"
+            with st.expander(f"{status} {check.agent_id} — {check.check_type} ({check.created_at})"):
+                st.json(check.result)
+    else:
+        st.info("No inspector checks recorded yet.")
+
+    st.subheader("Recent Guardrail Violations")
+    if recent_violations:
+        for v in recent_violations[:10]:
+            severity_color = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}.get(v.severity, "⚪")
+            with st.expander(f"{severity_color} {v.guardrail_type} — {v.severity} ({v.created_at})"):
+                st.json(v.violation_details)
+                if v.blocked:
+                    st.error("This violation BLOCKED execution.")
+    else:
+        st.info("No guardrail violations recorded yet.")
+
+    st.subheader("Pending Improvement Proposals")
+    if pending_proposals:
+        for p in pending_proposals:
+            with st.expander(f"📋 {p.agent_id} — {p.proposal_type}: {p.description[:80]}"):
+                st.json(p.payload)
+                col_a, col_r = st.columns(2)
+                if col_a.button("✅ Approve", key=f"approve_{p.id}"):
+                    with get_session() as s2:
+                        prop = s2.get(ImprovementProposal, p.id)
+                        if prop:
+                            prop.status = "approved"
+                            s2.add(prop)
+                            s2.commit()
+                    st.success("Proposal approved.")
+                    st.rerun()
+                if col_r.button("❌ Reject", key=f"reject_{p.id}"):
+                    with get_session() as s2:
+                        prop = s2.get(ImprovementProposal, p.id)
+                        if prop:
+                            prop.status = "rejected"
+                            s2.add(prop)
+                            s2.commit()
+                    st.warning("Proposal rejected.")
+                    st.rerun()
+    else:
+        st.info("No pending improvement proposals.")
+
 except Exception as e:
-    st.error(f"Could not load Improvement Proposals: {e}")
+    st.warning(f"Database not available — Inspector dashboard requires a running database. ({e})")
+    st.info("Run `alembic upgrade head` to create the required tables.")

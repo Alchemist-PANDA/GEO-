@@ -1,12 +1,15 @@
-# Auto-generated executor for create_location_pages
 def execute(ctx: dict) -> dict:
-    brand = ctx.get("brand", "Unknown")
-    platform = "file"
-    artifact_content = f"# Generated create_location_pages for {brand}\nContext: {ctx}"
-    
-    # Check credentials or simulate fallback
-    if ctx.get("credentials", {}).get(platform.lower()):
-        return {"status": "deployed", "platform": platform, "artifact": artifact_content}
-    
-    return {"status": "fallback", "platform": "file", "artifact": artifact_content,
-            "instructions": f"Paste or upload this create_location_pages artifact to {platform}."}
+    from geo_audit_agent.llm import gateway
+    brand = ctx.get("brand", "Brand")
+    category = ctx.get("category", "business")
+    city = ctx.get("city", "")
+    res = gateway.router(
+        f"Write a location-specific landing page for {brand}, a {category} in {city}. "
+        f"Include local keywords, address section, and service area. Format as markdown.",
+        tier="balanced")
+    content = res.text if not res.text.startswith("{") else (
+        f"# {brand} — {category} in {city}\n\n"
+        f"## Serving {city} and Surrounding Areas\n"
+        f"Find us at the heart of {city}.\n")
+    return {"status": "complete", "platform": "file", "artifact": content,
+            "filename": f"location_{city.lower().replace(' ', '_')}.md"}

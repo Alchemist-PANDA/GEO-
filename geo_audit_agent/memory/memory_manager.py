@@ -1,6 +1,9 @@
 """Long-term memory via Mem0, scoped per user_id. Mock-safe in-process store offline."""
 import os
-_mem, _fallback = None, {}  # type: ignore
+
+_mem = None
+_fallback: dict = {}
+
 
 def _client():
     global _mem
@@ -13,6 +16,7 @@ def _client():
             _mem = None
     return _mem
 
+
 def add(user_id: str, text: str, metadata: dict | None = None):
     from geo_audit_agent.memory.memory_guardrails import allow_memory
     ok, reason = allow_memory(text, metadata or {})
@@ -24,6 +28,7 @@ def add(user_id: str, text: str, metadata: dict | None = None):
         return {"saved": True, "backend": "local"}
     m.add(text, user_id=user_id, metadata=metadata or {})
     return {"saved": True, "backend": "mem0"}
+
 
 def search(user_id: str, query: str, limit: int = 5) -> list[str]:
     m = _client()

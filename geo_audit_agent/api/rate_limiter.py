@@ -1,15 +1,7 @@
-import time
 import logging
-from typing import Tuple, Dict, Optional
-try:
-    import redis
-    REDIS_MODULE_AVAILABLE = True
-    from redis import RedisError
-except ImportError:
-    REDIS_MODULE_AVAILABLE = False
-    class RedisError(Exception):  # type: ignore
-        pass
+import time
 
+import redis
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -25,9 +17,7 @@ class RedisRateLimiter:
         import os
         self.limit = limit
         self.window = window
-        self.redis: Optional[redis.Redis] = None  # type: ignore
-        
-        redis_url = None
+        self.redis: redis.Redis | None = None
         try:
             import streamlit as st
             redis_url = st.secrets.get("redis_url")
@@ -47,17 +37,19 @@ class RedisRateLimiter:
                 logger.warning(f"Redis rate limiter connection failed (rate limiting bypassed/fallback): {e}")
                 self.redis = None
 
-    def is_allowed(self, client_key: str) -> Tuple[bool, Dict[str, str]]:
+    def is_allowed(self, client_key: str) -> tuple[bool, dict[str, str]]:
+        import uuid as _uuid
         now = int(time.time())
         if not self.redis:
             return True, {}
 
         key = f"rate_limit:{client_key}"
+        member = f"{now}:{_uuid.uuid4().hex[:8]}"
         try:
             pipe = self.redis.pipeline()
             pipe.zremrangebyscore(key, 0, now - self.window)
             pipe.zcard(key)
-            pipe.zadd(key, {str(now): now})
+            pipe.zadd(key, {member: now})
             pipe.expire(key, self.window)
             _, count, _, _ = pipe.execute()
 
@@ -68,7 +60,7 @@ class RedisRateLimiter:
                 "X-RateLimit-Reset": str(now + self.window),
             }
 
-            if count > self.limit:
+            if count >= self.limit:
                 headers["Retry-After"] = str(self.window)
                 return False, headers
 

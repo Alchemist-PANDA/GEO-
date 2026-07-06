@@ -1,8 +1,8 @@
 """Industry-specific templates for GEO audit recommendations."""
 
-from .fitness_gym import FitnessGymTemplate
-from .ecommerce import EcommerceTemplate
 from .dental_clinic import DentalClinicTemplate
+from .ecommerce import EcommerceTemplate
+from .fitness_gym import FitnessGymTemplate
 from .restaurant import RestaurantTemplate
 
 TEMPLATES = {

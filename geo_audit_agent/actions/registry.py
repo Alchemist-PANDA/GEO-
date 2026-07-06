@@ -1,6 +1,6 @@
-"""The 16 actions. Each ACTION is metadata + an executor reference.
-impact = projected visibility lift %, effort = minutes, platform, approval flag."""
+"""The 16 actions. Each ACTION is metadata + an executor reference."""
 from dataclasses import dataclass
+
 
 @dataclass(frozen=True)
 class Action:
@@ -11,7 +11,8 @@ class Action:
     effort_min: int
     platform: str
     requires_approval: bool
-    executor: str          # dotted path under actions.executors
+    executor: str
+
 
 REGISTRY: dict[str, Action] = {
     "deploy_json_ld":      Action("deploy_json_ld", "Deploy JSON-LD Schema", "structured_data", 8.0, 5, "WordPress", True, "deploy_json_ld"),

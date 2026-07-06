@@ -1,8 +1,7 @@
 [server]
 headless = true
-enableCORS = false
-enableXsrfProtection = false
-websocketMaxMessageSize = 100000000
+enableCORS = true
+enableXsrfProtection = true
 
 [theme]
 base = "light"

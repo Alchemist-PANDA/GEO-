@@ -1,0 +1,31 @@
+groups:
+  - name: agentic
+    rules:
+      - alert: HighGuardrailBlockRate
+        expr: sum(rate(geo_guardrail_blocks_total{blocked="True"}[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guardrail block rate elevated (possible attack or regression)"
+      - alert: InspectorFailureSpike
+        expr: |
+          sum(rate(geo_inspector_results_total{passed="False"}[10m]))
+          / sum(rate(geo_inspector_results_total[10m])) > 0.2
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: ">20% of agent outputs failing inspection"
+      - alert: DailyBudgetBurn
+        expr: increase(geo_llm_cost_usd_total[1d]) > 45
+        labels:
+          severity: warning
+        annotations:
+          summary: "Approaching daily LLM budget"
+      - alert: CanaryRegression
+        expr: increase(geo_improvement_proposals_total{status="rolled_back"}[1h]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "A canary was rolled back — investigate the proposal"

@@ -1,13 +1,15 @@
-import streamlit as st
 import plotly.graph_objects as go
-from geo_audit_agent.ui.chart_wrapper import render_chart_with_explain_button
+import streamlit as st
+
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
+
 
 def render_lift_simulator(current_score, gaps):
     """Render the interactive strategic lift simulator with checklist and progression line chart."""
     if not gaps:
         st.success("Your brand performance is already optimized for Generative Search.")
         return
-        
+
     st.markdown("""
         <div style="margin-bottom: 20px;">
             <h3 style="margin-top: 0; margin-bottom: 5px; font-size: 1.25rem;">📈 Strategic Lift Simulator</h3>
@@ -16,13 +18,13 @@ def render_lift_simulator(current_score, gaps):
             </p>
         </div>
     """, unsafe_allow_html=True)
-    
+
     col_controls, col_visual = st.columns([1.2, 1])
-    
+
     with col_controls:
         st.markdown("#### Remediation Roadmap")
         st.write("Toggle the items you plan to implement:")
-        
+
         fixed_gaps = []
         for i, gap in enumerate(gaps):
             with st.container(border=True):
@@ -37,15 +39,15 @@ def render_lift_simulator(current_score, gaps):
                     color = {"Critical": "#EF4444", "High": "#F59E0B", "Medium": "#3B82F6", "Low": "#10B981"}.get(sev, "#9CA3AF")
                     st.markdown(f"**{gap.get('gap_type', 'General Gap')}** <span style='font-size: 0.75rem; color: {color}; font-weight: 600;'>({sev})</span>", unsafe_allow_html=True)
                     st.caption(gap.get('description', ''))
-                    
+
     with col_visual:
         # Calculate simulation score progression
         severity_weights = {"Critical": 0.15, "High": 0.10, "Medium": 0.05, "Low": 0.02}
-        
+
         # Step-by-step progress list
         steps = ["Current"]
         scores = [current_score * 100]
-        
+
         temp_score = current_score
         for gap in fixed_gaps:
             weight = severity_weights.get(gap.get('severity', 'Medium').title(), 0.05)
@@ -54,20 +56,20 @@ def render_lift_simulator(current_score, gaps):
             temp_score = min(1.0, temp_score + lift)
             steps.append(gap.get('gap_type', 'Fix'))
             scores.append(temp_score * 100)
-            
+
         # Target representation (if all remaining gaps were fixed)
         all_remaining = [g for g in gaps if g not in fixed_gaps]
         for gap in all_remaining:
             weight = severity_weights.get(gap.get('severity', 'Medium').title(), 0.05)
             lift = weight * (1.0 - temp_score)
             temp_score = min(1.0, temp_score + lift)
-        
+
         steps.append("Target (100% Fix)")
         scores.append(temp_score * 100)
-        
+
         # Plotly Line Chart
         fig = go.Figure()
-        
+
         # Line Path
         fig.add_trace(go.Scatter(
             x=steps,
@@ -80,13 +82,13 @@ def render_lift_simulator(current_score, gaps):
             fill='tozeroy',
             fillcolor='rgba(124, 58, 237, 0.08)'
         ))
-        
+
         # Style details
         is_dark = st.session_state.get("theme", "Dark") == "Dark"
         bg_color = "rgba(0,0,0,0)"
         text_color = "#FFFFFF" if is_dark else "#0A0A0F"
         grid_color = "rgba(255, 255, 255, 0.06)" if is_dark else "rgba(0, 0, 0, 0.06)"
-        
+
         fig.update_layout(
             height=280,
             margin=dict(l=40, r=40, t=30, b=30),
@@ -106,18 +108,18 @@ def render_lift_simulator(current_score, gaps):
 
             showlegend=False
         )
-        
-        render_chart_with_explain_button(fig, 'Lift Simulator Progression', {'type': 'lift_simulator'}, 'Lift Simulator', use_container_width=True, config={'displayModeBar': False})
-        
+
+        render_chart_with_copilot(fig, "Strategic Lift Simulation", chart_data={"steps": steps, "scores": scores}, key="lift_simulation")
+
         # Summary metrics
         final_lift = scores[-2] - scores[0] if len(scores) > 1 else 0
-        
+
         s_col1, s_col2 = st.columns(2)
         with s_col1:
             st.metric("Current", f"{scores[0]:.0f}%")
         with s_col2:
             st.metric("Projected", f"{scores[-2]:.0f}%", delta=f"+{final_lift:.1f}%" if final_lift > 0 else None)
-            
+
         if final_lift > 0:
             st.success(f"🎯 **Growth Opportunity:** Implementing these selected fixes yields a **+{final_lift:.1f}% lift** in brand presence!")
         else:

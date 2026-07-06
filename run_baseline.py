@@ -1,6 +1,7 @@
+import argparse
 import json
 import logging
-import argparse
+
 from geo_audit_agent.agent import build_geo_audit_agent
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

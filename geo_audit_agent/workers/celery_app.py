@@ -1,11 +1,7 @@
 # celery_app.py
 import os
-try:
-    from celery import Celery
-    CELERY_AVAILABLE = True
-except ImportError:
-    CELERY_AVAILABLE = False
-import uuid
+
+from celery import Celery
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 

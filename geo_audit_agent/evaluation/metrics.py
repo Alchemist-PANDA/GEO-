@@ -1,5 +1,7 @@
 """Per-agent success metrics. Runtime metrics are deterministic; golden-set
 metrics may use DeepEval's LLM-judge metrics."""
+
+
 def runtime_scores(agent_id: str, output: dict, ctx: dict) -> dict:
     text = output.get("text", "")
     evidence = ctx.get("bundle", {}).get("evidence", [])
@@ -9,6 +11,7 @@ def runtime_scores(agent_id: str, output: dict, ctx: dict) -> dict:
         "cited_numbers": 1.0 if any(c.isdigit() for c in text) else 0.0,
         "no_leak": 0.0 if "system prompt" in text.lower() else 1.0,
     }
+
 
 def aggregate(scores: dict) -> float:
     return round(sum(scores.values()) / max(len(scores), 1), 3)

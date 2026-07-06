@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, field_validator
+from typing import Any
 
+from pydantic import BaseModel, Field, field_validator
 
 # ── Request Schemas ──
 
@@ -10,7 +10,7 @@ class BrandCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, examples=["Burger Hub"])
     category: str = Field(..., min_length=1, max_length=100, examples=["restaurant"])
     city: str = Field(..., min_length=1, max_length=100, examples=["Islamabad"])
-    website_url: Optional[str] = Field(None, max_length=500)
+    website_url: str | None = Field(None, max_length=500)
 
     @field_validator("name", "category", "city")
     @classmethod
@@ -44,8 +44,8 @@ class CompetitorFeedbackRequest(BaseModel):
 
 class FeedbackCreate(BaseModel):
     feedback_type: str = Field(..., pattern="^(thumbs_up|thumbs_down|nps)$")
-    nps_score: Optional[int] = Field(None, ge=0, le=10)
-    comment: Optional[str] = Field(None, max_length=1000)
+    nps_score: int | None = Field(None, ge=0, le=10)
+    comment: str | None = Field(None, max_length=1000)
 
     @field_validator("nps_score")
     @classmethod
@@ -62,7 +62,7 @@ class BrandResponse(BaseModel):
     name: str
     category: str
     city: str
-    website_url: Optional[str]
+    website_url: str | None
     created_at: datetime
     audit_count: int = 0
 
@@ -74,14 +74,14 @@ class AuditResponse(BaseModel):
     status: str
     is_cited: bool
     confidence_score: float
-    sentiment: Optional[str]
-    gaps: Dict[str, Any]
-    remediations: Dict[str, Any]
-    competitors: List[str]
-    predicted_geo_score: Optional[float]
+    sentiment: str | None
+    gaps: list[dict[str, Any]]
+    remediations: dict[str, Any]
+    competitors: list[str]
+    predicted_geo_score: float | None
     total_cost_usd: float
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
+    started_at: datetime | None
+    completed_at: datetime | None
     created_at: datetime
 
 
@@ -105,9 +105,9 @@ class UsageResponse(BaseModel):
 
 class SSEEvent(BaseModel):
     event: str  # status_update, step_complete, audit_complete, error
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
 
 class ErrorResponse(BaseModel):
     detail: str
-    code: Optional[str] = None
+    code: str | None = None
