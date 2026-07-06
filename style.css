@@ -652,8 +652,8 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
     padding: 16px;
     border-left: 4px solid;
     transition: all 0.3s ease;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.04);
     backdrop-filter: blur(8px);
     margin-bottom: 12px;
 }
@@ -667,8 +667,8 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(124, 58, 237, 0.06);
     transition: all 0.3s ease;
 }
 
@@ -697,6 +697,4 @@ div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
     height: 100%;
     border-radius: 4px;
     transition: width 1s ease;
-}
-
 }

@@ -7,14 +7,16 @@ DATABASE_URL = os.getenv(
     "sqlite:///geo_saas.db"
 )
 
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-    pool_recycle=300,
-)
+_engine_kwargs = {"echo": False}
+if not DATABASE_URL.startswith("sqlite"):
+    _engine_kwargs.update(
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
+
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
 
 @contextmanager

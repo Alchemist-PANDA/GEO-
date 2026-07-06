@@ -16,6 +16,8 @@ from geo_audit_agent.ui.remediation_cards import render_remediation_hub
 from geo_audit_agent.ui.lift_simulator import render_lift_simulator
 from geo_audit_agent.ui.brand_visibility import render_brand_visibility
 from geo_audit_agent.ui.live_ticker import render_live_ticker
+from geo_audit_agent.ui.competitor_intelligence import render_competitor_intelligence
+from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +60,8 @@ if "tracked_keywords" not in st.session_state:
     st.session_state.tracked_keywords = []
 if "keyword_runs" not in st.session_state:
     st.session_state.keyword_runs = {}
+if "competitor_data" not in st.session_state:
+    st.session_state.competitor_data = None
 
 # Pre-populate default data for first-load beauty
 if st.session_state.audit_results is None:
@@ -100,6 +104,7 @@ if st.session_state.audit_results is None:
         }
     ]
     st.session_state.score_history.append(0.68)
+    st.session_state.competitor_data = run_competitor_scan("Burger Hub", "fast food", "Islamabad")
 
 if not st.session_state.tracked_keywords:
     default_keywords = [
@@ -844,8 +849,8 @@ with h_col2:
 if st.session_state.audit_results:
     res = st.session_state.audit_results
 
-    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare, tab_keywords = st.tabs([
-        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark", "🔍 Keyword Monitoring"
+    tab_overview, tab_gaps, tab_remediation, tab_simulator, tab_compare, tab_keywords, tab_competitors, tab_visibility = st.tabs([
+        "📈 Dashboard Overview", "🚩 Search Gap Analysis", "🛠️ Remediation Hub", "🧪 What-If Simulator", "🔄 Compare & Benchmark", "🔍 Keyword Monitoring", "🏢 Competitor Intelligence", "🌐 Brand Visibility"
     ])
 
     with tab_overview:
@@ -1196,6 +1201,23 @@ if st.session_state.audit_results:
                                 yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
                             )
                             st.plotly_chart(fig_kw_trend, use_container_width=True, config={'displayModeBar': False})
+
+    with tab_competitors:
+        if st.session_state.competitor_data is None:
+            brand_nm = res.get("brand_name", "")
+            cat = res.get("category", "")
+            cty = res.get("city", "Islamabad")
+            if brand_nm and cat:
+                st.session_state.competitor_data = run_competitor_scan(brand_nm, cat, cty)
+        render_competitor_intelligence(st.session_state.competitor_data)
+
+    with tab_visibility:
+        render_brand_visibility(
+            st.session_state.multi_model_results,
+            res.get("confidence_score", 0.0)
+        )
+        render_live_ticker(res.get("brand_name", "Your Brand"))
+
 else:
     st.markdown("""
         <div style='text-align: center; padding: 100px 0;'>

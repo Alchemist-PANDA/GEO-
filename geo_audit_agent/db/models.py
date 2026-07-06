@@ -101,9 +101,9 @@ class Audit(SQLModel, table=True):
     sentiment: Optional[str] = Field(default=None, max_length=20)
 
     # Structured results (JSONB)
-    gaps: Dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    gaps: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=SAColumn(JSONB, server_default=text("'[]'"))
     )
     planned_actions: Dict[str, Any] = Field(
         default_factory=dict,
@@ -165,6 +165,30 @@ class AuditFeedback(SQLModel, table=True):
     )
 
     audit: Audit = Relationship(back_populates="feedback")
+
+
+# ── Competitor Scans ──
+
+class CompetitorScan(SQLModel, table=True):
+    __tablename__ = "competitor_scans"
+    __table_args__ = (
+        Index("idx_competitor_scans_brand_id", "brand_id"),
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    brand_id: uuid.UUID = Field(foreign_key="brands.id", index=True)
+    competitors_json: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    )
+    summary: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
 
 
 # ── LLM Call Log (for cost tracking & debugging) ──

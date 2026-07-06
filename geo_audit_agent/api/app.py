@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from geo_audit_agent.api.routes import audits, brands, feedback, health
+from geo_audit_agent.api.routes import audits, brands, feedback, health, competitors
 from geo_audit_agent.api.rate_limiter import RateLimitMiddleware, RedisRateLimiter
 
 logger = logging.getLogger(__name__)
@@ -28,3 +28,4 @@ app.include_router(health.router, tags=["Health"])
 app.include_router(brands.router, prefix="/v1", tags=["Brands"])
 app.include_router(audits.router, prefix="/v1", tags=["Audits"])
 app.include_router(feedback.router, prefix="/v1", tags=["Feedback"])
+app.include_router(competitors.router, prefix="/v1", tags=["Competitors"])
