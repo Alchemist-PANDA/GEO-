@@ -18,7 +18,7 @@ def write_result_jsonl(file_path: str, result: Dict[str, Any]):
 
 def load_completed_test_ids(file_path: str) -> Set[str]:
     """Reads existing JSONL file and collects all test_ids that succeeded."""
-    completed = set()
+    completed: Set[str] = set()
     if not os.path.exists(file_path):
         return completed
     

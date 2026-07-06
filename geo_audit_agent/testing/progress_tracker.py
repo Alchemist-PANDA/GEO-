@@ -64,7 +64,7 @@ def generate_summary_report(results_file: str) -> str:
             city_stats[city]["cites"] += 1
             
     # Competitor mentions
-    competitor_counter = Counter()
+    competitor_counter: Counter[str] = Counter()
     for r in success_records:
         competitors = r.get("competitors_mentioned", [])
         for comp in competitors:
@@ -139,7 +139,7 @@ def write_summary_json(results_file: str, summary_file: str):
     total = len(success_records)
     
     # Calculate competitor mentions count
-    competitors = Counter()
+    competitors: Counter[str] = Counter()
     for r in success_records:
         for c in r.get("competitors_mentioned", []):
             competitors[c] += 1
