@@ -85,7 +85,9 @@ async def generate_content_async(
         except httpx.RequestError as e:
             raise APIError(f"Network error during API call: {e}")
         finally:
-            import json, datetime, os
+            import json
+            import datetime
+            import os
             log_record = {
                 "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
                 "request": {
