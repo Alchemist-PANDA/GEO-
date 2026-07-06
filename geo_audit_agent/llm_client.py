@@ -33,7 +33,7 @@ _llm_cache: _LRUCache = _LRUCache()
 def _cache_key(model: str, messages: list[dict], max_tokens: int, temperature: float) -> str:
     """Generate a deterministic cache key for LLM requests."""
     payload = json.dumps({"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}, sort_keys=True)
-    return hashlib.md5(payload.encode()).hexdigest()
+    return hashlib.md5(payload.encode(), usedforsecurity=False).hexdigest()
 
 
 def call_proxy_llm(model: str, messages: list[dict], max_tokens: int = 300, temperature: float = 0.2, use_cache: bool = True) -> str:
@@ -54,6 +54,11 @@ def call_proxy_llm(model: str, messages: list[dict], max_tokens: int = 300, temp
         EnvironmentError: If required env vars are not set.
         requests.HTTPError: If the API returns an error status.
     """
+    if os.getenv("FORCE_MOCK") == "true":
+        last_user = next((m["content"] for m in reversed(messages)
+                          if m.get("role") == "user"), "")
+        return f"[mock response] {str(last_user)[:100]}"
+
     base_url = os.getenv("ANTHROPIC_BASE_URL")
     api_key = os.getenv("ANTHROPIC_AUTH_TOKEN")
 

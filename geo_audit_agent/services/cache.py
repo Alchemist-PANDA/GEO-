@@ -37,7 +37,7 @@ def _get_redis():
 
 def get_cache_key(tier: str, prompt: str) -> str:
     payload = json.dumps({"tier": tier, "prompt": prompt}, sort_keys=True)
-    return f"geo:cache:{hashlib.md5(payload.encode()).hexdigest()}"
+    return f"geo:cache:{hashlib.md5(payload.encode(), usedforsecurity=False).hexdigest()}"
 
 def _record_cache_op(operation: str) -> None:
     try:

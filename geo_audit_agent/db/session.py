@@ -8,7 +8,7 @@ DATABASE_URL = os.getenv(
     "sqlite:///geo_saas.db"
 )
 
-_engine_kwargs = {"echo": False}
+_engine_kwargs: dict = {"echo": False}
 if not DATABASE_URL.startswith("sqlite"):
     _engine_kwargs.update(
         pool_size=20,

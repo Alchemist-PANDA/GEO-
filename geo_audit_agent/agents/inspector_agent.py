@@ -18,7 +18,8 @@ class InspectorAgent:
     @trace_span("inspector.run", agent_id="inspector")
     def inspect(self, output: dict, context: dict, *, agent_id: str,
                 trace_id: str | None = None) -> InspectorVerdict:
-        checks, issues = {}, []
+        checks: dict[str, bool] = {}
+        issues: list[str] = []
 
         checks["output_quality"] = self._output_quality(output, issues)
         checks["evidence_present"] = self._evidence(output, context, issues)

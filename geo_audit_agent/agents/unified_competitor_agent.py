@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 def _deterministic_score(brand: str, competitor: str, metric: str) -> int:
-    seed = hashlib.md5(f"{brand}:{competitor}:{metric}".encode()).hexdigest()
+    seed = hashlib.md5(f"{brand}:{competitor}:{metric}".encode(), usedforsecurity=False).hexdigest()
     return int(seed[:2], 16) % 61 + 30
 
 
@@ -79,7 +79,7 @@ def run_competitor_scan(
                 break
         competitors = matched or [f"{category.title()} Leader A", f"{category.title()} Leader B", f"{category.title()} Leader C"]
 
-    results = []
+    results: list[dict] = []
     for comp in competitors:
         scores = _generate_competitor_scores(brand_name, comp)
         explanations = _build_explanations(brand_name, comp, scores)

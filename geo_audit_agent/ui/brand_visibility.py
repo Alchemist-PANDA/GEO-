@@ -4,7 +4,7 @@ import streamlit as st
 
 
 def _bv_seed(text):
-    return int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+    return int(hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
 
 def render_brand_visibility(multi_model_results, current_score):

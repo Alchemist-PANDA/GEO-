@@ -1,7 +1,8 @@
 """Long-term memory via Mem0, scoped per user_id. Mock-safe in-process store offline."""
 import os
 
-_mem, _fallback = None, {}
+_mem = None
+_fallback: dict = {}
 
 
 def _client():

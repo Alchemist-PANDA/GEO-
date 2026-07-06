@@ -124,10 +124,12 @@ async def list_proposals(
     session: Session = Depends(get_async_session),
 ):
     try:
+        from sqlmodel import col
+
         from geo_audit_agent.db.models import ImprovementProposal
         proposals = session.query(ImprovementProposal).filter(
-            ImprovementProposal.status == "pending"
-        ).order_by(ImprovementProposal.created_at.desc()).limit(20).all()
+            col(ImprovementProposal.status) == "pending"
+        ).order_by(col(ImprovementProposal.created_at).desc()).limit(20).all()
         return [{"id": str(p.id), "agent_id": p.agent_id, "type": p.proposal_type,
                  "description": p.description, "status": p.status} for p in proposals]
     except Exception as e:

@@ -40,7 +40,7 @@ def variant_active(agent_id, request_key: str) -> dict | None:
     if not raw:
         return None
     cfg = json.loads(raw)
-    bucket = int(hashlib.md5(request_key.encode()).hexdigest()[:8], 16) % 100
+    bucket = int(hashlib.md5(request_key.encode(), usedforsecurity=False).hexdigest()[:8], 16) % 100
     return cfg if bucket < cfg["pct"] else None
 
 

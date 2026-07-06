@@ -15,7 +15,7 @@ def _brand(context: dict) -> str:
 
 
 def _seeded_rng(*parts: str) -> random.Random:
-    seed = hashlib.md5("|".join(str(p) for p in parts).encode()).hexdigest()
+    seed = hashlib.md5("|".join(str(p) for p in parts).encode(), usedforsecurity=False).hexdigest()
     return random.Random(int(seed[:8], 16))
 
 

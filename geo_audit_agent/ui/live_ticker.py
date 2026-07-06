@@ -16,7 +16,7 @@ def render_live_ticker(brand_name):
     """, unsafe_allow_html=True)
 
     now = datetime.now()
-    seed = int(hashlib.md5(f"{brand_name}:{now.strftime('%Y%m%d%H')}".encode()).hexdigest()[:8], 16)
+    seed = int(hashlib.md5(f"{brand_name}:{now.strftime('%Y%m%d%H')}".encode(), usedforsecurity=False).hexdigest()[:8], 16)
 
     templates = [
         ("✅", f"JSON-LD schema generated for {brand_name}"),

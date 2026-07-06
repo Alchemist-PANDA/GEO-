@@ -16,6 +16,6 @@ def _load():
 def embed(texts: list[str]) -> list[list[float]]:
     model = _load()
     if model is None:
-        return [[int(hashlib.md5((t + str(i)).encode()).hexdigest()[:2], 16) / 255
+        return [[int(hashlib.md5((t + str(i)).encode(), usedforsecurity=False).hexdigest()[:2], 16) / 255
                  for i in range(8)] for t in texts]
     return model.encode(texts, normalize_embeddings=True).tolist()
