@@ -410,7 +410,12 @@ def remediation_handler_node(state: AuditState) -> AuditState:
                 "correlation_id": state.correlation_id,
                 "audit_id": state.audit_id,
             })
-            results[tool_name] = {"error": str(e)}
+            result_key = {
+                "generate_json_ld": "json_ld",
+                "draft_technical_whitepaper": "whitepaper",
+                "generate_review_template": "review_template",
+            }.get(tool_name, tool_name)
+            results[result_key] = {"error": str(e)}
 
     state.remediation_outputs = results
 

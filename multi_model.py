@@ -9,7 +9,6 @@ Simulated mode uses deterministic sample outputs for demonstration purposes only
 """
 
 from typing import List
-import random
 import hashlib
 
 
@@ -103,7 +102,6 @@ def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> d
 def _run_simulated_audit(brand: str, category: str, city: str, model_info: dict) -> dict:
     """Generate deterministic simulated audit result for demonstration purposes."""
     seed = _get_deterministic_seed(brand, model_info["name"])
-    random.seed(seed)
 
     mentioned = seed % 100 >= 30
 
@@ -160,7 +158,6 @@ def _apply_model_variation(audit: dict, model_info: dict, brand: str) -> dict:
     """Apply controlled variation to make each model behave differently."""
     varied = audit.copy()
     seed = _get_deterministic_seed(brand, model_info["name"])
-    random.seed(seed)
 
     if seed % 100 < 30:
         varied["citation_found"] = False

@@ -62,6 +62,7 @@ class AgentState(TypedDict):
     enable_anomalies: Optional[bool]
     geo_potential_score: Optional[float]
     anomalies: Optional[List[Dict]]
+    force_mock: Optional[bool]
 
 # 2. Nodes
 
@@ -70,9 +71,8 @@ def predictive_node(state: AgentState) -> AgentState:
     logger.info("Starting Node: predictive_node")
     features = {
         "has_json_ld": any(g.get("tool_required") == "generate_json_ld" for g in state.get("gaps", [])),
-        "recent_reviews": any(g.get("tool_required") in ("create_review_snippet", "generate_review_template") for g in state.get("gaps", [])),
-        "high_authority": any(g.get("tool_required") == "draft_technical_whitepaper" for g in state.get("gaps", [])),
-        "city_relevance": True # Simplified
+        "has_reviews": any(g.get("tool_required") in ("create_review_snippet", "generate_review_template") for g in state.get("gaps", [])),
+        "has_technical_whitepaper": any(g.get("tool_required") == "draft_technical_whitepaper" for g in state.get("gaps", [])),
     }
     state["geo_potential_score"] = predict_score(features)
     logger.info(f"Finished Node: predictive_node (Score: {state['geo_potential_score']})")

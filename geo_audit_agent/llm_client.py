@@ -6,6 +6,7 @@ import os
 import json
 import logging
 import hashlib
+from collections import OrderedDict
 import requests
 from typing import List, Dict
 from dotenv import load_dotenv
@@ -16,8 +17,17 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Simple in-memory cache for LLM responses
-_llm_cache: Dict[str, str] = {}
+_LLM_CACHE_MAX_SIZE = 256
+
+class _LRUCache(OrderedDict):
+    def __setitem__(self, key, value):
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        if len(self) > _LLM_CACHE_MAX_SIZE:
+            self.popitem(last=False)
+
+_llm_cache: _LRUCache = _LRUCache()
 
 
 def _cache_key(model: str, messages: List[Dict], max_tokens: int, temperature: float) -> str:

@@ -735,7 +735,7 @@ def login_screen():
 
             if submit:
                 expected_user = os.getenv("DASHBOARD_USER", "admin")
-                expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
+                expected_pass = os.getenv("DASHBOARD_PASS", "changeme")
                 if username == expected_user and password == expected_pass:
                     st.session_state.authenticated = True
                     st.success("Welcome back!")
@@ -889,7 +889,7 @@ if st.session_state.audit_results:
             bg_gradient = "rgba(16, 185, 129, 0.15)" if is_cited else "rgba(239, 68, 68, 0.15)"
             st.markdown(f"""
             <div class="metric-card">
-                <div class="metric-icon-wrapper" style="background: {bg_gradient}; border-color: rgba(16, 185, 129, 0.3) if is_cited else rgba(239, 68, 68, 0.3); color: {status_color};">
+                <div class="metric-icon-wrapper" style="background: {bg_gradient}; border-color: {'rgba(16, 185, 129, 0.3)' if is_cited else 'rgba(239, 68, 68, 0.3)'}; color: {status_color};">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{icon_stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                         <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>

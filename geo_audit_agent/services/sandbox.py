@@ -14,10 +14,13 @@ class SandboxExecutor:
 
     def validate_html(self, html_content: str) -> dict:
         try:
+            import base64
             from e2b_code_interpreter import Sandbox
+            encoded = base64.b64encode(html_content.encode()).decode()
             with Sandbox(timeout=self.timeout_ms) as sandbox:
                 result = sandbox.run_code(f"""
 import json
+import base64
 from html.parser import HTMLParser
 
 class Validator(HTMLParser):
@@ -27,9 +30,10 @@ class Validator(HTMLParser):
     def handle_starttag(self, tag, attrs): pass
     def handle_endtag(self, tag): pass
 
+html_content = base64.b64decode("{encoded}").decode()
 validator = Validator()
 try:
-    validator.feed('''{html_content}''')
+    validator.feed(html_content)
     print(json.dumps({{"valid": True, "errors": []}}))
 except Exception as e:
     print(json.dumps({{"valid": False, "errors": [str(e)]}}))

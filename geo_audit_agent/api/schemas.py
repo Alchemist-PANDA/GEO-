@@ -56,7 +56,7 @@ class AuditResponse(BaseModel):
     is_cited: bool
     confidence_score: float
     sentiment: Optional[str]
-    gaps: Dict[str, Any]
+    gaps: List[Dict[str, Any]]
     remediations: Dict[str, Any]
     competitors: List[str]
     predicted_geo_score: Optional[float]

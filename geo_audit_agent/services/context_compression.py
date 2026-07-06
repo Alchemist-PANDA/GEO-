@@ -1,13 +1,13 @@
 # context_compression.py
 import logging
-import torch
 
 logger = logging.getLogger(__name__)
 
 class LLMLinguaCompressor:
     """Manages token compression on long web context inputs using LLMLingua perplexity checks."""
-    
+
     def __init__(self, model_name: str = "microsoft/llmlingua-2-bert-base-multilingual-cased-meeting"):
+        import torch
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.compressor = None
         self.model_name = model_name

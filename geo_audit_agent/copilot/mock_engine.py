@@ -327,9 +327,9 @@ def _explain_chart_answer(context: dict) -> str:
 
 def _summarize_chart_data(chart_data) -> str:
     if isinstance(chart_data, dict):
-        if "steps" in chart_data and "scores" in chart_data:
+        if "steps" in chart_data and "scores" in chart_data and chart_data["scores"]:
             return f"{len(chart_data['steps'])} steps from {chart_data['scores'][0]:.0f}% to {chart_data['scores'][-1]:.0f}%"
-        if "dates" in chart_data and "values" in chart_data:
+        if "dates" in chart_data and "values" in chart_data and chart_data["values"]:
             vals = chart_data["values"]
             return f"range from {min(vals)} to {max(vals)} over {len(vals)} data points"
         if "value" in chart_data:

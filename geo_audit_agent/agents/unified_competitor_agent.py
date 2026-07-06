@@ -64,7 +64,6 @@ def run_competitor_scan(
 ) -> Dict[str, Any]:
     """Run a competitor intelligence scan and return structured results."""
     if not competitors:
-        seed = hashlib.md5(f"{brand_name}:{category}:{city}".encode()).hexdigest()
         base_names = {
             "restaurant": ["Savour Foods", "Monal Restaurant", "Tuscany Courtyard"],
             "fast food": ["KFC", "McDonald's", "Hardee's"],

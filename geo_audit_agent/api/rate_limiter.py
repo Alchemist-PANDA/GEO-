@@ -23,16 +23,18 @@ class RedisRateLimiter:
             logger.error(f"Redis rate limiter connection failed: {e}")
 
     def is_allowed(self, client_key: str) -> Tuple[bool, Dict[str, str]]:
+        import uuid as _uuid
         now = int(time.time())
         if not self.redis:
             return True, {}
 
         key = f"rate_limit:{client_key}"
+        member = f"{now}:{_uuid.uuid4().hex[:8]}"
         try:
             pipe = self.redis.pipeline()
             pipe.zremrangebyscore(key, 0, now - self.window)
             pipe.zcard(key)
-            pipe.zadd(key, {str(now): now})
+            pipe.zadd(key, {member: now})
             pipe.expire(key, self.window)
             _, count, _, _ = pipe.execute()
 
@@ -43,7 +45,7 @@ class RedisRateLimiter:
                 "X-RateLimit-Reset": str(now + self.window),
             }
 
-            if count > self.limit:
+            if count >= self.limit:
                 headers["Retry-After"] = str(self.window)
                 return False, headers
 

@@ -65,7 +65,8 @@ def render_brand_visibility(multi_model_results, current_score):
         mapped_platforms = []
         for r in results_list:
             model_name = r.get("model", "")
-            confidence = int(r.get("confidence", 0) * 100) if r.get("mentioned") else int(r.get("confidence", 0.25) * 100)
+            raw_conf = r.get("confidence") or 0
+            confidence = int(raw_conf * 100) if r.get("mentioned") else int((raw_conf or 0.25) * 100)
             mapped_platforms.append({"name": model_name, "score": confidence})
 
         existing_names = {p["name"].lower() for p in mapped_platforms}

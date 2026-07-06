@@ -803,7 +803,7 @@ def login_screen():
 
             if submit:
                 expected_user = os.getenv("DASHBOARD_USER", "admin")
-                expected_pass = os.getenv("DASHBOARD_PASS", "geo123")
+                expected_pass = os.getenv("DASHBOARD_PASS", "changeme")
                 if username == expected_user and password == expected_pass:
                     st.session_state.authenticated = True
                     st.success("Welcome back!")
@@ -1175,7 +1175,7 @@ with trend_col2:
 
 # Live Ticker activity feed at the bottom
 st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
-st_autorefresh(interval=5000, key="bv_ticker_refresh")
+st_autorefresh(interval=30000, key="bv_ticker_refresh")
 
 ticker_mentions = int(bv_val * 26.63) + (_bv_seed(f"{brand_name_val}:{datetime.now().strftime('%Y%m%d%H%M%S')[:13]}") % 7)
 ticker_citations = int(cr_val * 26.63) + (_bv_seed(f"{brand_name_val}:c:{datetime.now().strftime('%Y%m%d%H%M%S')[:13]}") % 5)

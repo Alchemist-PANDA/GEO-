@@ -1,4 +1,3 @@
-import time
 import uuid
 
 import plotly.io as pio

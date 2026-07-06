@@ -60,7 +60,7 @@ def render_competitor_intelligence(competitor_data):
 
         colors = ['#3B82F6', '#10B981', '#F59E0B']
         for i, comp in enumerate(competitors[:3]):
-            comp_scores = comp["scores"]
+            comp_scores = comp.get("scores", {})
             comp_values = [comp_scores.get(k, 0) for k in metric_keys]
             color = colors[i % len(colors)]
             fig.add_trace(go.Scatterpolar(
@@ -85,13 +85,13 @@ def render_competitor_intelligence(competitor_data):
             showlegend=True,
             legend=dict(font=dict(size=12)),
         )
-        render_chart_with_copilot(fig, "Competitive Radar", chart_data={"brand": brand_name, "competitors": [c["scores"].get("competitor") for c in competitors]}, key="competitive_radar")
+        render_chart_with_copilot(fig, "Competitive Radar", chart_data={"brand": brand_name, "competitors": [c.get("scores", {}).get("competitor") for c in competitors]}, key="competitive_radar")
 
     # Competitor cards
     st.markdown("#### 🏢 Competitor Breakdown")
     for comp in competitors:
-        scores = comp["scores"]
-        explanations = comp["explanations"]
+        scores = comp.get("scores", {})
+        explanations = comp.get("explanations", [])
         comp_name = scores.get("competitor", "Unknown")
         geo = scores.get("geo_score", 0)
 
