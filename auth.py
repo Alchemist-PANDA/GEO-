@@ -159,6 +159,7 @@ def sign_out() -> None:
 
 
 def _friendly_error(e: Exception) -> str:
+    print(f"🔥 [AUTH ERROR] Supabase rejected request: {repr(e)}")
     msg = str(e)
     if "already registered" in msg.lower():
         return "That email is already registered — try signing in instead."
@@ -166,7 +167,9 @@ def _friendly_error(e: Exception) -> str:
         return "Invalid email or password."
     if "email not confirmed" in msg.lower():
         return "Please confirm your email before signing in (check your inbox)."
-    return "Something went wrong. Please try again."
+    if "signups not allowed" in msg.lower() or "not allowed to sign up" in msg.lower():
+        return "Signups are currently disabled. Please contact the administrator."
+    return f"Something went wrong: {msg[:50]}..."
 
 
 def require_login() -> AuthedUser:
