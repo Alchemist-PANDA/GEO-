@@ -1,3 +1,6 @@
+import datetime
+print("🚀 dashboard.py started at", datetime.datetime.now())
+
 import streamlit as st
 
 # --- DEBUGGING PRINTS ---
@@ -14,7 +17,6 @@ import os
 import hashlib
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from streamlit_autorefresh import st_autorefresh
 
 # --- NEW AUTH IMPORTS ---
 from auth import current_user, sign_in, sign_up, sign_out
@@ -295,6 +297,11 @@ if user is None:
 
 # --- If we reach here, the user is logged in ---
 print("[DEBUG] => User is logged in, proceeding to render dashboard")
+
+st.write("Hello World!")
+st.write(f"Current time: {datetime.now()}")
+st.stop()
+
 # Load dashboard CSS and proceed with the normal dashboard
 load_css("style.css")
 
