@@ -107,8 +107,27 @@ services:
       - grafanadata:/var/lib/grafana
     restart: unless-stopped
 
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  langfuse:
+    image: langfuse/langfuse:2
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - SALT=${SALT}
+    ports:
+      - "3000:3000"
+
 volumes:
   pgdata:
   redisdata:
   qdrant_data:
   grafanadata:
+  qdrant_data:

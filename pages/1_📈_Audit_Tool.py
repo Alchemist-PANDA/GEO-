@@ -97,7 +97,7 @@ if st.session_state.audit_results is None:
         "llm_response": "Burger Hub has emerging visibility in Islamabad's fast food category. While it is cited in local listings, there is a lack of structured LocalBusiness schema and technical entity backlinks, which creates a critical information gap for generative engines."
     }
     st.session_state.audit_results = mock_inputs
-    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False)
+    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False, user_id=st.session_state.get("user_id"))
     st.session_state.comparison_data["Burger Hub"] = mock_inputs
     st.session_state.remediations = [
         {
@@ -123,16 +123,17 @@ if not st.session_state.tracked_keywords:
             "last_run": "2026-06-2" + str(2 + (i % 3)),
             "num_runs": 1 + (i % 4)
         }
-
+if st.session_state.multi_model_results:
+    st.session_state.multi_model_results = normalize_multi_model_results(st.session_state.multi_model_results)
 
 # --- Custom CSS (Modernized) ---
 def apply_theme():
     # Font imports
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     if st.session_state.theme == "Dark":
         bg_style = "radial-gradient(circle at 50% 0%, #1c1140 0%, #0A0A0F 65%, #050508 100%)"
@@ -698,7 +699,7 @@ def generate_markdown_report(res, approved_items):
 
 # --- Authentication ---
 def login_screen():
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
         <div class="geo-shape geo-shape-1"></div>
         <div class="geo-shape geo-shape-2"></div>
         <div class="geo-shape geo-shape-3"></div>
@@ -718,17 +719,17 @@ def login_screen():
                 background: linear-gradient(135deg, #F8FAFC 0%, #EDE9FE 30%, #DBEAFE 60%, #FCE7F3 100%) !important;
             }
         </style>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1.2, 1.5, 1.2])
     with col2:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
             <div class="login-card">
                 <div class="login-logo">🌍</div>
                 <div class="login-title">BrandSight GEO</div>
                 <div class="login-subtitle">AI-Powered Generative Engine Optimization</div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         with st.form("login_form"):
             username = st.text_input("Username", placeholder="admin")
@@ -740,6 +741,25 @@ def login_screen():
                 expected_pass = os.getenv("DASHBOARD_PASS", "changeme")
                 if username == expected_user and password == expected_pass:
                     st.session_state.authenticated = True
+                    
+                    try:
+                        from sqlmodel import select
+                        from geo_audit_agent.db.session import get_session
+                        from geo_audit_agent.db.models import UserProfile
+                        import uuid
+                        
+                        admin_email = f"{username}@brandsightgeo.com"
+                        with get_session() as s:
+                            user = s.exec(select(UserProfile).where(UserProfile.email == admin_email)).first()
+                            if not user:
+                                user = UserProfile(id=uuid.uuid4(), email=admin_email, display_name=username, tier="free")
+                                s.add(user)
+                                s.commit()
+                            st.session_state.user_id = str(user.id)
+                    except Exception as e:
+                        logger.error(f"Error setting up mock user: {e}")
+                        pass
+                    
                     st.success("Welcome back!")
                     st.rerun()
                 else:
@@ -790,12 +810,17 @@ if run_audit:
                 "remediation_results": []
             }
             st.write(f"🌐 Crawling search engines for {brand_name} visibility...")
+            if st.session_state.audit_results:
+                st.session_state.last_scan_score = st.session_state.audit_results.get("confidence_score", 0)
             results = agent.invoke(inputs)
             st.session_state.audit_results = results
             st.session_state.comparison_data[brand_name] = results
 
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
-            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
+            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False, user_id=st.session_state.get("user_id"))
+            if "error" in multi_results:
+                st.error(multi_results["error"])
+                st.stop()
             st.session_state.multi_model_results = multi_results
 
             confidence = results.get("confidence_score", 0.0)
@@ -927,6 +952,8 @@ if st.session_state.audit_results:
             </div>
             """, unsafe_allow_html=True)
 
+        render_market_simulator()
+        
         col_left, col_right = st.columns([1.6, 1])
 
         with col_left:
@@ -1255,3 +1282,7 @@ st.sidebar.markdown("""
         &copy; 2026 Alchemist PANDA
     </div>
 """, unsafe_allow_html=True)
+
+# Inject Copilot FAB
+from geo_audit_agent.ui.copilot_fab import render_copilot_fab  # noqa: E402
+render_copilot_fab()

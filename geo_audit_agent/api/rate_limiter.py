@@ -14,13 +14,28 @@ class RedisRateLimiter:
 
     def __init__(self, host: str = "localhost", port: int = 6379,
                  db: int = 1, limit: int = 100, window: int = 3600):
+        import os
         self.limit = limit
         self.window = window
         self.redis: redis.Redis | None = None
         try:
-            self.redis = redis.Redis(host=host, port=port, db=db, socket_timeout=3)
-        except Exception as e:
-            logger.error(f"Redis rate limiter connection failed: {e}")
+            import streamlit as st
+            redis_url = st.secrets.get("redis_url")
+        except Exception:
+            pass
+        if not redis_url:
+            redis_url = os.getenv("REDIS_URL")
+
+        if REDIS_MODULE_AVAILABLE:
+            try:
+                if redis_url:
+                    self.redis = redis.from_url(redis_url, socket_timeout=3)
+                else:
+                    self.redis = redis.Redis(host=host, port=port, db=db, socket_timeout=3)  # type: ignore
+                self.redis.ping()
+            except Exception as e:
+                logger.warning(f"Redis rate limiter connection failed (rate limiting bypassed/fallback): {e}")
+                self.redis = None
 
     def is_allowed(self, client_key: str) -> tuple[bool, dict[str, str]]:
         import uuid as _uuid
@@ -50,7 +65,7 @@ class RedisRateLimiter:
                 return False, headers
 
             return True, headers
-        except redis.RedisError as e:
+        except RedisError as e:
             logger.error(f"Rate limiter error: {e}")
             return True, {}
 

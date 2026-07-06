@@ -9,12 +9,15 @@ description = "AI-Powered Generative Engine Optimization Dashboard"
 requires-python = ">=3.10"
 dependencies = [
     "streamlit>=1.30.0",
+    "extra-streamlit-components",
     "plotly>=5.0.0",
     "requests>=2.28.0",
     "python-dotenv",
     "langgraph>=0.2.0",
     "pydantic",
     "tenacity",
+    "anthropic>=0.52.0",
+    "supabase",
 ]
 
 [project.optional-dependencies]

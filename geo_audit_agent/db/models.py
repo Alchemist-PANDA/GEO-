@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import Any
 
@@ -8,6 +8,12 @@ from sqlalchemy import Column as SAColumn
 from sqlmodel import Field, Relationship, SQLModel
 
 JSONB = JSON
+
+# Reset MetaData and registry to prevent Streamlit hot-reload duplicate class errors
+SQLModel.metadata = MetaData()
+if hasattr(sqlmodel.main, "default_registry"):
+    sqlmodel.main.default_registry.dispose()
+    sqlmodel.main.default_registry._class_registry.clear()
 
 
 class AuditTier(str, Enum):
@@ -34,6 +40,7 @@ class FeedbackType(str, Enum):
 # ── Users (managed by Supabase Auth, mirrored for FK references) ──
 
 class UserProfile(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "user_profiles"
 
     id: uuid.UUID = Field(
@@ -45,6 +52,10 @@ class UserProfile(SQLModel, table=True):
     display_name: str | None = Field(default=None, max_length=100)
     plan_tier: str = Field(default="free", max_length=20)
     monthly_audit_quota: int = Field(default=10)
+    tier: str = Field(default="free", max_length=50)
+    tier_expires_at: Optional[datetime] = None
+    stripe_customer_id: Optional[str] = Field(default=None, max_length=255)
+    stripe_subscription_id: Optional[str] = Field(default=None, max_length=255)
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
@@ -59,6 +70,7 @@ class Brand(SQLModel, table=True):
     __tablename__ = "brands"
     __table_args__ = (
         Index("idx_brands_name_city", "name", "city"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -90,6 +102,7 @@ class Audit(SQLModel, table=True):
     __table_args__ = (
         Index("idx_audits_created_at", "created_at"),
         Index("idx_audits_status", "status"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -154,6 +167,7 @@ class Audit(SQLModel, table=True):
 # ── Feedback ──
 
 class AuditFeedback(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "audit_feedback"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -201,6 +215,7 @@ class LLMCallLog(SQLModel, table=True):
     __table_args__ = (
         Index("idx_llm_calls_audit_id", "audit_id"),
         Index("idx_llm_calls_created_at", "created_at"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -222,6 +237,7 @@ class LLMCallLog(SQLModel, table=True):
 # ── Guardrail Event Log ──
 
 class GuardrailEvent(SQLModel, table=True):
+    __table_args__ = {"extend_existing": True}
     __tablename__ = "guardrail_events"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

@@ -23,6 +23,25 @@ class AuditCreate(BaseModel):
     tier: str = Field(default="balanced", pattern="^(express|balanced|deep)$")
 
 
+class CompetitorAnalysisRequest(BaseModel):
+    brand_name: str = Field(..., min_length=1, max_length=255)
+    category: str = Field(..., min_length=1, max_length=100)
+    city: str = Field(..., min_length=1, max_length=100)
+    limit: int = Field(default=5, ge=1, le=20)
+
+
+class RemediationRequest(BaseModel):
+    brand_name: str = Field(...)
+    competitor_name: str = Field(...)
+    strategy_text: str = Field(...)
+
+
+class CompetitorFeedbackRequest(BaseModel):
+    competitor_id: str = Field(...)
+    is_helpful: bool = Field(...)
+    comment: Optional[str] = Field(None, max_length=1000)
+
+
 class FeedbackCreate(BaseModel):
     feedback_type: str = Field(..., pattern="^(thumbs_up|thumbs_down|nps)$")
     nps_score: int | None = Field(None, ge=0, le=10)

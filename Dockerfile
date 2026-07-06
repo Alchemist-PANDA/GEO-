@@ -3,8 +3,8 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc build-essential && \
     rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+COPY requirements-prod.txt .
+RUN pip install --user --no-cache-dir -r requirements-prod.txt
 
 FROM python:3.11-slim-bookworm AS runner
 WORKDIR /app

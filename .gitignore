@@ -30,3 +30,4 @@ jsonld_deploy_instructions.md
 # Database
 *.db
 
+.streamlit/secrets.toml

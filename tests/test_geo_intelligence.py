@@ -18,7 +18,7 @@ class TestGeoIntelligence(unittest.TestCase):
     def test_anomaly_similarity(self):
         # Using exact same words to ensure intersection/union > 0.5 in dummy logic
         score = compute_semantic_similarity("Burger Hub", "Burger Hub")
-        self.assertEqual(score, 1.0)
+        self.assertAlmostEqual(score, 1.0, places=6)
 
     def test_fingerprint_keywords(self):
         keywords = extract_tfidf_keywords("Burger Hub offers the best fast food.")

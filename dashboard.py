@@ -14,6 +14,7 @@ from multi_model import run_multi_model_audit
 
 # Import modernized dashboard components
 
+print("[DEBUG] => Auth imports completed")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,12 +34,273 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Load custom styling
+# st.warning(f"🔧 Debug Mode | Render Loop Counter: {st.session_state.render_count}")
+print("[DEBUG] => Page config and initial warning displayed")
+
+# --- Load custom styling for the dashboard (used later) ---
+def load_css(file_name="style.css"):
+    if os.path.exists(file_name):
+        with open(file_name, "r") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# ==============================================
+# BRANDSIGHT GEO LOGIN PAGE (shown if user is not logged in)
+# ==============================================
+
+def render_brandsight_login():
+    # Inject Bloom CSS (liquid glass, fonts, layout)
+    st.markdown(textwrap.dedent("""
+    <style>
+        /* ----- Fonts ----- */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;1,500&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Video background */
+        #bloom-bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        .bloom-content {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Liquid Glass classes */
+        .liquid-glass {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.01);
+            background-blend-mode: luminosity;
+            backdrop-filter: blur(4px);
+            border: none;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            border-radius: 1.5rem;
+        }
+        .liquid-glass::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1.4px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%, transparent 40%, transparent 60%, rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            -webkit-mask-composite: xor;
+            pointer-events: none;
+            border-radius: inherit;
+        }
+
+        .liquid-glass-strong {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.01);
+            background-blend-mode: luminosity;
+            backdrop-filter: blur(50px);
+            border: none;
+            box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+            border-radius: 1.5rem;
+        }
+        .liquid-glass-strong::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1.4px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 20%, transparent 40%, transparent 60%, rgba(255,255,255,0.2) 80%, rgba(255,255,255,0.5) 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            -webkit-mask-composite: xor;
+            pointer-events: none;
+            border-radius: inherit;
+        }
+
+        .serif-italic {
+            font-family: 'Source Serif 4', serif;
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        .text-white\\/80 { color: rgba(255,255,255,0.8); }
+        .text-white\\/60 { color: rgba(255,255,255,0.6); }
+        .text-white\\/50 { color: rgba(255,255,255,0.5); }
+        .bg-white\\/15 { background-color: rgba(255,255,255,0.15); }
+
+        .brandsight-left-panel {
+            position: relative;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .brandsight-left-panel .glass-overlay {
+            position: absolute;
+            inset: 1.5rem;
+            border-radius: 1.5rem;
+        }
+        @media (min-width: 1024px) {
+            .brandsight-left-panel .glass-overlay { inset: 1.5rem; }
+        }
+        .brandsight-hero {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 1.5rem;
+            padding: 2rem 0;
+        }
+        @media (min-width: 1024px) {
+            .brandsight-hero { align-items: flex-start; text-align: left; }
+        }
+
+        /* Hide Streamlit branding on login page */
+        #MainMenu { visibility: hidden; }
+        footer { visibility: hidden; }
+        header { visibility: hidden; }
+        .stApp > header { display: none; }
+    </style>
+    """), unsafe_allow_html=True)
+
+    # --- Video Background ---
+    st.markdown(textwrap.dedent("""
+    <video id="bloom-bg-video" autoplay loop muted playsinline>
+        <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260315_073750_51473149-4350-4920-ae24-c8214286f323.mp4" type="video/mp4" />
+    </video>
+    """), unsafe_allow_html=True)
+
+    # --- Two-panel layout using Streamlit columns ---
+    col_left, col_right = st.columns([0.52, 0.48], gap="large")
+
+    # ----- LEFT PANEL (Hero) -----
+    with col_left:
+        st.markdown(textwrap.dedent("""
+        <div class="brandsight-left-panel">
+            <div class="glass-overlay liquid-glass-strong"></div>
+            <div style="position:relative; z-index:20; display:flex; flex-direction:column; height:100%; padding: 0.5rem 1rem;">
+                <!-- Nav -->
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="font-size:1.75rem;">🌍</span>
+                        <span style="font-size:1.5rem; font-weight:600; letter-spacing:-0.05em; color:white;">BrandSight GEO</span>
+                    </div>
+                    <div class="liquid-glass" style="padding:0.5rem 1.5rem; border-radius:9999px; cursor:default;">
+                        <span style="color:rgba(255,255,255,0.8); font-size:0.875rem;">Menu</span>
+                    </div>
+                </div>
+                <!-- Hero -->
+                <div class="brandsight-hero">
+                    <span style="font-size:3.5rem;">🌍</span>
+                    <h1 style="font-size:3.5rem; font-weight:500; letter-spacing:-0.05em; line-height:1.2; color:white; margin:0;">
+                        Innovating the <br />
+                        <span class="serif-italic text-white/80">spirit of AI search</span>
+                    </h1>
+                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center;">
+                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">Generative Engine Optimization</div>
+                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">Brand Visibility</div>
+                        <div class="liquid-glass" style="padding:0.4rem 1.25rem; border-radius:9999px; color:rgba(255,255,255,0.8); font-size:0.75rem;">AI Audits</div>
+                    </div>
+                    <div style="margin-top:1rem; max-width:28rem;">
+                        <div style="font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:0.25rem;">VISIONARY DESIGN</div>
+                        <div style="font-size:1.2rem; font-weight:500; color:white;">
+                            "We imagined a realm <span class="serif-italic text-white/80">with no ending.</span>"
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem; margin-top:0.75rem;">
+                            <hr style="flex:1; border:0; height:1px; background:rgba(255,255,255,0.2);" />
+                            <span style="font-size:0.7rem; letter-spacing:0.1em; color:rgba(255,255,255,0.5);">MARCUS AURELIO</span>
+                            <hr style="flex:1; border:0; height:1px; background:rgba(255,255,255,0.2);" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """), unsafe_allow_html=True)
+
+    # ----- RIGHT PANEL (Login/Signup) -----
+    with col_right:
+        st.markdown(textwrap.dedent("""
+        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; padding:1.5rem 0.5rem;">
+            <div class="liquid-glass-strong" style="width:100%; max-width:400px; padding:2rem 1.5rem; border-radius:1.5rem; text-align:center;">
+                <h2 style="color:white; font-weight:500; margin-top:0; margin-bottom:0.5rem;">Welcome to BrandSight GEO</h2>
+                <p style="color:rgba(255,255,255,0.6); font-size:0.9rem; margin-bottom:1.5rem;">Sign in to access your GEO dashboard</p>
+        """), unsafe_allow_html=True)
+
+        # --- Streamlit Auth Forms ---
+        tab_login, tab_signup = st.tabs(["Log in", "Create account"])
+
+        with tab_login:
+            with st.form("brandsight_login_form", clear_on_submit=False):
+                login_email = st.text_input("Email", placeholder="you@example.com", key="brandsight_login_email")
+                login_password = st.text_input("Password", type="password", placeholder="••••••••", key="brandsight_login_pass")
+                submitted_login = st.form_submit_button("Log in", use_container_width=True)
+                if submitted_login:
+                    if login_email and login_password:
+                        ok, msg = sign_in(login_email, login_password)
+                        if ok:
+                            st.success("Logged in! Redirecting...")
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Please enter both email and password.")
+
+        with tab_signup:
+            with st.form("brandsight_signup_form", clear_on_submit=False):
+                signup_email = st.text_input("Email", placeholder="you@example.com", key="brandsight_signup_email")
+                signup_password = st.text_input("Password", type="password", placeholder="min 8 characters", key="brandsight_signup_pass")
+                submitted_signup = st.form_submit_button("Create account", use_container_width=True)
+                if submitted_signup:
+                    if signup_email and signup_password:
+                        if len(signup_password) < 8:
+                            st.error("Password must be at least 8 characters.")
+                        else:
+                            ok, msg = sign_up(signup_email, signup_password)
+                            if ok:
+                                st.success("Account created! Check your email to confirm.")
+                            else:
+                                st.error(msg)
+                    else:
+                        st.warning("Please fill in all fields.")
+
+        st.markdown(textwrap.dedent("""
+                <p style="color:rgba(255,255,255,0.4); font-size:0.7rem; margin-top:1rem;">Secured by Supabase Auth • RLS enforced</p>
+            </div>
+        </div>
+        """), unsafe_allow_html=True)
+
+# ==============================================
+# DASHBOARD (shown only when user is logged in)
+# ==============================================
+
+# Check authentication status
+user = current_user()
+
+if user is None:
+    # Show BrandSight GEO login page
+    render_brandsight_login()
+    # Stop execution here so the dashboard doesn't render
+    st.stop()
+
+# --- If we reach here, the user is logged in ---
+print("[DEBUG] => User is logged in, proceeding to render dashboard")
+
+# Load dashboard CSS and proceed with the normal dashboard
 load_css("style.css")
 
 # --- Session State Initialization ---
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
 if "audit_results" not in st.session_state:
     st.session_state.audit_results = None
 if "remediations" not in st.session_state:
@@ -87,7 +349,8 @@ if st.session_state.audit_results is None:
         "llm_response": "Burger Hub has emerging visibility in Islamabad's fast food category. While it is cited in local listings, there is a lack of structured LocalBusiness schema and technical entity backlinks, which creates a critical information gap for generative engines."
     }
     st.session_state.audit_results = mock_inputs
-    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False)
+    from multi_model import run_multi_model_audit
+    st.session_state.multi_model_results = run_multi_model_audit("Burger Hub", "fast food", "Islamabad", use_real=False, user_id=st.session_state.get("user_id"))
     st.session_state.comparison_data["Burger Hub"] = mock_inputs
     st.session_state.remediations = [
         {
@@ -117,11 +380,11 @@ if not st.session_state.tracked_keywords:
 # --- Custom CSS (Modernized) ---
 def apply_theme():
     # Font imports
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     if st.session_state.theme == "Dark":
         bg_style = "radial-gradient(circle at 50% 0%, #1c1140 0%, #0A0A0F 65%, #050508 100%)"
@@ -350,6 +613,9 @@ def apply_theme():
 apply_theme()
 
 # --- Helper Functions ---
+def clean_html(html_str: str) -> str:
+    return "\n".join(line.strip() for line in html_str.split("\n"))
+
 def create_circular_gauge(score, is_dark=True):
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
@@ -873,6 +1139,7 @@ if run_audit:
     with st.status(f"Conducting GEO Audit: {brand_name} in {city}", expanded=True) as status:
         try:
             st.write("🔄 Initializing BrandSight Intelligence Engine...")
+            from geo_audit_agent.agent import build_geo_audit_agent
             agent = build_geo_audit_agent()
             inputs = {
                 "brand_name": brand_name,
@@ -888,7 +1155,11 @@ if run_audit:
             st.session_state.comparison_data[brand_name] = results
 
             st.write("⚡ Auditing cross-model visibility (ChatGPT, Gemini, Claude.ai, Meta.ai, DeepSeek)...")
-            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False)
+            from multi_model import run_multi_model_audit
+            multi_results = run_multi_model_audit(brand_name, category, city, use_real=False, user_id=st.session_state.get("user_id"))
+            if "error" in multi_results:
+                st.error(multi_results["error"])
+                st.stop()
             st.session_state.multi_model_results = multi_results
 
             # Update history
@@ -1014,12 +1285,13 @@ else:
             <span style="color: #64748B; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg> {neu_count}</span>
             <span style="color: #EF4444; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm10-7h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg> {neg_count}</span>
         </div>
-    """
+    """)
+
 
 # Custom SVG rendering helper function
 def render_gauge_html(title, value_str, percent, sub_label, delta, delta_color, color, bottom_text):
     offset = 364.42 * (1 - percent / 100.0)
-    return f"""
+    raw_html = f"""
     <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
         <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
             {title}
@@ -1043,6 +1315,8 @@ def render_gauge_html(title, value_str, percent, sub_label, delta, delta_color, 
         </div>
     </div>
     """
+    return clean_html(raw_html)
+
 
 # 4 Columns Row: 3 Gauges + Platform Breakdown
 col_g1, col_g2, col_g3, col_pb = st.columns([1, 1, 1, 1.3])
@@ -1098,8 +1372,8 @@ with col_pb:
             </div>
             <div class="bv2-platform-score" style="width: 45px; text-align: right; font-weight: 700; font-size: 0.85rem; color: #1E293B;">{p['score']}%</div>
         </div>
-        """
-    st.markdown(f"""
+        """)
+    st.markdown(clean_html(f"""
     <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
         <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
             <span>Brand Visibility By Platform</span>

@@ -44,7 +44,7 @@ class FeedbackPersistenceManager:
             # Add run ID to a tracking index list for analytical queries
             self.r.lpush("geo:feedback:index", run_id)
             return True
-        except redis.RedisError as e:
+        except RedisError as e:
             logger.error(f"Failed to persist feedback in Redis: {e}")
             return False
 
@@ -90,6 +90,6 @@ class FeedbackPersistenceManager:
                 "promoters_pct": round((promoters / total) * 100, 2),
                 "detractors_pct": round((detractors / total) * 100, 2)
             }
-        except redis.RedisError as e:
+        except RedisError as e:
             logger.error(f"Failed to calculate NPS metrics: {e}")
             return {"error": str(e)}

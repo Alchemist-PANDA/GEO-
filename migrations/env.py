@@ -5,6 +5,7 @@ from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
+import geo_audit_agent.db.models
 
 load_dotenv()
 
@@ -42,6 +43,7 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
+            render_as_batch=True,
         )
         with context.begin_transaction():
             context.run_migrations()
