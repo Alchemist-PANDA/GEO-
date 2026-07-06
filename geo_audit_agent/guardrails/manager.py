@@ -37,6 +37,14 @@ def check_phase(phase: str, payload: dict, *, agent_id: str = "system",
                     Severity.CRITICAL, f"guardrail crashed: {e}"))
     _persist(violations, phase, agent_id, trace_id)
     allowed = not any(v.severity in _BLOCKING for v in violations)
+    try:
+        from geo_audit_agent.observability.metrics import GUARDRAIL_EVENTS, GUARDRAIL_BLOCKS
+        GUARDRAIL_EVENTS.labels(classification="safe" if allowed else "blocked").inc()
+        for v in violations:
+            GUARDRAIL_BLOCKS.labels(type=v.guardrail_type, severity=v.severity.value,
+                                    blocked=str(v.severity in _BLOCKING)).inc()
+    except Exception:
+        pass
     return GuardrailDecision(allowed=allowed, violations=violations)
 
 

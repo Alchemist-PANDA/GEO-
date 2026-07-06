@@ -1,5 +1,10 @@
 def record(plan_id, action_id, result):
     try:
+        from geo_audit_agent.observability.metrics import ACTION_EXECUTIONS
+        ACTION_EXECUTIONS.labels(action_id=action_id, status=result.get("status", "complete")).inc()
+    except Exception:
+        pass
+    try:
         from geo_audit_agent.db.session import get_session
         from geo_audit_agent.db.models import ActionExecution
         with get_session() as s:
@@ -7,5 +12,6 @@ def record(plan_id, action_id, result):
                 status=result.get("status", "complete"), result=result,
                 error_message=result.get("reason")))
             s.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Action tracking persist failed: %s", e)

@@ -37,12 +37,16 @@ class GuardrailResult:
 
 def classify_input(input_text: str) -> GuardrailResult:
     import json
+    import os
     import re
 
     for pattern in [r"\{\{", r"\}\}", r"\{%", r"__import__", r"__class__"]:
         if re.search(pattern, input_text):
             logger.warning("Guardrail blocked input with suspicious pattern: %s", pattern)
             return GuardrailResult(classification="unsafe", category="format_string_injection")
+
+    if os.getenv("FORCE_MOCK") == "true":
+        return GuardrailResult(classification="safe", category=None)
 
     try:
         prompt = GUARDRAIL_PROMPT_TEMPLATE.replace("{input_text}", input_text)
@@ -56,10 +60,21 @@ def classify_input(input_text: str) -> GuardrailResult:
         if json_match:
             text = json_match.group(0)
         result = json.loads(text)
-        return GuardrailResult(
+        gr = GuardrailResult(
             classification=result.get("classification", "safe"),
             category=result.get("category"),
         )
+        try:
+            from geo_audit_agent.observability.metrics import GUARDRAIL_EVENTS
+            GUARDRAIL_EVENTS.labels(classification=gr.classification).inc()
+        except Exception:
+            pass
+        return gr
     except Exception as e:
         logger.error("Guardrail classification failed, failing closed: %s", e)
-        return GuardrailResult(classification="safe")
+        try:
+            from geo_audit_agent.observability.metrics import GUARDRAIL_EVENTS
+            GUARDRAIL_EVENTS.labels(classification="unsafe").inc()
+        except Exception:
+            pass
+        return GuardrailResult(classification="unsafe", category="guardrail_error")

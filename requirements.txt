@@ -24,8 +24,21 @@ anthropic>=0.52.0
 # Celery
 celery>=5.3.0
 
-# Monitoring
+# Observability
+langfuse>=2.0.0
 prometheus-client>=0.17.0
+
+# Vector Search
+qdrant-client>=1.9.0
+
+# Memory
+mem0ai>=0.1.0
+
+# Embeddings
+sentence-transformers>=2.2.0
+
+# Evaluation
+deepeval>=0.21.0
 
 # Database
 psycopg2-binary>=2.9.0

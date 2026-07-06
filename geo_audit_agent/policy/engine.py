@@ -19,6 +19,12 @@ class PolicyEngine:
         violations = self.evaluate(context)
         blocking = [r for r in violations if r.action == "BLOCK"]
         warnings = [r for r in violations if r.action == "WARN"]
+        try:
+            from geo_audit_agent.observability.metrics import POLICY_BLOCKS
+            for r in blocking:
+                POLICY_BLOCKS.labels(rule_id=r.id).inc()
+        except Exception:
+            pass
         return {
             "allowed": not blocking,
             "blocking": [{"id": r.id, "message": r.message} for r in blocking],

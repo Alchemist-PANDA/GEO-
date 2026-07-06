@@ -41,13 +41,15 @@ def claude(system: str, user: str, *, model: str = "claude-opus-4-8",
             msg = stream.get_final_message()
         text = "".join(b.text for b in msg.content if b.type == "text")
         usage = getattr(msg, "usage", None)
-        return LLMResult(
+        result = LLMResult(
             text=text,
             input_tokens=getattr(usage, "input_tokens", 0) if usage else 0,
             output_tokens=getattr(usage, "output_tokens", 0) if usage else 0,
             cost_usd=_price("claude-opus", usage),
             provider="anthropic",
         )
+        _record_metrics(result, model, cache_hit=False)
+        return result
     except Exception as e:
         logger.warning("Claude gateway failed, returning mock: %s", e)
         return _mock(user, "claude-error")
@@ -68,6 +70,20 @@ def parse_json(text: str) -> dict:
         return json.loads(text[s:e]) if s != -1 and e else {}
     except Exception:
         return {}
+
+
+def _record_metrics(result: LLMResult, model: str, cache_hit: bool = False):
+    try:
+        from geo_audit_agent.observability.metrics import LLM_REQUESTS, LLM_TOKENS, LLM_COST
+        LLM_REQUESTS.labels(provider=result.provider, model=model, cache_hit=str(cache_hit)).inc()
+        if result.input_tokens:
+            LLM_TOKENS.labels(provider=result.provider, direction="input").inc(result.input_tokens)
+        if result.output_tokens:
+            LLM_TOKENS.labels(provider=result.provider, direction="output").inc(result.output_tokens)
+        if result.cost_usd:
+            LLM_COST.labels(provider=result.provider, tier="standard").inc(result.cost_usd)
+    except Exception:
+        pass
 
 
 _PRICES = {"claude-opus": (5.0, 25.0)}

@@ -1,4 +1,7 @@
 """Attach delayed success signals to traces."""
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def record_trace(agent_id, trace_id, context, decision, outcome=None, score=None):
@@ -9,8 +12,8 @@ def record_trace(agent_id, trace_id, context, decision, outcome=None, score=None
             s.add(AgentTrace(agent_id=agent_id, trace_id=trace_id, context=context,
                              decision=decision, outcome=outcome or {}, score=score))
             s.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("record_trace failed: %s", e)
 
 
 def attach_outcome(trace_id, outcome: dict, score: float):
@@ -24,5 +27,5 @@ def attach_outcome(trace_id, outcome: dict, score: float):
                 row.score = score
                 s.add(row)
                 s.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("attach_outcome failed: %s", e)

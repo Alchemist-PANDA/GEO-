@@ -802,14 +802,37 @@ def login_screen():
             submit = st.form_submit_button("Sign In", use_container_width=True)
 
             if submit:
-                expected_user = os.getenv("DASHBOARD_USER", "admin")
-                expected_pass = os.getenv("DASHBOARD_PASS", "changeme")
-                if username == expected_user and password == expected_pass:
+                expected_user = os.getenv("DASHBOARD_USER")
+                expected_pass = os.getenv("DASHBOARD_PASS")
+                if not expected_user or not expected_pass:
+                    st.error("Authentication not configured. Set DASHBOARD_USER and DASHBOARD_PASS environment variables.")
+                    return
+
+                if "login_attempts" not in st.session_state:
+                    st.session_state.login_attempts = 0
+                    st.session_state.lockout_until = None
+
+                import time
+                if st.session_state.lockout_until and time.time() < st.session_state.lockout_until:
+                    remaining = int(st.session_state.lockout_until - time.time())
+                    st.error(f"Account locked. Try again in {remaining}s.")
+                    return
+
+                pass_hash = hashlib.sha256(password.encode()).hexdigest()
+                expected_hash = hashlib.sha256(expected_pass.encode()).hexdigest()
+                if username == expected_user and pass_hash == expected_hash:
                     st.session_state.authenticated = True
+                    st.session_state.login_attempts = 0
                     st.success("Welcome back!")
                     st.rerun()
                 else:
-                    st.error("Invalid credentials")
+                    st.session_state.login_attempts += 1
+                    remaining = 5 - st.session_state.login_attempts
+                    if st.session_state.login_attempts >= 5:
+                        st.session_state.lockout_until = time.time() + 300
+                        st.error("Too many failed attempts. Account locked for 5 minutes.")
+                    else:
+                        st.error(f"Invalid credentials. {remaining} attempts remaining.")
 
 if not st.session_state.authenticated:
     login_screen()

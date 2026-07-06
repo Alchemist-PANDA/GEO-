@@ -40,6 +40,11 @@ class InspectorAgent:
                else "medium" if issues else "low"
         verdict = InspectorVerdict(passed=passed, checks=checks, issues=issues, risk=risk)
         self._persist(agent_id, trace_id, verdict)
+        try:
+            from geo_audit_agent.observability.metrics import INSPECTOR_RESULTS
+            INSPECTOR_RESULTS.labels(agent=agent_id, passed=str(passed), risk=risk).inc()
+        except Exception:
+            pass
         return verdict
 
     def _output_quality(self, o, issues):
@@ -119,5 +124,6 @@ class InspectorAgent:
                     "issues": verdict.issues, "risk": verdict.risk},
                     passed=verdict.passed, input_data={}))
                 s.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Inspector persist failed: %s", e)
