@@ -1,3 +1,4 @@
+import html
 import streamlit as st
 import logging
 import os
@@ -929,7 +930,7 @@ st.markdown(f"""
         📊 Brand Visibility Dashboard
     </h1>
     <p style="color: #64748B; font-size: 1.05rem; margin-top: 4px;">
-        Full-spectrum AI search monitoring for <b style="color: #7C3AED;">{brand_name_val}</b> in <b>{category_val}</b>
+        Full-spectrum AI search monitoring for <b style="color: #7C3AED;">{html.escape(brand_name_val)}</b> in <b>{html.escape(category_val)}</b>
     </p>
 </div>
 """, unsafe_allow_html=True)

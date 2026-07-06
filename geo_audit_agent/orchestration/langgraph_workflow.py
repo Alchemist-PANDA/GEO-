@@ -8,6 +8,10 @@ from geo_audit_agent.context import build_context
 
 
 def _node_input_guard(state: AgenticState) -> AgenticState:
+    from geo_audit_agent.utils.sanitize import sanitize_brand_name, sanitize_category, sanitize_city
+    state.brand_name = sanitize_brand_name(state.brand_name)
+    state.category = sanitize_category(state.category)
+    state.city = sanitize_city(state.city)
     d = check_phase("input", {"user_message": state.user_message,
         "brand_name": state.brand_name}, trace_id=state.trace_id)
     if d.blocked:

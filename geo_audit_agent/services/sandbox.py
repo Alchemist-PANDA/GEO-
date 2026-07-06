@@ -43,7 +43,7 @@ except Exception as e:
             logger.warning("E2B not available, falling back to local validation")
             return self._local_validate_html(html_content)
         except Exception as e:
-            logger.error(f"Sandbox execution failed: {e}")
+            logger.error("Sandbox execution failed: %s", e)
             return {"valid": False, "error": str(e)}
 
     def _local_validate_html(self, html_content: str) -> dict:

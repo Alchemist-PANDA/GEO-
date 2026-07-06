@@ -5,7 +5,8 @@ def save_fingerprint_json(fingerprint: dict):
     """Saves fingerprint to data directory."""
     data_dir = "data/fingerprints"
     os.makedirs(data_dir, exist_ok=True)
-    filename = f"{fingerprint['brand_name'].lower().replace(' ', '_')}.json"
+    safe_name = fingerprint['brand_name'].lower().replace(' ', '_')
+    filename = os.path.basename(f"{safe_name}.json")
     with open(os.path.join(data_dir, filename), "w") as f:
         json.dump(fingerprint, f, indent=4)
 

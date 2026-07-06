@@ -1,6 +1,9 @@
+import logging
 import pandas as pd
 import os
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 try:
     import mlflow
@@ -24,7 +27,7 @@ def build_training_data():
 def train_model():
     df = build_training_data()
     if df.empty:
-        print("Error: No training data found.")
+        logger.error("No training data found.")
         return None
     
     features = ['has_json_ld', 'has_technical_whitepaper', 'has_reviews', 
@@ -33,7 +36,7 @@ def train_model():
     y = df['confidence_score']
     
     if not HAS_SKLEARN:
-        print("Warning: scikit-learn is not installed. Mocking model training.")
+        logger.warning("scikit-learn is not installed. Mocking model training.")
         return None, "1"
     
     if HAS_MLFLOW:
@@ -51,10 +54,7 @@ def train_model():
                 mse = mean_squared_error(y, predictions)
                 rmse = np.sqrt(mse)
                 
-                print("Model Performance:")
-                print(f"R-squared: {r2:.4f}")
-                print(f"MAE: {mae:.4f}")
-                print(f"RMSE: {rmse:.4f}")
+                logger.info("Model Performance: R²=%.4f MAE=%.4f RMSE=%.4f", r2, mae, rmse)
                 
                 mlflow.log_metric("r2_score", r2)
                 mlflow.log_metric("mae", mae)
@@ -70,11 +70,11 @@ def train_model():
                 versions = client.get_latest_versions("GEO_Potential_Predictor")
                 latest_version = versions[0].version if versions else "1"
                 client.set_registered_model_tag("GEO_Potential_Predictor", "production", "true")
-                print(f"Model registered as version {latest_version} with tag 'production'")
+                logger.info("Model registered as version %s with tag 'production'", latest_version)
                     
                 return model, latest_version
         except Exception as e:
-            print(f"Error during MLflow tracked training: {e}. Falling back to untracked local training.")
+            logger.warning("MLflow tracked training failed: %s. Falling back to untracked local training.", e)
 
     # Local training fallback without MLflow
     try:
@@ -82,11 +82,10 @@ def train_model():
         model.fit(X, y)
         predictions = model.predict(X)
         r2 = r2_score(y, predictions)
-        print("Local Model Performance (No MLflow):")
-        print(f"R-squared: {r2:.4f}")
+        logger.info("Local Model Performance (No MLflow): R²=%.4f", r2)
         return model, "1"
     except Exception as e:
-        print(f"Error during local training fallback: {e}")
+        logger.error("Error during local training fallback: %s", e)
         return None, "1"
 
 def predict_score(features_dict):

@@ -446,7 +446,7 @@ def generate_report(state: AgentState) -> AgentState:
     logger.info("Starting Node: generate_report")
     brand = state.get("brand_name") or state.get("brand", "Unknown Brand")
     report = {"brand": brand, "is_cited": state.get("is_cited", False), "confidence": state.get("confidence_score", 0.0), "gaps_identified": len(state.get("gaps", [])), "remediation_actions": len(state.get("remediation_results", [])), "remediation_details": state.get("remediation_results", [])}
-    print("\n" + "="*50 + "\nGEO AUDIT AGENT INTEGRATED REPORT\n" + "="*50 + "\n" + json.dumps(report, indent=4) + "\n" + "="*50 + "\n")
+    logger.info("GEO AUDIT AGENT INTEGRATED REPORT: %s", json.dumps(report, indent=4))
     return state
 
 class GeoAuditAgent:

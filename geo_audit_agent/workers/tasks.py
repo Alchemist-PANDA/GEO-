@@ -12,18 +12,18 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="geo_audit_agent.workers.tasks.run_audit_task")
 def run_audit_task(audit_id: str, user_id: str):
     """Executes the LangGraph audit graph asynchronously for a queued audit_id."""
-    logger.info(f"Asynchronous worker picked up audit task: {audit_id}")
+    logger.info("Asynchronous worker picked up audit task: %s", audit_id)
     
     with Session(engine) as session:
         # Retrieve target audit
         audit = session.get(Audit, audit_id)
         if not audit:
-            logger.error(f"Audit record {audit_id} not found in database.")
+            logger.error("Audit record %s not found in database.", audit_id)
             return False
             
         brand = session.get(Brand, audit.brand_id)
         if not brand:
-            logger.error(f"Brand record {audit.brand_id} not found for audit {audit_id}.")
+            logger.error("Brand record %s not found for audit %s.", audit.brand_id, audit_id)
             audit.status = AuditStatus.FAILED
             session.add(audit)
             session.commit()
@@ -46,7 +46,7 @@ def run_audit_task(audit_id: str, user_id: str):
         )
         
         try:
-            logger.info(f"Invoking LangGraph execution pipeline for {brand.name} ({audit.tier} tier)")
+            logger.info("Invoking LangGraph execution pipeline for %s (%s tier)", brand.name, audit.tier)
             final_state = audit_graph.invoke(initial_state)
             
             # Retrieve final data from graph state
@@ -58,11 +58,11 @@ def run_audit_task(audit_id: str, user_id: str):
             
             session.add(audit)
             session.commit()
-            logger.info(f"Audit {audit_id} completed successfully.")
+            logger.info("Audit %s completed successfully.", audit_id)
             return True
             
         except Exception as e:
-            logger.error(f"LangGraph execution pipeline crashed for audit {audit_id}: {e}", exc_info=True)
+            logger.error("LangGraph execution pipeline crashed for audit %s: %s", audit_id, e, exc_info=True)
             audit.status = AuditStatus.FAILED
             session.add(audit)
             session.commit()
