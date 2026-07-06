@@ -53,6 +53,11 @@ class AuthedUser:
 
 
 def _get_client() -> Client:
+    if "supabase" not in st.secrets or "url" not in st.secrets["supabase"] or "anon_key" not in st.secrets["supabase"]:
+        st.error("⚠️ **Supabase Secrets Missing!**")
+        st.info("Your Streamlit Cloud environment is missing the required Supabase credentials. Please go to **Manage App > Settings > Secrets** on your Streamlit dashboard and paste your `[supabase]` section with `url` and `anon_key`.")
+        st.stop()
+        
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["anon_key"]
     if "sb_client" not in st.session_state:
