@@ -298,10 +298,6 @@ if user is None:
 # --- If we reach here, the user is logged in ---
 print("[DEBUG] => User is logged in, proceeding to render dashboard")
 
-st.write("Hello World!")
-st.write(f"Current time: {datetime.now()}")
-st.stop()
-
 # Load dashboard CSS and proceed with the normal dashboard
 load_css("style.css")
 

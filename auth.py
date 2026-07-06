@@ -51,20 +51,10 @@ class AuthedUser:
     id: str
     email: str
 
-    def __getitem__(self, key):
-        return getattr(self, key)
 
-    def get(self, key, default=None):
-        return getattr(self, key, default)
-
-
-def _get_client() -> Client | None:
-    try:
-        url = st.secrets["supabase"]["url"]
-        key = st.secrets["supabase"]["anon_key"]
-    except (KeyError, AttributeError, FileNotFoundError):
-        return None
-
+def _get_client() -> Client:
+    url = st.secrets["supabase"]["url"]
+    key = st.secrets["supabase"]["anon_key"]
     if "sb_client" not in st.session_state:
         st.session_state.sb_client = create_client(url, key)
     return st.session_state.sb_client
@@ -76,10 +66,8 @@ def _get_cookie_manager() -> stx.CookieManager:
     return st.session_state.cookie_manager
 
 
-def _restore_session(client: Client | None, cookies: dict) -> AuthedUser | None:
+def _restore_session(client: Client, cookies: dict) -> AuthedUser | None:
     """Try to restore a session from the persisted refresh token."""
-    if client is None:
-        return None
     refresh_token = cookies.get(COOKIE_NAME)
     if not refresh_token:
         return None
@@ -102,14 +90,6 @@ def current_user() -> AuthedUser | None:
         return st.session_state.authed_user
 
     client = _get_client()
-    if client is None:
-        if "supabase_warning_shown" not in st.session_state:
-            st.info("🔧 No Supabase credentials – using development user.")
-            st.session_state.supabase_warning_shown = True
-        dummy = AuthedUser(id="dev-user", email="dev@example.com")
-        st.session_state.authed_user = dummy
-        return dummy
-
     cookie_mgr = _get_cookie_manager()
     cookies = cookie_mgr.get_all()
 
@@ -121,8 +101,6 @@ def current_user() -> AuthedUser | None:
 def sign_in(email: str, password: str) -> tuple[bool, str]:
     """Returns (success, message)."""
     client = _get_client()
-    if client is None:
-        return False, "Database client unavailable."
     try:
         result = client.auth.sign_in_with_password(
             {"email": email, "password": password}
@@ -156,8 +134,6 @@ def sign_up(email: str, password: str) -> tuple[bool, str]:
     """Returns (success, message). Requires email confirmation if enabled
     in Supabase settings (recommended — prevents fake/typo emails)."""
     client = _get_client()
-    if client is None:
-        return False, "Database client unavailable."
     try:
         client.auth.sign_up({"email": email, "password": password})
         return True, "Account created. Check your email to confirm before signing in."
@@ -167,11 +143,10 @@ def sign_up(email: str, password: str) -> tuple[bool, str]:
 
 def sign_out() -> None:
     client = _get_client()
-    if client is not None:
-        try:
-            client.auth.sign_out()
-        except Exception:
-            pass
+    try:
+        client.auth.sign_out()
+    except Exception:
+        pass
     for k in ("authed_user", "sb_access_token", "sb_refresh_token"):
         st.session_state.pop(k, None)
     cookie_mgr = _get_cookie_manager()
