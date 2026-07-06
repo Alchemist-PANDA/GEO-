@@ -69,7 +69,7 @@ def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> d
         varied_audit = _apply_model_variation(audit, model_info, brand)
 
         mentioned = varied_audit["citation_found"]
-        position = _calculate_position(varied_audit["citation_position_score"]) if mentioned else None
+        position = _calculate_position(varied_audit.get("citation_position_score", 0.5)) if mentioned else None
 
         # Evidence trace
         if mentioned:
@@ -169,7 +169,8 @@ def _apply_model_variation(audit: dict, model_info: dict, brand: str) -> dict:
         varied["sentiment"] = "none"
     else:
         position_variance = (seed % 20) / 100
-        varied["citation_position_score"] = min(1.0, max(0.0, audit["citation_position_score"] + position_variance - 0.1))
+        base_position = audit.get("citation_position_score", 0.5)
+        varied["citation_position_score"] = min(1.0, max(0.0, base_position + position_variance - 0.1))
 
         if seed % 3 == 0 and audit["sentiment"] == "positive":
             varied["sentiment"] = "neutral"

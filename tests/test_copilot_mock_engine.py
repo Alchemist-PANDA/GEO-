@@ -70,7 +70,7 @@ def test_explain_chart_uses_chart_title():
 
 def test_fallback_for_vague_question():
     response = mock_engine.generate_response("asdkjhasd", _base_context())
-    assert "Could you rephrase" in response
+    assert "Great question" in response or "Try asking" in response
 
 
 def test_no_data_gracefully_handled():

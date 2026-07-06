@@ -4,9 +4,12 @@ Designed to never crash the UI — any failure in the live path falls back
 to the deterministic mock engine so the Copilot always answers.
 """
 
+import logging
 import os
 
 from geo_audit_agent.copilot import mock_engine
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are the GEO Copilot, embedded inside a brand visibility \
 dashboard. You help users understand their AI-search visibility data, \
@@ -49,6 +52,6 @@ def get_response(user_message: str, context: dict, history: list | None = None) 
     if is_live_mode():
         try:
             return _live_response(user_message, context, history)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Live Copilot failed, falling back to mock: %s", e)
     return mock_engine.generate_response(user_message, context)

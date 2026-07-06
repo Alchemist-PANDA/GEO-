@@ -27,9 +27,12 @@ def _pct(value, default=None):
 
 def _greeting(context: dict) -> str:
     brand = _brand(context)
+    score = _pct(context.get("confidence_score"))
+    score_line = f"Your current confidence score is **{score}%**. " if score is not None else ""
     return (
         f"Hey! 👋 I'm your GEO Copilot — I can see **{brand}**'s audit data, "
         "competitor scan, and every chart on this dashboard.\n\n"
+        f"{score_line}"
         "Ask me things like:\n"
         "- *\"Why is my GEO score lower than my competitor's?\"*\n"
         "- *\"What should I fix first?\"*\n"
@@ -57,6 +60,13 @@ def _score_answer(context: dict) -> str:
 
     if cited is not None:
         lines.append(f"\n{'✅ Good news — your brand **is being cited**' if cited else '⚠️ Right now your brand **is not being cited**'} by AI assistants in the queries we tested.")
+
+    gaps = context.get("gaps") or []
+    if gaps:
+        critical = sum(1 for g in gaps if str(g.get("severity", "")).lower() == "critical")
+        high = sum(1 for g in gaps if str(g.get("severity", "")).lower() == "high")
+        if critical or high:
+            lines.append(f"\n⚠️ You have **{critical} critical** and **{high} high** priority gaps that need attention.")
 
     lines.append("\n**Want me to break this down by platform, or compare it against a competitor?**")
     return "\n".join(lines)
@@ -87,6 +97,7 @@ def _visibility_answer(context: dict) -> str:
     if weak:
         lines.append(f"\n**Gap:** you're invisible on **{len(weak)} platform(s)**, including **{weak[0].get('model', 'one major model')}**. That's usually the fastest place to claw back visibility.")
 
+    lines.append("\n💡 **Recommendation:** Focus on the platforms where you're missing. Each platform you gain visibility on lifts your overall GEO coverage score.")
     return "\n".join(lines)
 
 
@@ -252,6 +263,18 @@ def _explain_chart_answer(context: dict) -> str:
             )
         else:
             lines.append(f"This chart compares **{brand}**'s recognition confidence across AI models like ChatGPT, Gemini, Claude, and Perplexity.")
+    elif "visibility" in title_lower and "trend" in title_lower:
+        lines.append(
+            f"This shows how **{brand}**'s brand visibility has moved over recent measurement points. "
+            "A rising line means AI engines are surfacing you more often; a flat or declining line usually means a competitor "
+            "is gaining ground, or recently published content needs refreshing. The rolling average (dashed) smooths out day-to-day noise."
+        )
+    elif "citation" in title_lower and "trend" in title_lower:
+        lines.append(
+            f"This shows how **{brand}**'s citation rate has evolved. "
+            "Citation rate measures how often AI assistants reference your content as a source. "
+            "Rising means your content authority is growing; a dip may signal a competitor published stronger content recently."
+        )
     elif "trend" in title_lower:
         lines.append(
             f"This shows how **{chart_title.replace('Trend', '').strip()}** has moved over recent measurement points for **{brand}**. "
@@ -264,28 +287,119 @@ def _explain_chart_answer(context: dict) -> str:
             "content depth, schema coverage, and platform presence. The bigger your shape, the stronger your overall position. "
             "Look for the axes where a competitor's line pokes outside yours — those are your priority gaps."
         )
-    elif "compare" in title_lower:
+    elif "lift" in title_lower or "simulator" in title_lower:
+        lines.append(
+            f"This chart shows the projected score improvement for **{brand}** as you implement specific fixes. "
+            "Each step on the x-axis represents fixing one gap — the line shows your cumulative score gain. "
+            "The steeper the line, the higher impact that fix has. Start with the leftmost fixes for maximum ROI."
+        )
+    elif "brand visibility" in title_lower and "platform" not in title_lower:
+        lines.append(
+            f"This gauge shows **{brand}**'s overall brand visibility — the percentage of AI-generated responses that mention you. "
+            "A score above 60% is strong; below 40% means you're being overshadowed by competitors."
+        )
+    elif "platform" in title_lower:
+        lines.append(
+            f"This shows **{brand}**'s visibility broken down by AI platform. Each bar represents how prominently you appear "
+            "on that specific platform. Platforms where you score low are the best opportunities for quick visibility gains."
+        )
+    elif "compare" in title_lower or "confidence" in title_lower:
         lines.append(f"This compares **{brand}** directly against a competitor you selected, metric by metric.")
+    elif "keyword" in title_lower:
+        lines.append(
+            f"This sparkline shows how **{brand}**'s visibility has trended for this specific keyword over recent monitoring runs. "
+            "Upward trends mean you're gaining ground for this search query."
+        )
+    elif "performance" in title_lower:
+        lines.append(
+            f"This shows **{brand}**'s confidence score over your last few audits. "
+            "Each point is one audit run. An upward trend means your optimizations are working."
+        )
     else:
         lines.append(
             f"This chart visualizes **{chart_title}** for **{brand}**. "
-            + (f"Underlying data: {chart_data}" if chart_data else "Ask me a specific question about it and I'll dig into the numbers.")
+            + (f"The underlying data shows: {_summarize_chart_data(chart_data)}" if chart_data else "Ask me a specific question about it and I'll dig into the numbers.")
         )
 
     lines.append("\n**Want me to suggest what to do about it, or compare it to a competitor?**")
     return "\n".join(lines)
 
 
-def _fallback_answer(context: dict, user_message: str) -> str:
+def _summarize_chart_data(chart_data) -> str:
+    if isinstance(chart_data, dict):
+        if "steps" in chart_data and "scores" in chart_data:
+            return f"{len(chart_data['steps'])} steps from {chart_data['scores'][0]:.0f}% to {chart_data['scores'][-1]:.0f}%"
+        if "dates" in chart_data and "values" in chart_data:
+            vals = chart_data["values"]
+            return f"range from {min(vals)} to {max(vals)} over {len(vals)} data points"
+        if "value" in chart_data:
+            return f"current value is {chart_data['value']}"
+    if isinstance(chart_data, list) and chart_data:
+        if isinstance(chart_data[0], dict) and "brand" in chart_data[0]:
+            return f"{len(chart_data)} brands compared"
+    return str(chart_data)[:200]
+
+
+def _remediation_answer(context: dict) -> str:
+    brand = _brand(context)
+    gaps = context.get("gaps") or []
+    if not gaps:
+        return f"No gaps found for **{brand}** yet. Run an audit first, and I'll generate specific remediation actions for each gap."
+
+    lines = [f"### 🛠️ Remediation Strategy for {brand}\n"]
+    lines.append(f"Based on your **{len(gaps)} identified gap(s)**, here's the action plan:\n")
+
+    for i, gap in enumerate(gaps[:5], start=1):
+        gtype = gap.get("gap_type", "Gap")
+        sev = str(gap.get("severity", "Medium")).title()
+        if "structured data" in gtype.lower() or "schema" in gtype.lower():
+            lines.append(f"**{i}. {gtype}** (`{sev}`)\n   → Generate JSON-LD schema markup for your business type and deploy it to your homepage\n")
+        elif "review" in gtype.lower():
+            lines.append(f"**{i}. {gtype}** (`{sev}`)\n   → Create a review collection campaign and add ReviewSchema markup\n")
+        elif "content" in gtype.lower() or "information" in gtype.lower():
+            lines.append(f"**{i}. {gtype}** (`{sev}`)\n   → Publish comprehensive, authoritative content addressing the information gaps\n")
+        elif "authority" in gtype.lower():
+            lines.append(f"**{i}. {gtype}** (`{sev}`)\n   → Build backlinks through whitepapers, press releases, and industry partnerships\n")
+        else:
+            lines.append(f"**{i}. {gtype}** (`{sev}`)\n   → Address this gap using the specific remediation in the Remediation Hub\n")
+
+    lines.append("Head to the **Remediation Hub** tab for implementation-ready code snippets and content.")
+    return "\n".join(lines)
+
+
+def _keyword_answer(context: dict) -> str:
     brand = _brand(context)
     return (
-        f"I want to give you a precise answer, but I'm not totally sure what you're after with *\"{user_message.strip()}\"*. 🤔\n\n"
-        f"Here's what I can tell you about right now for **{brand}**:\n"
-        "- Your overall GEO score and platform breakdown\n"
-        "- Competitor comparisons and what they're doing better\n"
-        "- Content/schema gaps and what to fix first\n"
-        "- Any chart on the dashboard\n\n"
-        "Could you rephrase, or pick one of those?"
+        f"### 🔍 Keyword Monitoring for {brand}\n\n"
+        f"The **Keyword Monitoring** tab tracks how **{brand}** appears across AI platforms for specific search queries.\n\n"
+        "For each keyword you track, we monitor:\n"
+        "- Whether your brand is **mentioned** in each AI platform's response\n"
+        "- The number of **brands** and **sources** referenced\n"
+        "- Whether an **AI Overview** is triggered for that query\n"
+        "- A **trend sparkline** showing visibility changes over time\n\n"
+        "💡 **Tip:** Add keywords that your customers actually search for — long-tail queries like *\"best [category] near me\"* "
+        "are more actionable than generic terms."
+    )
+
+
+def _fallback_answer(context: dict, user_message: str) -> str:
+    brand = _brand(context)
+    score = _pct(context.get("confidence_score"))
+    score_line = f" Your current score is **{score}%**." if score is not None else ""
+
+    return (
+        f"Great question! Let me help with that.{score_line}\n\n"
+        f"Here's what I can tell you about **{brand}** right now:\n"
+        "- 📊 Your overall GEO score and platform breakdown\n"
+        "- ⚔️ Competitor comparisons and what they're doing better\n"
+        "- 🛠️ Content/schema gaps and what to fix first\n"
+        "- 📈 Any chart on the dashboard — just click the 💬 icon\n"
+        "- 🔍 Keyword monitoring insights\n\n"
+        "Try asking something like:\n"
+        "- *\"What is my GEO score?\"*\n"
+        "- *\"Compare me to KFC\"*\n"
+        "- *\"What should I fix first?\"*\n"
+        "- *\"Explain my visibility trend\"*"
     )
 
 
@@ -293,34 +407,46 @@ def generate_response(user_message: str, context: dict) -> str:
     """Route a user message to a deterministic, context-aware markdown answer."""
     msg = (user_message or "").strip().lower()
 
-    if not msg or msg in {"hi", "hello", "hey", "help", "hi!", "hello!"}:
+    if not msg or msg in {"hi", "hello", "hey", "help", "hi!", "hello!", "start"}:
         return _greeting(context)
 
-    if msg.startswith("explain this chart") or context.get("fig_json") and "explain" in msg and "chart" in msg:
+    if msg.startswith("explain this chart") or (context.get("fig_json") and "explain" in msg and "chart" in msg):
         return _explain_chart_answer(context)
 
-    if any(k in msg for k in ["vs ", "versus", "compare", "competitor", "rival"]):
+    if context.get("chart_title") and msg.startswith("explain"):
+        return _explain_chart_answer(context)
+
+    if any(k in msg for k in ["vs ", "versus", "compare", "competitor", "rival", "against"]):
         return _competitor_answer(context, user_message)
 
-    if any(k in msg for k in ["fix first", "what should i fix", "priority", "gap", "remediat"]):
+    if any(k in msg for k in ["fix first", "what should i fix", "priority", "gap"]):
         return _gap_answer(context)
+
+    if any(k in msg for k in ["remediat", "implement", "action plan", "how to fix"]):
+        return _remediation_answer(context)
 
     if any(k in msg for k in ["citation"]):
         return _citation_answer(context)
 
-    if any(k in msg for k in ["sentiment"]):
+    if any(k in msg for k in ["sentiment", "tone", "perception"]):
         return _sentiment_answer(context)
+
+    if any(k in msg for k in ["keyword", "search term", "query monitor"]):
+        return _keyword_answer(context)
 
     if any(k in msg for k in ["visibility", "platform", "where do i show", "where am i"]):
         return _visibility_answer(context)
 
-    if any(k in msg for k in ["score", "confidence", "how am i doing", "geo coverage"]):
+    if any(k in msg for k in ["score", "confidence", "how am i doing", "geo coverage", "how is my", "how's my"]):
         return _score_answer(context)
 
-    if any(k in msg for k in ["what does", "what is this app", "how does this work", "tab", "feature"]):
+    if any(k in msg for k in ["what does", "what is this app", "how does this work", "tab", "feature", "what can you"]):
         return _app_help_answer()
 
-    if context.get("chart_title") and any(k in msg for k in ["explain", "what does this mean", "why"]):
+    if context.get("chart_title") and any(k in msg for k in ["explain", "what does this mean", "why", "tell me about", "what is this"]):
         return _explain_chart_answer(context)
+
+    if any(k in msg for k in ["thank", "thanks", "great", "awesome", "perfect", "got it"]):
+        return f"You're welcome! 😊 Let me know if you have any other questions about **{_brand(context)}**'s GEO performance."
 
     return _fallback_answer(context, user_message)

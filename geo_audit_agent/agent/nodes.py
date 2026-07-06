@@ -335,6 +335,10 @@ def planner_node(state: AuditState) -> AuditState:
         state.planned_actions = actions
         state.total_tokens += response.total_tokens
         state.total_cost_usd += response.cost_usd
+        state.step_log.append({
+            "node": "planner",
+            "action_count": len(actions),
+        })
     except Exception as e:
         logger.warning(f"Real planner query failed, falling back to mock planner: {e}")
         planned_actions = []
@@ -354,10 +358,6 @@ def planner_node(state: AuditState) -> AuditState:
             "fallback_due_to_error": str(e),
         })
 
-    state.step_log.append({
-        "node": "planner",
-        "action_count": len(actions),
-    })
     return state
 
 

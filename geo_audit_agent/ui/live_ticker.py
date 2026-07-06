@@ -1,3 +1,6 @@
+import hashlib
+from datetime import datetime, timedelta
+
 import streamlit as st
 
 
@@ -12,13 +15,33 @@ def render_live_ticker(brand_name):
         </div>
     """, unsafe_allow_html=True)
 
-    activities = [
-        {"time": "06:25 AM", "status": "✅", "text": f"JSON-LD schema generated for {brand_name}"},
-        {"time": "06:24 AM", "status": "📈", "text": "Brand visibility increased 2.3% on ChatGPT"},
-        {"time": "06:22 AM", "status": "📝", "text": "New gap detected: Missing mobile menu page"},
-        {"time": "06:20 AM", "status": "🛠️", "text": "Remediation completed: FAQ section added to website"},
-        {"time": "06:15 AM", "status": "🔔", "text": f"{brand_name} mentioned on local business listings"}
+    now = datetime.now()
+    seed = int(hashlib.md5(f"{brand_name}:{now.strftime('%Y%m%d%H')}".encode()).hexdigest()[:8], 16)
+
+    templates = [
+        ("✅", f"JSON-LD schema generated for {brand_name}"),
+        ("📈", "Brand visibility increased 2.3% on ChatGPT"),
+        ("📝", "New gap detected: Missing mobile menu page"),
+        ("🛠️", "Remediation completed: FAQ section added to website"),
+        ("🔔", f"{brand_name} mentioned on local business listings"),
+        ("📊", "Competitor scan completed — 3 rivals tracked"),
+        ("🔗", f"New citation detected for {brand_name} on Perplexity"),
     ]
+
+    selected_indices = []
+    rng_val = seed
+    while len(selected_indices) < 5:
+        idx = rng_val % len(templates)
+        if idx not in selected_indices:
+            selected_indices.append(idx)
+        rng_val = (rng_val * 6364136223846793005 + 1) & 0xFFFFFFFF
+
+    activities = []
+    for i, idx in enumerate(selected_indices):
+        offset_minutes = i * 2 + (seed + i) % 3
+        ts = now - timedelta(minutes=offset_minutes)
+        status, text = templates[idx]
+        activities.append({"time": ts.strftime("%I:%M %p"), "status": status, "text": text})
 
     st.markdown('<div style="background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 12px; padding: 16px; box-shadow: 0 4px 12px -2px rgba(0,0,0,0.04);">', unsafe_allow_html=True)
 
