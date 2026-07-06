@@ -18,6 +18,7 @@ from geo_audit_agent.ui.brand_visibility import render_brand_visibility
 from geo_audit_agent.ui.live_ticker import render_live_ticker
 from geo_audit_agent.ui.competitor_intelligence import render_competitor_intelligence
 from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -750,6 +751,8 @@ if not st.session_state.authenticated:
 with st.sidebar:
     st.markdown("## 🌍 BrandSight GEO")
     st.caption("Generative Engine Optimization")
+    if st.button("🤖 Ask Copilot", use_container_width=True):
+        st.switch_page("pages/3_🤖_Copilot.py")
     st.divider()
 
     st.markdown("#### Display Settings")
@@ -935,7 +938,7 @@ if st.session_state.audit_results:
             """, unsafe_allow_html=True)
             comp_data = get_competitor_data(brand_name_val, category_val)
             fig_multi = create_multi_model_chart(comp_data, brand_name_val, is_dark=(st.session_state.theme == "Dark"))
-            st.plotly_chart(fig_multi, use_container_width=True, config={'displayModeBar': False})
+            render_chart_with_copilot(fig_multi, "Multi-Model Benchmark Chart", chart_data=comp_data, key="fig_multi")
 
             st.markdown("#### 📝 AI Search Intelligence Summary")
             raw_response = html.escape(res.get("llm_response", "No response content."))
@@ -985,7 +988,7 @@ if st.session_state.audit_results:
                     xaxis=dict(showgrid=False, showticklabels=False),
                     yaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)' if is_dark else 'rgba(124, 58, 237, 0.06)', showticklabels=True, range=[0, 105]),
                 )
-                st.plotly_chart(fig_trend, use_container_width=True)
+                render_chart_with_copilot(fig_trend, "Performance Trend", chart_data={"score_history": st.session_state.score_history}, key="fig_trend")
 
     with tab_gaps:
         st.subheader("🚩 GEO Search Gap Analysis")
@@ -1090,7 +1093,7 @@ if st.session_state.audit_results:
                         showlegend=False,
                         font={'color': 'white' if comp_is_dark else '#1E293B'}
                     )
-                    st.plotly_chart(fig_comp, use_container_width=True)
+                    render_chart_with_copilot(fig_comp, "Search Confidence Benchmark", chart_data={"brands": selected_brands}, key="fig_comp")
 
                 with col_chart2:
                     fig_radar = go.Figure()
@@ -1112,7 +1115,7 @@ if st.session_state.audit_results:
                         height=350,
                         margin=dict(l=40, r=40, t=20, b=20)
                     )
-                    st.plotly_chart(fig_radar, use_container_width=True)
+                    render_chart_with_copilot(fig_radar, "Brand Comparison Radar", chart_data={"brands": selected_brands}, key="fig_radar")
 
     with tab_keywords:
         kw_is_dark = st.session_state.theme == "Dark"
@@ -1200,7 +1203,7 @@ if st.session_state.audit_results:
                                 xaxis=dict(showgrid=False, showticklabels=False),
                                 yaxis=dict(showgrid=False, showticklabels=False, range=[0, 105]),
                             )
-                            st.plotly_chart(fig_kw_trend, use_container_width=True, config={'displayModeBar': False})
+                            render_chart_with_copilot(fig_kw_trend, f"Keyword Trend: {kw}", chart_data={"keyword": kw, "trend": kw_data["trend"]}, key=f"fig_kw_trend_{kw}")
 
     with tab_competitors:
         if st.session_state.competitor_data is None:

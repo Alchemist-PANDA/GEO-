@@ -1,6 +1,8 @@
 import streamlit as st
 import plotly.graph_objects as go
 
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
+
 
 def render_competitor_intelligence(competitor_data):
     """Render the Competitor Intelligence dashboard tab with formatted UI cards."""
@@ -83,7 +85,7 @@ def render_competitor_intelligence(competitor_data):
             showlegend=True,
             legend=dict(font=dict(size=12)),
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        render_chart_with_copilot(fig, "Competitive Radar", chart_data={"brand": brand_name, "competitors": [c["scores"].get("competitor") for c in competitors]}, key="competitive_radar")
 
     # Competitor cards
     st.markdown("#### 🏢 Competitor Breakdown")

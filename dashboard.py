@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from geo_audit_agent.agent import build_geo_audit_agent
 from multi_model import run_multi_model_audit
 from streamlit_autorefresh import st_autorefresh
+from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot, copilot_icon_button
 
 # Import modernized dashboard components
 
@@ -818,6 +819,8 @@ if not st.session_state.authenticated:
 with st.sidebar:
     st.markdown("## 🌍 BrandSight GEO")
     st.caption("Generative Engine Optimization")
+    if st.button("🤖 Ask Copilot", use_container_width=True):
+        st.switch_page("pages/3_🤖_Copilot.py")
     st.divider()
 
     # Theme Toggle with Tooltip
@@ -1029,6 +1032,7 @@ with col_g1:
         color="#10B981",
         bottom_text=mentions_text
     ), unsafe_allow_html=True)
+    copilot_icon_button("Brand Visibility score", data={"value": bv_val}, key="bv_gauge")
 
 with col_g2:
     st.markdown(render_gauge_html(
@@ -1041,6 +1045,7 @@ with col_g2:
         color="#F59E0B",
         bottom_text=citations_text
     ), unsafe_allow_html=True)
+    copilot_icon_button("Citation Rate", data={"value": cr_val}, key="cr_gauge")
 
 with col_g3:
     st.markdown(render_gauge_html(
@@ -1053,6 +1058,7 @@ with col_g3:
         color="#10B981",
         bottom_text=sentiment_text
     ), unsafe_allow_html=True)
+    copilot_icon_button("Sentiment score", data={"value": sent_val}, key="sentiment_gauge")
 
 with col_pb:
     # Platform breakdown progress bars
@@ -1084,6 +1090,7 @@ with col_pb:
         </div>
     </div>
     """, unsafe_allow_html=True)
+    copilot_icon_button("Brand Visibility By Platform", data={"platforms": platform_scores}, key="platform_breakdown")
 
 # Trend charts row side-by-side
 st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
@@ -1128,7 +1135,7 @@ with trend_col1:
         legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
         hovermode='x unified'
     )
-    st.plotly_chart(fig_bv_trend, use_container_width=True, config={'displayModeBar': False})
+    render_chart_with_copilot(fig_bv_trend, "Brand Visibility Trend", chart_data={"dates": bv_dates, "values": bv_values}, key="bv_trend")
 
 with trend_col2:
     st.markdown("""
@@ -1164,7 +1171,7 @@ with trend_col2:
         legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
         hovermode='x unified'
     )
-    st.plotly_chart(fig_cr_trend, use_container_width=True, config={'displayModeBar': False})
+    render_chart_with_copilot(fig_cr_trend, "Citation Rate Trend", chart_data={"dates": cr_dates, "values": cr_values}, key="cr_trend")
 
 # Live Ticker activity feed at the bottom
 st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
