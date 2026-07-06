@@ -1,5 +1,4 @@
 import httpx
-import time
 import logging
 from typing import Dict, Any, Tuple
 
@@ -46,8 +45,14 @@ async def generate_content_async(
     }
     
     async with httpx.AsyncClient(timeout=timeout) as client:
+        response = None
+        error_msg = None
         try:
-            response = await client.post(url, headers=headers, json=data)
+            try:
+                response = await client.post(url, headers=headers, json=data)
+            except Exception as e:
+                error_msg = str(e)
+                raise
             
             if response.status_code == 429:
                 raise RateLimitError("Gemini API rate limit exceeded (HTTP 429).")
@@ -79,3 +84,24 @@ async def generate_content_async(
                 
         except httpx.RequestError as e:
             raise APIError(f"Network error during API call: {e}")
+        finally:
+            import json, datetime, os
+            log_record = {
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "request": {
+                    "url": url.split("?key=")[0] + "?key=MASKED",
+                    "model": model,
+                    "prompt": prompt
+                },
+                "response": {
+                    "status_code": response.status_code if response else None,
+                    "text": response.text if response else None,
+                    "error": error_msg
+                }
+            }
+            try:
+                os.makedirs("data", exist_ok=True)
+                with open("data/raw_audit_log.jsonl", "a", encoding="utf-8") as f:
+                    f.write(json.dumps(log_record) + "\n")
+            except Exception as le:
+                logger.error(f"Failed to write to raw_audit_log.jsonl: {le}")

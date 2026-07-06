@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Set
 from geo_audit_agent.testing.key_manager import GeminiKeyManager
 from geo_audit_agent.testing.gemini_client import generate_content_async, RateLimitError, APIError
 from geo_audit_agent.testing.storage import write_result_jsonl, load_completed_test_ids
-from geo_audit_agent.testing.progress_tracker import ProgressTracker, generate_summary_report, write_summary_json
+from geo_audit_agent.testing.progress_tracker import ProgressTracker
 
 logger = logging.getLogger(__name__)
 
