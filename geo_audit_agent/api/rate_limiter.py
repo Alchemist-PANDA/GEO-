@@ -1,7 +1,15 @@
 import logging
 import time
 
-import redis
+try:
+    import redis
+    REDIS_MODULE_AVAILABLE = True
+    from redis import RedisError
+except ImportError:
+    REDIS_MODULE_AVAILABLE = False
+    class RedisError(Exception):  # type: ignore
+        pass
+
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware

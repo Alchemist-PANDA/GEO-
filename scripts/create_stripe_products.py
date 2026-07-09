@@ -1,5 +1,6 @@
-import stripe
 import os
+
+import stripe
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,7 +25,7 @@ def main():
                 description=config["desc"],
                 metadata={"tier": tier_id}
             )
-            
+
             # Create price
             price = stripe.Price.create(
                 product=product.id,
@@ -33,7 +34,7 @@ def main():
                 recurring={"interval": "month"},
                 lookup_key=f"price_{tier_id}",
             )
-            
+
             print(f"✅ Created {config['name']}: {price.id}")
         except Exception as e:
             print(f"Error creating {config['name']}: {e}")

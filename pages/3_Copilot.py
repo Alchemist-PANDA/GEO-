@@ -1,13 +1,15 @@
-import streamlit as st
-import uuid
-import os
 import asyncio
+import os
+import uuid
+
 import plotly.io
-from sqlmodel import Session, select, desc, SQLModel
-from geo_audit_agent.db.session import engine
-from geo_audit_agent.db.models import UserProfile, CopilotConversation
+import streamlit as st
+from sqlmodel import Session, SQLModel, desc, select
+
 from geo_audit_agent.copilot.context import build_copilot_context
 from geo_audit_agent.copilot.engine import stream_chat
+from geo_audit_agent.db.models import CopilotConversation, UserProfile
+from geo_audit_agent.db.session import engine
 
 SQLModel.metadata.create_all(engine)
 
@@ -17,7 +19,7 @@ def get_db_session():
 # Load CSS
 def load_css(file_name="style.css"):
     if os.path.exists(file_name):
-        with open(file_name, "r") as f:
+        with open(file_name) as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Page Setup
@@ -59,13 +61,13 @@ if "active_conv_id" not in st.session_state:
 def render_history_sidebar():
     st.sidebar.markdown("<h2 style='text-align: center; background: linear-gradient(135deg, #7C3AED 0%, #3B82F6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>🤖 GEO Copilot</h2>", unsafe_allow_html=True)
     st.sidebar.markdown("---")
-    
+
     if st.sidebar.button("➕ New Chat", use_container_width=True):
         st.session_state.active_conv_id = None
         st.rerun()
 
     st.sidebar.markdown("### Conversation History")
-    
+
     with get_db_session() as session:
         statement = select(CopilotConversation).where(
             CopilotConversation.user_id == USER_ID
@@ -74,13 +76,13 @@ def render_history_sidebar():
 
         if not conversations:
             st.sidebar.caption("No conversations yet.")
-        
+
         for conv in conversations:
             conv_id_str = str(conv.id)
             # Accentuate active item
             is_active = (st.session_state.active_conv_id == conv_id_str)
             title_prefix = "💬 " if not is_active else "👉 "
-            
+
             col1, col2 = st.sidebar.columns([4, 1])
             with col1:
                 if st.button(f"{title_prefix}{conv.title}", key=f"select_{conv_id_str}", use_container_width=True):
@@ -113,7 +115,7 @@ st.markdown("Your interactive command center for Generative Engine Optimization.
 def get_or_create_conversation() -> str:
     if st.session_state.active_conv_id:
         return st.session_state.active_conv_id
-        
+
     with get_db_session() as session:
         conv = CopilotConversation(
             user_id=USER_ID,
@@ -137,7 +139,7 @@ with get_db_session() as session:
     for msg in messages:
         with st.chat_message(msg.role):
             st.write(msg.content)
-            
+
             # Render charts if present in artifacts
             if msg.artifacts and "chart" in msg.artifacts:
                 try:
@@ -145,7 +147,7 @@ with get_db_session() as session:
                     st.plotly_chart(fig, use_container_width=True)
                 except Exception:
                     print("Error loading chart from message artifacts")
-            
+
             # Render navigation if present in artifacts
             if msg.artifacts and "navigation" in msg.artifacts:
                 nav = msg.artifacts["navigation"]
@@ -170,7 +172,7 @@ if prompt_to_send:
         response_placeholder = st.empty()
         chart_placeholder = st.empty()
         nav_placeholder = st.empty()
-        
+
         state = {
             "full_text": "",
             "plotly_json": None,

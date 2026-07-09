@@ -3,8 +3,8 @@
 Revision ID: 0007_agentic
 Revises: b01ababa7828
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "0007_agentic"
 down_revision = "b01ababa7828"

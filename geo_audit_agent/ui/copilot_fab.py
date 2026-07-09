@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 def render_copilot_fab():
     """Render the floating Copilot button (bottom-right corner)."""
     if "copilot" not in st.session_state:
@@ -39,6 +40,6 @@ def render_copilot_fab():
     }
     </style>
     """, unsafe_allow_html=True)
-    
+
     if st.button("🤖", key="copilot_fab", use_container_width=False):
         st.switch_page("pages/3_Copilot.py")

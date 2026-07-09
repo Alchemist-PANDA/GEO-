@@ -1,4 +1,5 @@
 import sqlite3
+
 with sqlite3.connect('geo_saas.db') as conn:
     c = conn.cursor()
     c.execute("DROP TABLE IF EXISTS audit_usage")

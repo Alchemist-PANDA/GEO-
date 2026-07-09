@@ -1,13 +1,14 @@
-import streamlit as st
-import uuid
 import asyncio
-import plotly.io
-from sqlmodel import Session, select, SQLModel
-from geo_audit_agent.db.session import engine
+import uuid
 
-from geo_audit_agent.db.models import UserProfile, CopilotConversation
+import plotly.io
+import streamlit as st
+from sqlmodel import Session, SQLModel, select
+
 from geo_audit_agent.copilot.context import build_copilot_context
 from geo_audit_agent.copilot.engine import stream_chat
+from geo_audit_agent.db.models import CopilotConversation, UserProfile
+from geo_audit_agent.db.session import engine
 
 # Ensure tables exist (critical for Streamlit Cloud with local sqlite)
 SQLModel.metadata.create_all(engine)
@@ -35,7 +36,7 @@ def get_or_create_sidebar_user() -> uuid.UUID:
 def render_copilot_panel():
     """Render the side panel as a floating CSS overlay."""
     is_open = st.session_state.get("copilot_open", False)
-    
+
     # User ID Resolution
     user_id = get_or_create_sidebar_user()
 
@@ -82,7 +83,7 @@ def render_copilot_panel():
     # Always render the container, CSS will hide it if not open
     with st.container():
         st.markdown("<div id='copilot-anchor'></div>", unsafe_allow_html=True)
-        
+
         # Header and Close Button
         col1, col2 = st.columns([4, 1])
         with col1:
@@ -91,7 +92,7 @@ def render_copilot_panel():
             if st.button("✕", key="close_panel_btn", help="Close Copilot"):
                 st.session_state["copilot_open"] = False
                 st.rerun()
-                
+
         st.markdown("---")
 
         # Fetch conversation messages
@@ -104,7 +105,7 @@ def render_copilot_panel():
                 role_label = "👤 You" if msg.role == "user" else "🤖 Copilot"
                 st.markdown(f"**{role_label}**")
                 st.markdown(msg.content)
-                
+
                 # Show charts if any
                 if msg.artifacts and "chart" in msg.artifacts:
                     try:
@@ -116,24 +117,24 @@ def render_copilot_panel():
 
         # Handle pending explanation prompts from "Explain This" buttons
         pending_prompt = st.session_state.pop("copilot_pending_message", None)
-        
+
         # Text input
         user_input = st.chat_input("Ask about your brand visibility...", key="panel_input")
-        
+
         prompt_to_send = pending_prompt or user_input
-        
+
         if prompt_to_send:
             # Display immediately
             st.markdown("**👤 You**")
             st.markdown(prompt_to_send)
-            
+
             ctx = build_copilot_context(st.session_state)
-            
+
             # Stream response
             st.markdown("**🤖 Copilot**")
             response_placeholder = st.empty()
             chart_placeholder = st.empty()
-            
+
             full_text = ""
             plotly_json = None
 
@@ -155,5 +156,5 @@ def render_copilot_panel():
                     chart_placeholder.plotly_chart(fig, use_container_width=True)
                 except Exception:
                     pass
-                    
+
             st.rerun()

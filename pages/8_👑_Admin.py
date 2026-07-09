@@ -1,10 +1,12 @@
-import streamlit as st
+from datetime import datetime
+
 import pandas as pd
-from datetime import datetime, timedelta
-from sqlmodel import select, func
-from geo_audit_agent.db.session import get_session
-from geo_audit_agent.db.models import UserProfile, InvoiceRequest, AuditUsage
+import streamlit as st
+from sqlmodel import func, select
+
 from geo_audit_agent.auth.user import TIER_CONFIG
+from geo_audit_agent.db.models import AuditUsage, InvoiceRequest, UserProfile
+from geo_audit_agent.db.session import get_session
 
 st.set_page_config(page_title="Admin Panel", page_icon="👑", layout="wide")
 
@@ -51,7 +53,7 @@ with tab1:
             query = query.where(UserProfile.email.contains(search))
         if tier_filter != "All":
             query = query.where(UserProfile.tier == tier_filter)
-        
+
         if sort_by == "Created (newest)":
             query = query.order_by(UserProfile.created_at.desc())
         elif sort_by == "Created (oldest)":
@@ -69,7 +71,7 @@ with tab1:
             with get_session() as s2:
                 usage = s2.exec(select(AuditUsage).where(AuditUsage.user_id == user.id)).all()
                 total_audits = sum(u.count for u in usage)
-            
+
             tier_limit = TIER_CONFIG.get(user.tier, {}).get("audits_per_month", 0)
 
             data.append({
@@ -78,7 +80,7 @@ with tab1:
                 "Tier": user.tier.capitalize(),
                 "Audits": f"{total_audits}/{tier_limit if tier_limit != 999999 else '∞'}",
                 "Joined": user.created_at.strftime("%Y-%m-%d") if user.created_at else "N/A",
-                "Actions": f"Edit|Upgrade|Delete",
+                "Actions": "Edit|Upgrade|Delete",
             })
 
         df = pd.DataFrame(data)
@@ -140,7 +142,7 @@ with tab2:
         for req in requests:
             with get_session() as s2:
                 user = s2.get(UserProfile, req.user_id)
-            
+
             data.append({
                 "ID": str(req.id)[:8],
                 "User": user.email if user else "Unknown",
@@ -158,7 +160,7 @@ with tab2:
             request_ids = [str(r.id) for r in requests]
             selected_req_id = st.selectbox("Select Request ID", request_ids)
             new_status = st.selectbox("New Status", ["pending", "sent", "paid", "cancelled"])
-            
+
             if st.form_submit_button("Update Status"):
                 with get_session() as s:
                     # find the actual request

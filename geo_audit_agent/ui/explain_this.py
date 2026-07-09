@@ -1,5 +1,7 @@
-import streamlit as st
 import json
+
+import streamlit as st
+
 
 def explain_this(element_type: str, element_id: str, context_data: dict):
     """
@@ -32,18 +34,18 @@ def explain_this(element_type: str, element_id: str, context_data: dict):
 
     if st.button(f"💡 Explain This {element_type.title()}", key=button_key):
         prompt = f"Explain this {element_type} to me in simple terms. Here's the data: {json.dumps(context_data)}"
-        
+
         # Open side panel/sidebar copilot
         st.session_state["copilot_open"] = True
         st.session_state["copilot_pending_message"] = prompt
-        
+
         # Set context for mock engine
         st.session_state["chart_title"] = f"{element_type.title()} ({element_id})"
         st.session_state["chart_data"] = json.dumps(context_data)
-        
+
         # Add to message list directly to trigger processing
         if "copilot_messages" not in st.session_state:
             st.session_state["copilot_messages"] = []
-        
+
         # We rerun to display it
         st.rerun()

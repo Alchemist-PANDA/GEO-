@@ -1,15 +1,16 @@
-import pytest
 import sys
 import uuid
 from pathlib import Path
+
+import pytest
 from sqlmodel import Session, create_engine
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from geo_audit_agent.db.models import UserProfile, CopilotConversation, CopilotMessage
-from geo_audit_agent.copilot.context import build_copilot_context
 from geo_audit_agent.copilot.chart_builder import build_chart
+from geo_audit_agent.copilot.context import build_copilot_context
 from geo_audit_agent.copilot.engine import compact_history
+from geo_audit_agent.db.models import CopilotConversation, CopilotMessage, UserProfile
 
 # Setup in-memory sqlite for testing DB
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -92,7 +93,7 @@ def test_chart_builder():
             {"name": "Comp B", "geo_score": 90}
         ]
     }
-    
+
     chart_json = build_chart(
         chart_type="bar",
         title="Competitor Comparison",
@@ -108,7 +109,7 @@ def test_compact_history():
     messages = [{"role": "user", "content": "Context"}]
     for i in range(25):
         messages.append({"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"})
-    
+
     compacted = compact_history(messages)
     assert len(compacted) < 20
     assert compacted[0]["content"] == "Context"

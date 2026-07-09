@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import textwrap
 from datetime import datetime
 
 import plotly.graph_objects as go
@@ -11,7 +12,11 @@ import streamlit as st
 
 from geo_audit_agent.agent import build_geo_audit_agent
 from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
-from geo_audit_agent.ui.brand_visibility import render_brand_visibility
+from geo_audit_agent.ui.brand_visibility import (
+    normalize_multi_model_results,
+    render_brand_visibility,
+    render_market_simulator,
+)
 from geo_audit_agent.ui.chart_wrapper import render_chart_with_copilot
 from geo_audit_agent.ui.competitor_intelligence import render_competitor_intelligence
 
@@ -741,13 +746,15 @@ def login_screen():
                 expected_pass = os.getenv("DASHBOARD_PASS", "changeme")
                 if username == expected_user and password == expected_pass:
                     st.session_state.authenticated = True
-                    
+
                     try:
-                        from sqlmodel import select
-                        from geo_audit_agent.db.session import get_session
-                        from geo_audit_agent.db.models import UserProfile
                         import uuid
-                        
+
+                        from sqlmodel import select
+
+                        from geo_audit_agent.db.models import UserProfile
+                        from geo_audit_agent.db.session import get_session
+
                         admin_email = f"{username}@brandsightgeo.com"
                         with get_session() as s:
                             user = s.exec(select(UserProfile).where(UserProfile.email == admin_email)).first()
@@ -759,7 +766,7 @@ def login_screen():
                     except Exception as e:
                         logger.error(f"Error setting up mock user: {e}")
                         pass
-                    
+
                     st.success("Welcome back!")
                     st.rerun()
                 else:
@@ -953,7 +960,7 @@ if st.session_state.audit_results:
             """, unsafe_allow_html=True)
 
         render_market_simulator()
-        
+
         col_left, col_right = st.columns([1.6, 1])
 
         with col_left:
@@ -1285,4 +1292,5 @@ st.sidebar.markdown("""
 
 # Inject Copilot FAB
 from geo_audit_agent.ui.copilot_fab import render_copilot_fab  # noqa: E402
+
 render_copilot_fab()

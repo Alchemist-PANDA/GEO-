@@ -3,19 +3,21 @@ Phase 6: Copilot API Tests
 Tests for the /v1/copilot/* endpoints using FastAPI TestClient.
 Uses an in-memory SQLite database to avoid touching production data.
 """
-import uuid
 import json
-import pytest
 import sys
+import uuid
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
-from geo_audit_agent.db.models import UserProfile, CopilotConversation
+
+from geo_audit_agent.db.models import CopilotConversation, UserProfile
 
 # ── Test database (in-memory SQLite) ─────────────────────────────────────────
 TEST_DB_URL = "sqlite://"

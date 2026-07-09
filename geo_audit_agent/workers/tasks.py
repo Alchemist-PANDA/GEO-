@@ -1,11 +1,22 @@
 # tasks.py
 import logging
+from datetime import datetime
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from geo_audit_agent.agent.graph import audit_graph
 from geo_audit_agent.agent.state import AuditState
-from geo_audit_agent.db.models import Audit, AuditStatus, Brand
+from geo_audit_agent.agents.unified_competitor_agent import run_competitor_scan
+from geo_audit_agent.db.models import (
+    Alert,
+    Audit,
+    AuditStatus,
+    Brand,
+    Competitor,
+    CompetitorExplanation,
+    CompetitorScan,
+    CompetitorScore,
+)
 from geo_audit_agent.db.session import engine
 from geo_audit_agent.workers.celery_app import celery_app
 
@@ -74,20 +85,25 @@ def run_audit_task(audit_id: str, user_id: str):
 def run_competitor_analysis(brand_name: str, category: str, city: str, limit: int = 5):
     """Executes the Unified Competitor Intelligence Agent and persists to DB."""
     logger.info(f"Asynchronous worker picked up competitor analysis task for {brand_name}")
-    
-    agent = UnifiedCompetitorIntelligenceAgent()
+
     try:
-        # Run async agent in synchronous celery worker
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        result = loop.run_until_complete(agent.run(brand_name, category, city, limit))
-        
-        if result.get("status") != "success":
-            return result
-            
+        # Get list of existing competitors from DB if available, or scan new ones
+        with Session(engine) as session:
+            brand = session.exec(select(Brand).where(Brand.name == brand_name)).first()
+            existing_names = []
+            if brand:
+                existing_comps = session.exec(select(Competitor).where(Competitor.brand_id == brand.id)).all()
+                existing_names = [c.name for c in existing_comps]
+
+        # Call the synchronous competitor scan
+        # We pass existing competitor names to keep them consistent if they exist
+        result = run_competitor_scan(
+            brand_name=brand_name,
+            category=category,
+            city=city,
+            competitors=existing_names if existing_names else None
+        )
+
         with Session(engine) as session:
             brand = session.exec(select(Brand).where(Brand.name == brand_name)).first()
             if not brand:
@@ -97,8 +113,14 @@ def run_competitor_analysis(brand_name: str, category: str, city: str, limit: in
             competitors = result.get("competitors", [])
             for comp_data in competitors:
                 # 1. Upsert Competitor
-                comp_name = comp_data.get("name")
-                competitor = session.exec(select(Competitor).where(Competitor.name == comp_name, Competitor.brand_id == brand.id)).first()
+                scores = comp_data.get("scores", {})
+                comp_name = scores.get("competitor")
+                if not comp_name:
+                    continue
+
+                competitor = session.exec(
+                    select(Competitor).where(Competitor.name == comp_name, Competitor.brand_id == brand.id)
+                ).first()
                 if not competitor:
                     competitor = Competitor(
                         brand_id=brand.id,
@@ -110,7 +132,7 @@ def run_competitor_analysis(brand_name: str, category: str, city: str, limit: in
                     session.add(competitor)
                     session.commit()
                     session.refresh(competitor)
-                    
+
                     # Generate an Alert for new competitor
                     alert = Alert(
                         user_id=brand.user_id,
@@ -134,21 +156,22 @@ def run_competitor_analysis(brand_name: str, category: str, city: str, limit: in
                 session.refresh(scan)
 
                 # 3. Add CompetitorScores
-                scores = comp_data.get("scores", {})
                 overall_score = 0
+                valid_scores_count = 0
                 for dim, score_val in scores.items():
-                    if dim != "overall":
+                    if dim != "overall" and isinstance(score_val, (int, float)):
                         overall_score += score_val
+                        valid_scores_count += 1
                         session.add(CompetitorScore(
                             competitor_id=competitor.id,
                             scan_id=scan.id,
                             dimension=dim,
                             score=score_val
                         ))
-                
+
                 # We could add an overall dimension too if we want
-                if scores:
-                    overall = overall_score / len(scores)
+                if valid_scores_count > 0:
+                    overall = overall_score / valid_scores_count
                     session.add(CompetitorScore(
                         competitor_id=competitor.id,
                         scan_id=scan.id,
@@ -157,33 +180,33 @@ def run_competitor_analysis(brand_name: str, category: str, city: str, limit: in
                     ))
 
                 # 4. Add CompetitorExplanations
-                intel = comp_data.get("intelligence", {})
-                if intel.get("explanation"):
+                exps = comp_data.get("explanations", [])
+                for exp in exps:
+                    area = exp.get("area", "General")
+                    insight = exp.get("insight", "")
+                    rec = exp.get("recommendation", "")
                     session.add(CompetitorExplanation(
                         competitor_id=competitor.id,
                         scan_id=scan.id,
-                        explanation_type="winning_factors",
-                        content=intel.get("explanation")
+                        explanation_type=area.lower().replace(" ", "_"),
+                        content=f"{insight} Recommendation: {rec}"
                     ))
-                if intel.get("strategy"):
-                    session.add(CompetitorExplanation(
-                        competitor_id=competitor.id,
-                        scan_id=scan.id,
-                        explanation_type="strategy",
-                        content=intel.get("strategy")
-                    ))
-                    
-            # 5. Add Global Summary as Alert (optional) or store globally. 
-            summary = result.get("summary")
-            if summary:
+
+            # 5. Add Global Summary as Alert (optional) or store globally.
+            summary_dict = result.get("summary", {})
+            if summary_dict:
+                rank = summary_dict.get("brand_rank", 1)
+                total = summary_dict.get("total_competitors", 0)
+                opp = summary_dict.get("top_opportunity", "Content Depth")
+                message = f"Competitor scan complete. Brand rank: {rank}/{total + 1}. Top opportunity: {opp}."
                 alert = Alert(
                     user_id=brand.user_id,
                     alert_type="scan_summary",
                     severity="info",
-                    message=summary[:200] + "..." if len(summary) > 200 else summary
+                    message=message
                 )
                 session.add(alert)
-                
+
             session.commit()
 
         logger.info(f"Competitor analysis for {brand_name} completed and persisted successfully.")

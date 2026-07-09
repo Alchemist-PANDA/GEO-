@@ -25,7 +25,13 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
     Returns:
         Dictionary with per-model results and cross-model summary
     """
-    from geo_audit_agent.auth.user import get_available_models, is_model_real, get_user_tier, can_run_audit, increment_audit_usage
+    from geo_audit_agent.auth.user import (
+        can_run_audit,
+        get_available_models,
+        get_user_tier,
+        increment_audit_usage,
+        is_model_real,
+    )
 
     if user_id and not can_run_audit(user_id):
         return {"error": "Audit limit reached. Please upgrade your plan."}
@@ -42,7 +48,7 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
 
     tier = get_user_tier(user_id) if user_id else "free"
     allowed_models = get_available_models(user_id)
-    
+
     # If free tier, show all standard models but force mock
     if tier == "free" or not allowed_models:
         allowed_models = ["ChatGPT", "Gemini", "Meta.ai", "Claude.ai", "DeepSeek"]
@@ -52,9 +58,9 @@ def run_multi_model_audit(brand: str, category: str, city: str, use_real: bool =
     for model_info in all_models:
         if model_info["name"] not in allowed_models:
             continue
-            
+
         can_use_real = is_model_real(user_id, model_info["name"]) and tier != "free"
-        
+
         if use_real and can_use_real:
             result = _run_real_audit(brand, category, city, model_info)
         else:

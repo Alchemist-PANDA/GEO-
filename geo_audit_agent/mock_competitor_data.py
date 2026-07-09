@@ -1,6 +1,7 @@
-from typing import Dict, Any
+from typing import Any
 
-def generate_competitor_mock_data() -> Dict[str, Any]:
+
+def generate_competitor_mock_data() -> dict[str, Any]:
     return {
         "brand": "Burger Hub",
         "category": "fast food",

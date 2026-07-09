@@ -39,7 +39,7 @@ class RemediationRequest(BaseModel):
 class CompetitorFeedbackRequest(BaseModel):
     competitor_id: str = Field(...)
     is_helpful: bool = Field(...)
-    comment: Optional[str] = Field(None, max_length=1000)
+    comment: str | None = Field(None, max_length=1000)
 
 
 class FeedbackCreate(BaseModel):

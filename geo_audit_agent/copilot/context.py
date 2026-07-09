@@ -7,21 +7,36 @@ shape, so the Copilot's knowledge of the app never drifts between modes.
 import streamlit as st
 
 
-def build_context() -> dict:
-    audit_results = st.session_state.get("audit_results") or {}
-    multi_model_results = st.session_state.get("multi_model_results") or {}
-    competitor_data = st.session_state.get("competitor_data") or {}
+def build_copilot_context(state: dict) -> dict:
+    """Builds a flat, JSON-friendly context dict from a session state dictionary."""
+    audit_result = state.get("audit_result") or state.get("audit_results") or {}
+    multi_model_results = state.get("multi_model_results") or {}
+    competitor_data = state.get("competitor_data") or {}
+
+    # Extract nested fields safely
+    report = audit_result.get("report") or {}
+    geo_score = report.get("geo_score") or audit_result.get("confidence_score")
+    if geo_score is not None:
+        # Convert to percentage if it's a fraction
+        if isinstance(geo_score, float) and geo_score <= 1.0:
+            geo_score = int(geo_score * 100)
+        else:
+            geo_score = int(geo_score)
+
+    sentiment = audit_result.get("sentiment") or audit_result.get("llm_response")
 
     brand_scores = competitor_data.get("brand_scores", {}) if competitor_data else {}
     summary = competitor_data.get("summary", {}) if competitor_data else {}
 
     return {
-        "brand_name": audit_results.get("brand_name") or st.session_state.get("brand_name", "Your Brand"),
-        "category": audit_results.get("category", ""),
-        "city": audit_results.get("city", ""),
-        "confidence_score": audit_results.get("confidence_score"),
-        "is_cited": audit_results.get("is_cited"),
-        "gaps": audit_results.get("gaps", []),
+        "current_tab": state.get("active_tab", "GEO Score"),
+        "brand_name": state.get("brand_name") or audit_result.get("brand_name") or "Your Brand",
+        "category": state.get("category") or audit_result.get("category", ""),
+        "city": state.get("city") or audit_result.get("city", ""),
+        "geo_score": geo_score,
+        "sentiment": sentiment,
+        "is_cited": audit_result.get("is_cited"),
+        "gaps": audit_result.get("gaps", []),
         "geo_coverage_score": (multi_model_results.get("summary") or {}).get("geo_coverage_score"),
         "model_results": multi_model_results.get("results", []) if multi_model_results else [],
         "competitor_summary": summary,
@@ -31,3 +46,8 @@ def build_context() -> dict:
         "chart_data": None,
         "fig_json": None,
     }
+
+
+def build_context() -> dict:
+    return build_copilot_context(st.session_state)
+

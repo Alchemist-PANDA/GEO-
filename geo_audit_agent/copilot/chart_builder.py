@@ -1,7 +1,9 @@
-import plotly.graph_objects as go
-from typing import Dict, Any, List, Optional
+from typing import Any
 
-def build_chart(chart_type: str, title: str, data_source: str, metrics: Optional[List[str]], context: Dict[str, Any]) -> str:
+import plotly.graph_objects as go
+
+
+def build_chart(chart_type: str, title: str, data_source: str, metrics: list[str] | None, context: dict[str, Any]) -> str:
     """
     Generate a Plotly figure from a Copilot tool call.
 
@@ -14,7 +16,7 @@ def build_chart(chart_type: str, title: str, data_source: str, metrics: Optional
         competitors = context.get("competitors", []) or []
         names = [c.get("name") or "Unknown" for c in competitors]
         scores = [c.get("geo_score") or 0 for c in competitors]
-        
+
         # Include own brand if present
         brand_name = context.get("brand_name")
         brand_score = context.get("geo_score")
@@ -23,8 +25,8 @@ def build_chart(chart_type: str, title: str, data_source: str, metrics: Optional
             scores.insert(0, brand_score)
 
         fig.add_trace(go.Bar(
-            x=names, 
-            y=scores, 
+            x=names,
+            y=scores,
             marker_color="#7C3AED",
             text=scores,
             textposition='auto'
@@ -34,7 +36,7 @@ def build_chart(chart_type: str, title: str, data_source: str, metrics: Optional
         categories = ["GEO Score", "Citation Rate", "Sentiment"]
         geo_score = context.get("geo_score") or 0.0
         citation_rate = context.get("citation_rate") or 0.0
-        
+
         sentiment_val = 50.0
         sentiment = context.get("sentiment", "").lower()
         if "positive" in sentiment:
@@ -43,14 +45,14 @@ def build_chart(chart_type: str, title: str, data_source: str, metrics: Optional
             sentiment_val = 10.0
 
         values = [geo_score, citation_rate * 100, sentiment_val]
-        
+
         # Add start element at end to close the radar loop
         categories.append(categories[0])
         values.append(values[0])
 
         fig.add_trace(go.Scatterpolar(
-            r=values, 
-            theta=categories, 
+            r=values,
+            theta=categories,
             fill="toself",
             fillcolor="rgba(124, 58, 237, 0.2)",
             line=dict(color="#7C3AED")

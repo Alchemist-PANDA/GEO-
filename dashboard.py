@@ -2,12 +2,14 @@ import hashlib
 import html
 import logging
 import os
+import textwrap
 from datetime import datetime, timedelta
 
 import plotly.graph_objects as go
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
+from auth import current_user, sign_in, sign_up
 from geo_audit_agent.agent import build_geo_audit_agent
 from geo_audit_agent.ui.chart_wrapper import copilot_icon_button, render_chart_with_copilot
 from multi_model import run_multi_model_audit
@@ -36,12 +38,6 @@ st.set_page_config(
 
 # st.warning(f"🔧 Debug Mode | Render Loop Counter: {st.session_state.render_count}")
 print("[DEBUG] => Page config and initial warning displayed")
-
-# --- Load custom styling for the dashboard (used later) ---
-def load_css(file_name="style.css"):
-    if os.path.exists(file_name):
-        with open(file_name, "r") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ==============================================
 # BRANDSIGHT GEO LOGIN PAGE (shown if user is not logged in)
@@ -1285,7 +1281,7 @@ else:
             <span style="color: #64748B; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg> {neu_count}</span>
             <span style="color: #EF4444; display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm10-7h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg> {neg_count}</span>
         </div>
-    """)
+    """
 
 
 # Custom SVG rendering helper function
@@ -1372,7 +1368,7 @@ with col_pb:
             </div>
             <div class="bv2-platform-score" style="width: 45px; text-align: right; font-weight: 700; font-size: 0.85rem; color: #1E293B;">{p['score']}%</div>
         </div>
-        """)
+        """
     st.markdown(clean_html(f"""
     <div style="background: #FFFFFF; border: 1px solid rgba(124, 58, 237, 0.08); border-radius: 20px; padding: 22px 24px; box-shadow: 0 8px 24px rgba(124, 58, 237, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02); height: 100%;">
         <div style="font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
@@ -1389,7 +1385,7 @@ with col_pb:
             10 platforms tracked &bull; 2,663 total responses
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
     copilot_icon_button("Brand Visibility By Platform", data={"platforms": platform_scores}, key="platform_breakdown")
 
 # Trend charts row side-by-side

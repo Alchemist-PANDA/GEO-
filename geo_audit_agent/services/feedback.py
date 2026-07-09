@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, cast
 
 import redis
+from redis.exceptions import RedisError
 
 logger = logging.getLogger(__name__)
 

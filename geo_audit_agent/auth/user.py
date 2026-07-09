@@ -1,10 +1,12 @@
-import streamlit as st
-from enum import Enum
-from typing import List, Dict
-from geo_audit_agent.db.session import get_session
-from geo_audit_agent.db.models import UserProfile, AuditUsage
-from sqlmodel import select
 from datetime import date
+from enum import Enum
+
+import streamlit as st
+from sqlmodel import select
+
+from geo_audit_agent.db.models import AuditUsage, UserProfile
+from geo_audit_agent.db.session import get_session
+
 
 class UserTier(str, Enum):
     FREE = "free"
@@ -13,7 +15,7 @@ class UserTier(str, Enum):
     BUSINESS = "business"
     ENTERPRISE = "enterprise"
 
-TIER_CONFIG: Dict[str, Dict] = {
+TIER_CONFIG: dict[str, dict] = {
     "free": {
         "models": [],  # All mock
         "audits_per_month": 3,
@@ -72,7 +74,7 @@ def get_user_tier(user_id: str) -> str:
     except Exception:
         return "free"
 
-def get_available_models(user_id: str) -> List[str]:
+def get_available_models(user_id: str) -> list[str]:
     """Get list of models available to the user."""
     tier = get_user_tier(user_id)
     return TIER_CONFIG.get(tier, {}).get("models", [])

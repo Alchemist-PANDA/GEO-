@@ -5,7 +5,6 @@ from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
-import geo_audit_agent.db.models
 
 load_dotenv()
 

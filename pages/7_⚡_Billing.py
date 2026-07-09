@@ -1,7 +1,8 @@
 import streamlit as st
-from geo_audit_agent.auth.user import get_user_tier, TIER_CONFIG
+
+from geo_audit_agent.auth.user import TIER_CONFIG, get_user_tier
+from geo_audit_agent.db.models import InvoiceRequest
 from geo_audit_agent.db.session import get_session
-from geo_audit_agent.db.models import UserProfile, InvoiceRequest
 
 st.set_page_config(page_title="Billing & Plans", page_icon="⚡", layout="wide")
 
@@ -29,19 +30,19 @@ tiers = [t for t in TIER_CONFIG.keys() if t != "free"]
 for i, tier_name in enumerate(tiers):
     col = cols[i % 4]
     config = TIER_CONFIG[tier_name]
-    
+
     with col:
         st.markdown(f"### {tier_name.capitalize()}")
         st.markdown(f"**${config['price']}/month**")
         st.markdown(f"✅ {config['audits_per_month']} audits/month")
         st.markdown(f"✅ {config['competitors']} competitors tracked")
-        
+
         models_str = ", ".join(config['models'])
         st.markdown(f"🤖 Models: {models_str}")
-        
+
         if config['action_agent']:
             st.markdown("✅ Action Agent included")
-        
+
         if tier_name == current_tier:
             st.button("Current Plan", disabled=True, key=f"btn_{tier_name}")
         else:
@@ -69,7 +70,7 @@ st.subheader("Invoice History")
 with get_session() as s:
     from sqlmodel import select
     requests = s.exec(select(InvoiceRequest).where(InvoiceRequest.user_id == user_id).order_by(InvoiceRequest.created_at.desc())).all()
-    
+
     if not requests:
         st.info("You have no past invoice requests.")
     else:

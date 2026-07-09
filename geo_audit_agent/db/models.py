@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, date
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Index, text
+import sqlmodel
+from sqlalchemy import JSON, DateTime, Index, MetaData, text
 from sqlalchemy import Column as SAColumn
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -53,9 +54,9 @@ class UserProfile(SQLModel, table=True):
     plan_tier: str = Field(default="free", max_length=20)
     monthly_audit_quota: int = Field(default=10)
     tier: str = Field(default="free", max_length=50)
-    tier_expires_at: Optional[datetime] = None
-    stripe_customer_id: Optional[str] = Field(default=None, max_length=255)
-    stripe_subscription_id: Optional[str] = Field(default=None, max_length=255)
+    tier_expires_at: datetime | None = None
+    stripe_customer_id: str | None = Field(default=None, max_length=255)
+    stripe_subscription_id: str | None = Field(default=None, max_length=255)
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
@@ -186,19 +187,120 @@ class AuditFeedback(SQLModel, table=True):
 
 # ── Competitor Scans ──
 
-class CompetitorScan(SQLModel, table=True):
-    __tablename__ = "competitor_scans"
+class Competitor(SQLModel, table=True):
+    __tablename__ = "competitors"
     __table_args__ = (
-        Index("idx_competitor_scans_brand_id", "brand_id"),
+        Index("idx_competitors_brand_id", "brand_id"),
+        {"extend_existing": True}
     )
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     brand_id: uuid.UUID = Field(foreign_key="brands.id", index=True)
-    competitors_json: dict[str, Any] = Field(
-        default_factory=dict,
-        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    name: str = Field(max_length=255)
+    website: str | None = Field(default=None, max_length=500)
+    category: str = Field(default="", max_length=100)
+    city: str = Field(default="", max_length=100)
+    is_auto_discovered: bool = Field(default=True)
+    added_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
-    summary: dict[str, Any] = Field(
+
+
+class CompetitorScan(SQLModel, table=True):
+    __tablename__ = "competitor_scans"
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    scan_type: str = Field(default="weekly", max_length=20)
+    status: str = Field(default="pending", max_length=20)
+    started_at: datetime | None = Field(default=None)
+    completed_at: datetime | None = Field(default=None)
+    error_message: str | None = Field(default=None)
+    crawl_data: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn("crawl_data", JSONB, server_default=text("'{}'"))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class CompetitorScore(SQLModel, table=True):
+    __tablename__ = "competitor_scores"
+    __table_args__ = (
+        Index("idx_scores_competitor_scan", "competitor_id", "scan_id"),
+        {"extend_existing": True}
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    scan_id: uuid.UUID = Field(foreign_key="competitor_scans.id", index=True)
+    dimension: str = Field(max_length=50)  # authority, schema, content, reviews, entities, citations, brand
+    score: float = Field(default=0.0)
+    details: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn("details", JSONB, server_default=text("'{}'"))
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class CompetitorExplanation(SQLModel, table=True):
+    __tablename__ = "competitor_explanations"
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    competitor_id: uuid.UUID = Field(foreign_key="competitors.id", index=True)
+    scan_id: uuid.UUID = Field(foreign_key="competitor_scans.id", index=True)
+    explanation_type: str = Field(max_length=50)  # winning_factors, strategy, summary
+    content: str = ""
+    confidence: float = Field(default=0.0)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class Alert(SQLModel, table=True):
+    __tablename__ = "alerts"
+    __table_args__ = (
+        {"extend_existing": True},
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    competitor_id: uuid.UUID | None = Field(default=None, foreign_key="competitors.id", index=True)
+    alert_type: str = Field(max_length=50)
+    severity: str = Field(default="info", max_length=20)
+    message: str = Field(default="")
+    is_read: bool = Field(default=False)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+
+class CopilotConversation(SQLModel, table=True):
+    __tablename__ = "copilot_conversations"
+    __table_args__ = (
+        Index("idx_copilot_conv_user_id", "user_id"),
+        Index("idx_copilot_conv_created_at", "created_at"),
+        {"extend_existing": True}
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    title: str = Field(max_length=200, default="New conversation")
+    context_snapshot: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=SAColumn(JSONB, server_default=text("'{}'"))
     )
@@ -206,6 +308,40 @@ class CompetitorScan(SQLModel, table=True):
         default_factory=datetime.utcnow,
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+    messages: list["CopilotMessage"] = Relationship(
+        back_populates="conversation",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "order_by": "CopilotMessage.created_at"}
+    )
+
+
+class CopilotMessage(SQLModel, table=True):
+    __tablename__ = "copilot_messages"
+    __table_args__ = (
+        Index("idx_copilot_msg_conv_id", "conversation_id"),
+        {"extend_existing": True}
+    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    conversation_id: uuid.UUID = Field(foreign_key="copilot_conversations.id", index=True)
+    role: str = Field(max_length=20)  # "user" | "assistant"
+    content: str  # Plain text or markdown
+    artifacts: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=SAColumn(JSONB, server_default=text("'{}'"))
+    )
+    tokens_used: int = Field(default=0)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
+    )
+
+    conversation: CopilotConversation = Relationship(back_populates="messages")
+
 
 
 # ── LLM Call Log (for cost tracking & debugging) ──
@@ -341,3 +477,40 @@ class ImprovementProposal(SQLModel, table=True):
     deployed_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow,
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
+
+
+class BillingHistory(SQLModel, table=True):
+    __tablename__ = "billing_history"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    tier: str = Field(max_length=50)
+    amount: float
+    currency: str = Field(default="usd", max_length=3)
+    payment_method: str = Field(default="card", max_length=20)
+    status: str = Field(max_length=20)
+    stripe_invoice_id: str | None = Field(default=None, max_length=255)
+    stripe_payment_intent_id: str | None = Field(default=None, max_length=255)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AuditUsage(SQLModel, table=True):
+    __tablename__ = "audit_usage"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    audit_date: date = Field(default_factory=date.today)
+    count: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class InvoiceRequest(SQLModel, table=True):
+    __tablename__ = "invoice_requests"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
+    tier: str = Field(max_length=50)
+    amount: float
+    status: str = Field(default="pending", max_length=20)  # pending, sent, paid, cancelled
+    invoice_sent_at: datetime | None = Field(default=None)
+    paid_at: datetime | None = Field(default=None)
+    notes: str | None = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+

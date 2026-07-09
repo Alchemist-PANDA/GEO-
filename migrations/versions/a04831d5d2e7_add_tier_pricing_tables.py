@@ -5,17 +5,17 @@ Revises: 0007_agentic
 Create Date: 2026-07-03
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 import sqlmodel
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'a04831d5d2e7'
-down_revision: Union[str, None] = '0007_agentic'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '0007_agentic'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -30,7 +30,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_audit_usage_user_id'), 'audit_usage', ['user_id'], unique=False)
-    
+
     # 2. Create billing_history
     op.create_table('billing_history',
         sa.Column('id', sa.Uuid(), nullable=False),

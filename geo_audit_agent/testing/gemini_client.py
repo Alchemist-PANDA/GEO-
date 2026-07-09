@@ -1,6 +1,7 @@
-import httpx
 import logging
-from typing import Dict, Any, Tuple
+from typing import Any
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ async def generate_content_async(
     model: str,
     api_key: str,
     timeout: float = 45.0
-) -> Tuple[str, Dict[str, Any]]:
+) -> tuple[str, dict[str, Any]]:
     """
     Asynchronously calls the Google Gemini/Gemma REST API to generate content.
     Returns a tuple of (response_text, raw_result_dict).
@@ -25,10 +26,10 @@ async def generate_content_async(
     normalized_model = model
     if not model.startswith("models/"):
         normalized_model = f"models/{model}"
-    
+
     url = f"https://generativelanguage.googleapis.com/v1beta/{normalized_model}:generateContent?key={api_key}"
     headers = {"Content-Type": "application/json"}
-    
+
     data = {
         "contents": [
             {
@@ -43,7 +44,7 @@ async def generate_content_async(
             "temperature": 0.2
         }
     }
-    
+
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = None
         error_msg = None
@@ -53,21 +54,21 @@ async def generate_content_async(
             except Exception as e:
                 error_msg = str(e)
                 raise
-            
+
             if response.status_code == 429:
                 raise RateLimitError("Gemini API rate limit exceeded (HTTP 429).")
-            
+
             if response.status_code != 200:
                 raise APIError(f"Gemini API returned status {response.status_code}: {response.text}")
-            
+
             result = response.json()
-            
+
             # Extract response text safely
             try:
                 candidates = result.get("candidates", [])
                 if not candidates:
                     raise APIError("No candidates returned from Gemini model.")
-                
+
                 parts = candidates[0].get("content", {}).get("parts", [])
                 if not parts:
                     # Check finishReason (could be safety, block, etc.)
@@ -75,18 +76,17 @@ async def generate_content_async(
                     if finish_reason:
                         raise APIError(f"Model stopped generating. Reason: {finish_reason}")
                     raise APIError("Empty parts list returned from Gemini model.")
-                
+
                 text = parts[0].get("text", "")
                 return text, result
-                
             except (KeyError, IndexError) as e:
-                raise APIError(f"Failed to parse response structure: {e}. Raw response: {result}")
-                
+                raise APIError(f"Failed to parse response structure: {e}. Raw response: {result}") from e
+
         except httpx.RequestError as e:
-            raise APIError(f"Network error during API call: {e}")
+            raise APIError(f"Network error during API call: {e}") from e
         finally:
-            import json
             import datetime
+            import json
             import os
             log_record = {
                 "timestamp": datetime.datetime.utcnow().isoformat() + "Z",

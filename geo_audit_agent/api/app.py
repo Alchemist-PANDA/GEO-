@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from geo_audit_agent.api.rate_limiter import RateLimitMiddleware, RedisRateLimiter
-from geo_audit_agent.api.routes import agentic, audits, brands, competitors, feedback, health, stream
+from geo_audit_agent.api.routes import agentic, audits, brands, competitors, copilot, feedback, health, stream
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ app.include_router(feedback.router, prefix="/v1", tags=["Feedback"])
 app.include_router(competitors.router, prefix="/v1", tags=["Competitors"])
 app.include_router(stream.router, prefix="/v1", tags=["Streaming"])
 app.include_router(agentic.router, prefix="/v1", tags=["Agentic"])
+app.include_router(copilot.router, prefix="/v1", tags=["Copilot"])
 
 try:
     from prometheus_client import make_asgi_app
