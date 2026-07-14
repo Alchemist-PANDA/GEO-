@@ -52,10 +52,64 @@ def _render_result(result: dict) -> None:
         st.code(result.get("raw_response") or "No response body", language=None)
 
 
+def _render_workspace_navigation() -> None:
+    st.markdown("### Workspace")
+    st.caption("The complete product is still here. Open a specialist workspace below or use the sidebar.")
+    modules = [
+        ("📈", "Audit Studio", "Measure visibility and inspect raw provider evidence.", "pages/1_📈_Audit_Tool.py"),
+        ("🤖", "GEO Copilot", "Explore audit findings in a guided conversation.", "pages/3_🤖_Copilot.py"),
+        ("⚡", "Action Agent", "Turn verified gaps into an approval-based action plan.", "pages/4_⚡_Action_Agent.py"),
+        ("🔍", "Inspector", "Inspect page signals, structured data, and technical gaps.", "pages/5_🔍_Inspector.py"),
+        ("🧠", "Agentic Workflow", "Review orchestration state, controls, and execution traces.", "pages/6_🧠_Agentic_Workflow.py"),
+        ("💳", "Billing & usage", "Review plan limits, usage, and billing requests.", "pages/7_⚡_Billing.py"),
+    ]
+    for offset in range(0, len(modules), 3):
+        columns = st.columns(3)
+        for column, (icon, label, description, page) in zip(columns, modules[offset:offset + 3], strict=False):
+            with column:
+                with st.container(border=True):
+                    st.markdown(f"#### {icon} {label}")
+                    st.caption(description)
+                    st.page_link(page, label=f"Open {label}", use_container_width=True)
+
+
 def render_audit_workspace() -> None:
-    st.set_page_config(page_title="BrandSight GEO", page_icon="🌍", layout="wide")
-    st.title("BrandSight GEO")
-    st.caption("Evidence-backed AI visibility measurement")
+    st.set_page_config(
+        page_title="BrandSight GEO",
+        page_icon="🌍",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    st.markdown(
+        """
+        <style>
+        .brandsight-hero {
+            padding: 1.5rem 1.75rem;
+            border-radius: 1.25rem;
+            background: linear-gradient(120deg, #111827 0%, #312e81 58%, #6d28d9 100%);
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .brandsight-hero h1 { color: white; margin: 0; font-size: 2.6rem; }
+        .brandsight-hero p { color: rgba(255,255,255,.78); margin: .45rem 0 0; font-size: 1.05rem; }
+        </style>
+        <div class="brandsight-hero">
+          <h1>BrandSight GEO</h1>
+          <p>Measure, explain, and improve how AI systems represent your brand—with evidence attached.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    capability_columns = st.columns(3)
+    capability_columns[0].metric("Provider adapters", "4", help="OpenAI, Gemini, Anthropic, and Perplexity")
+    capability_columns[1].metric("Evidence policy", "Raw + attributable")
+    capability_columns[2].metric("Execution modes", "Live + demo")
+
+    _render_workspace_navigation()
+    st.divider()
+    st.markdown("### Run a visibility audit")
+    st.caption("Start here to populate the evidence, action, and copilot workspaces.")
 
     authenticated_runtime = _auth_configured()
     user_id = None
@@ -70,6 +124,9 @@ def render_audit_workspace() -> None:
         )
 
     with st.sidebar:
+        st.markdown("## 🌍 BrandSight GEO")
+        st.caption("Workspace navigation is listed above. This panel controls the active audit.")
+        st.divider()
         st.header("Audit configuration")
         allowed_modes = ["Demo fixture"] if not authenticated_runtime else ["Live providers", "Demo fixture"]
         execution_mode = st.radio("Execution mode", allowed_modes)
@@ -111,7 +168,11 @@ def render_audit_workspace() -> None:
     audit = st.session_state.get("verified_audit")
     audit_input = st.session_state.get("verified_audit_input")
     if not audit or not audit_input:
-        st.info("Run an audit to collect observations. No sample results are preloaded.")
+        left, right = st.columns(2)
+        with left:
+            st.info("Run an audit to collect observations. No sample results are preloaded.")
+        with right:
+            st.success("All specialist workspaces are available above and in the expanded sidebar.")
         return
 
     results = audit["results"]
