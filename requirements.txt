@@ -43,7 +43,10 @@ mem0ai>=0.1.0
 sentence-transformers>=2.2.0
 
 # Evaluation
-deepeval>=0.21.0
+# DeepEval is an optional online judge. Keep it out of the default runtime:
+# its currently published releases are incompatible with LangChain 1.x and
+# offline/CI evaluation uses the deterministic proxy in deep_eval.py.
+# Install a pinned DeepEval version only in a dedicated online-evaluation env.
 
 # Database
 psycopg2-binary>=2.9.0
