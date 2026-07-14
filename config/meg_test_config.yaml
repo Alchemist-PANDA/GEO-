@@ -1,0 +1,27 @@
+# MEG Burger brand visibility testing configuration
+model: "gemma-4-31b-it"
+brand: "MEG Burger"
+
+cities:
+  - "Islamabad"
+  - "Lahore"
+  - "Karachi"
+  - "Rawalpindi"
+  - "Peshawar"
+  - "Quetta"
+  - "Faisalabad"
+  - "Multan"
+  - "Hyderabad"
+  - "Gujranwala"
+
+prompts:
+  - "What is the best burger in {city}?"
+  - "Which burger place is recommended in {city}?"
+  - "Where can I find the best burger in {city}?"
+  - "Is there a good burger place in {city}?"
+  - "What do people say about burgers in {city}?"
+  - "Which is the best burger joint in {city}?"
+  - "Where to eat burgers in {city}?"
+  - "Who makes the best burger in {city}?"
+  - "What's the best burger spot in {city}?"
+  - "Which burger restaurant is best in {city}?"

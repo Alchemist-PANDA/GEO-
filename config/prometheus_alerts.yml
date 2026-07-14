@@ -1,0 +1,57 @@
+groups:
+  - name: geo_availability
+    rules:
+      - alert: HighErrorRate
+        expr: >
+          (sum(rate(http_requests_total{status=~"5.."}[5m]))
+          / sum(rate(http_requests_total[5m]))) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate exceeds 1% SLO threshold"
+
+      - alert: SlowAuditLatency
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(geo_audit_duration_seconds_bucket{tier="balanced"}[5m])) by (le)
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Balanced tier P95 latency exceeds 10s"
+
+      - alert: RedisCacheDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis cache offline - LLM costs will spike"
+
+      - alert: GuardrailBypassDetected
+        expr: >
+          increase(geo_guardrail_events_total{classification="unsafe"}[1h]) > 50
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Unusual volume of unsafe input classifications"
+
+      - alert: LLMProviderDown
+        expr: >
+          increase(geo_llm_requests_total{status="error"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LLM provider experiencing errors - circuit breaker may trip"
+
+      - alert: MonthlyBudgetWarning
+        expr: geo_llm_cost_usd_total > 40
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Monthly LLM spend approaching $50 budget"

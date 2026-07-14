@@ -1,0 +1,68 @@
+{
+    "brand": "MEG Burger",
+    "total_successful_runs": 196,
+    "total_cites_found": 0,
+    "overall_citation_rate": 0.0,
+    "average_confidence": 0.0,
+    "city_breakdown": {
+        "Rawalpindi": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 19
+        },
+        "Islamabad": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 20
+        },
+        "Lahore": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 20
+        },
+        "Karachi": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 19
+        },
+        "Peshawar": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 20
+        },
+        "Quetta": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 19
+        },
+        "Faisalabad": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 20
+        },
+        "Multan": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 20
+        },
+        "Hyderabad": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 19
+        },
+        "Gujranwala": {
+            "citation_rate": 0.0,
+            "cites_found": 0,
+            "total_runs": 20
+        }
+    },
+    "competitor_mentions": {
+        "McDonald's": 173,
+        "KFC": 160,
+        "Burger Lab": 132,
+        "Hardee's": 129,
+        "Burger King": 83,
+        "OPTP": 12,
+        "Howdy": 4
+    }
+}

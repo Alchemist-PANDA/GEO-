@@ -1,0 +1,17 @@
+[
+  {
+    "competitor_name": "Acme Marketing",
+    "html": "<html><head><title>Acme Marketing | Best SEO Agency</title></head><body><h1>Dominating Search Results</h1><p>We use advanced semantic schema and high-authority backlinks.</p></body></html>",
+    "expected_winning_factor": "advanced semantic schema and high-authority backlinks"
+  },
+  {
+    "competitor_name": "Global Tech Sol",
+    "html": "<html><body><h2>Hyper-local Landing Pages</h2><p>Our strategy involves creating 500+ hyper-local city pages with dynamic content mapping.</p></body></html>",
+    "expected_winning_factor": "hyper-local city pages"
+  },
+  {
+    "competitor_name": "FastTrack Legal",
+    "html": "<html><body><p>We leverage 10,000+ verified customer reviews on TrustPilot and Google Business Profile to build unshakeable trust and E-E-A-T.</p></body></html>",
+    "expected_winning_factor": "verified customer reviews"
+  }
+]

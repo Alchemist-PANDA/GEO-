@@ -1,0 +1,33 @@
+# Generated outputs
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv/
+venv/
+
+# Streamlit machine ID
+.streamlit/machine_id_v4
+
+# Generated audit artifacts (keep templates, not outputs)
+pre_remediation_audit.json
+post_remediation_audit.json
+geo_remediation_*.json
+lift_report.json
+deployment_status.json
+review_submission_email.txt
+wait_start.txt
+jsonld_deploy_instructions.md
+
+# IDE
+.vscode/
+.idea/
+
+# Database
+*.db
+
+.streamlit/secrets.toml
