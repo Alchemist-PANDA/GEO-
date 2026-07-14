@@ -33,6 +33,17 @@ explicit demo fixtures. Configure `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPA
 authenticated deployment. Live adapters use `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, and
 `PERPLEXITY_API_KEY`; missing or failed providers remain failed and never fall back to fixtures.
 
+### No-key evaluation workflow
+
+1. Run an audit from the dashboard. Every synthetic observation is labelled `FIXTURE` and `DEMO DATA`.
+2. Select earlier audits from the session history. The selected audit becomes the shared context for every workspace.
+3. Open GEO Copilot to ask about the selected evidence, or Action Agent to turn missing mentions into an approval plan.
+4. Export the complete audit as JSON, observations as CSV, or a readable Markdown report.
+
+Demo history is intentionally session-local: refreshing or restarting Streamlit clears it. Persistent multi-user history,
+live observations, billing writes, and admin QA require their documented external services. The application never
+pretends those capabilities are active when they are not.
+
 Run the API separately:
 
 ```bash
@@ -60,6 +71,9 @@ docker compose up --build
 
 CI runs packaging, tracked-tree credential scanning, Compose validation, migrations, offline startup smoke tests,
 linting, type checking, tests, and coverage.
+
+The repository's evidence-based implementation rating and remaining release blockers are maintained in
+[`docs/IMPLEMENTATION_SCORECARD.md`](docs/IMPLEMENTATION_SCORECARD.md).
 
 ## Security
 

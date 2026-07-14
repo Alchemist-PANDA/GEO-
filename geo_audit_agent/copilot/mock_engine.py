@@ -40,6 +40,8 @@ def _score_answer(context: dict) -> str:
     cited = context.get("is_cited")
 
     lines = [f"### 📊 {brand}'s GEO Score Breakdown\n"]
+    if context.get("data_source") == "simulated":
+        lines.append("**DEMO FIXTURE:** the following score describes synthetic observations, not live provider measurements.\n")
     if score is not None:
         tier = "strong" if score >= 70 else "developing" if score >= 45 else "weak"
         lines.append(f"Your overall **AI visibility confidence score is {score}%** — that's a **{tier}** position right now.")
@@ -66,7 +68,17 @@ def _score_answer(context: dict) -> str:
 def _visibility_answer(context: dict) -> str:
     brand = _brand(context)
     model_results = context.get("model_results") or []
+    fixture_results = context.get("fixture_model_results") or []
     if not model_results:
+        if fixture_results:
+            mentioned = [row for row in fixture_results if row.get("mentioned")]
+            platforms = ", ".join(row.get("model", "Unknown") for row in fixture_results)
+            return (
+                "### 🌐 Demo platform visibility\n\n"
+                "**DEMO FIXTURE — not live provider data.**\n\n"
+                f"The selected scenario contains {len(fixture_results)} synthetic observations ({platforms}); "
+                f"**{len(mentioned)}** mention **{brand}**. Use this to explore the workflow, not to make a business claim."
+            )
         return (
             f"I don't have multi-model visibility data for **{brand}** yet. "
             "Run a multi-model audit from the **Audit Tool** tab and I'll be able to break this down platform by platform."

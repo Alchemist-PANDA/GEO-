@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -225,7 +225,7 @@ async def rename_conversation(
 
     try:
         conversation.title = payload.title
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = datetime.now(timezone.utc)
         session.add(conversation)
         session.commit()
         return {"status": "success", "title": conversation.title}

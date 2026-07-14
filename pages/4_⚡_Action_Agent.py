@@ -1,12 +1,12 @@
 import streamlit as st
 
-from auth import require_login
 from geo_audit_agent.actions.mapper import map_gaps_to_actions
 from geo_audit_agent.agents.action_agent import ActionAgent
 from geo_audit_agent.orchestration.state import AgenticState
+from geo_audit_agent.ui.access import require_user_or_demo
 
 st.set_page_config(page_title="Action Agent", page_icon="⚡", layout="wide")
-user = require_login()
+user = require_user_or_demo()
 
 st.title("⚡ Action Agent")
 st.warning("Planning weights are heuristic prioritization aids, not measured visibility lift forecasts.")
@@ -14,6 +14,14 @@ gaps = st.session_state.get("audit_results", {}).get("gaps", [])
 if not gaps:
     st.info("Run an audit first — the Action Agent turns gaps into an execution plan.")
     st.stop()
+
+active_audit = st.session_state.get("active_audit") or {}
+st.caption(
+    f"Selected audit: {active_audit.get('brand_name', 'Unknown brand')} · "
+    f"{active_audit.get('city', 'Unknown market')} · {active_audit.get('data_source', 'unavailable').upper()}"
+)
+if active_audit.get("data_source") == "simulated":
+    st.error("DEMO DATA — plans are illustrative and must not be treated as measured provider findings.")
 
 actions = map_gaps_to_actions(gaps)
 st.subheader("Proposed Plan (ranked by impact / effort)")

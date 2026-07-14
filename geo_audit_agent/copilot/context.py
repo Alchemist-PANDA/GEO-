@@ -39,6 +39,8 @@ def build_copilot_context(state: Mapping[str, Any]) -> dict:
         "category": state.get("category") or audit_input.get("category") or audit_result.get("category", ""),
         "city": state.get("city") or audit_input.get("city") or audit_result.get("city", ""),
         "geo_score": geo_score,
+        "confidence_score": geo_score,
+        "data_source": audit_result.get("data_source") or (multi_model_results.get("summary") or {}).get("data_source"),
         "sentiment": sentiment,
         "is_cited": audit_result.get("is_cited"),
         "gaps": audit_result.get("gaps", []),
@@ -46,6 +48,10 @@ def build_copilot_context(state: Mapping[str, Any]) -> dict:
         "model_results": [
             result for result in multi_model_results.get("results", [])
             if result.get("mode") in {"live", "cached", "live_api"}
+        ] if multi_model_results else [],
+        "fixture_model_results": [
+            result for result in multi_model_results.get("results", [])
+            if result.get("mode") in {"fixture", "simulated"}
         ] if multi_model_results else [],
         "competitor_summary": summary,
         "competitors": competitor_data.get("competitors", []) if competitor_data else [],

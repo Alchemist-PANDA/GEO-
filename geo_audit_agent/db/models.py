@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -58,7 +58,7 @@ class UserProfile(SQLModel, table=True):
     stripe_customer_id: str | None = Field(default=None, max_length=255)
     stripe_subscription_id: str | None = Field(default=None, max_length=255)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -85,7 +85,7 @@ class Brand(SQLModel, table=True):
         sa_column=SAColumn("metadata", JSONB, server_default=text("'{}'"))
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -157,7 +157,7 @@ class Audit(SQLModel, table=True):
     started_at: datetime | None = Field(default=None)
     completed_at: datetime | None = Field(default=None)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -193,7 +193,7 @@ class ObservationEvidence(SQLModel, table=True):
     cache_hit: bool = Field(default=False)
     error_code: str | None = Field(default=None, max_length=100)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")),
     )
 
@@ -211,7 +211,7 @@ class AuditFeedback(SQLModel, table=True):
     nps_score: int | None = Field(default=None, ge=0, le=10)
     comment: str | None = Field(default=None)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -235,7 +235,7 @@ class Competitor(SQLModel, table=True):
     city: str = Field(default="", max_length=100)
     is_auto_discovered: bool = Field(default=True)
     added_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -258,7 +258,7 @@ class CompetitorScan(SQLModel, table=True):
         sa_column=SAColumn("crawl_data", JSONB, server_default=text("'{}'"))
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -280,7 +280,7 @@ class CompetitorScore(SQLModel, table=True):
         sa_column=SAColumn("details", JSONB, server_default=text("'{}'"))
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -298,7 +298,7 @@ class CompetitorExplanation(SQLModel, table=True):
     content: str = ""
     confidence: float = Field(default=0.0)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -317,7 +317,7 @@ class Alert(SQLModel, table=True):
     message: str = Field(default="")
     is_read: bool = Field(default=False)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -338,11 +338,11 @@ class CopilotConversation(SQLModel, table=True):
         sa_column=SAColumn(JSONB, server_default=text("'{}'"))
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -369,7 +369,7 @@ class CopilotMessage(SQLModel, table=True):
     )
     tokens_used: int = Field(default=0)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -398,7 +398,7 @@ class LLMCallLog(SQLModel, table=True):
     latency_ms: int = Field(default=0)
     cache_hit: bool = Field(default=False)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -416,7 +416,7 @@ class GuardrailEvent(SQLModel, table=True):
     category: str | None = Field(default=None, max_length=50)
     blocked: bool = Field(default=False)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()"))
     )
 
@@ -442,7 +442,7 @@ class ActionPlan(SQLModel, table=True):
     status: str = Field(default=PlanStatus.PENDING, max_length=20, index=True)
     approved_by: uuid.UUID | None = Field(default=None, foreign_key="user_profiles.id")
     approved_at: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow,
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
@@ -454,7 +454,7 @@ class ActionExecution(SQLModel, table=True):
     status: str = Field(default="pending", max_length=20)
     result: dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB))
     error_message: str | None = Field(default=None)
-    executed_at: datetime = Field(default_factory=datetime.utcnow,
+    executed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
@@ -467,7 +467,7 @@ class InspectorCheck(SQLModel, table=True):
     input_data: dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB))
     result: dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB))
     passed: bool = Field(default=True, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow,
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
@@ -480,7 +480,7 @@ class GuardrailViolation(SQLModel, table=True):
     violation_details: dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB))
     severity: str = Field(default="medium", max_length=20)
     blocked: bool = Field(default=False, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow,
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
@@ -493,7 +493,7 @@ class AgentTrace(SQLModel, table=True):
     decision: dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB))
     outcome: dict[str, Any] = Field(default_factory=dict, sa_column=SAColumn(JSONB))
     score: float | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow,
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
@@ -508,7 +508,7 @@ class ImprovementProposal(SQLModel, table=True):
     after_score: float | None = Field(default=None)
     status: str = Field(default="pending", max_length=20, index=True)
     deployed_at: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow,
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc),
         sa_column=SAColumn(DateTime(timezone=True), server_default=text("now()")))
 
 
@@ -523,7 +523,7 @@ class BillingHistory(SQLModel, table=True):
     status: str = Field(max_length=20)
     stripe_invoice_id: str | None = Field(default=None, max_length=255)
     stripe_payment_intent_id: str | None = Field(default=None, max_length=255)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AuditUsage(SQLModel, table=True):
@@ -532,7 +532,7 @@ class AuditUsage(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="user_profiles.id", index=True)
     audit_date: date = Field(default_factory=date.today)
     count: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class InvoiceRequest(SQLModel, table=True):
@@ -545,4 +545,4 @@ class InvoiceRequest(SQLModel, table=True):
     invoice_sent_at: datetime | None = Field(default=None)
     paid_at: datetime | None = Field(default=None)
     notes: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

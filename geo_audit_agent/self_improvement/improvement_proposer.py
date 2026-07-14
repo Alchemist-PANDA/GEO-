@@ -11,10 +11,11 @@ def propose(agent_id: str, limit: int = 40) -> dict | None:
         from geo_audit_agent.db.models import AgentTrace
         from geo_audit_agent.db.session import get_session
         with get_session() as s:
-            from sqlmodel import col
-            traces = (s.query(AgentTrace).filter(col(AgentTrace.agent_id) == agent_id)
-                      .filter(col(AgentTrace.score).isnot(None))
-                      .order_by(col(AgentTrace.created_at).desc()).limit(limit).all())
+            from sqlmodel import col, select
+            statement = (select(AgentTrace).where(col(AgentTrace.agent_id) == agent_id)
+                         .where(col(AgentTrace.score).isnot(None))
+                         .order_by(col(AgentTrace.created_at).desc()).limit(limit))
+            traces = list(s.exec(statement).all())
     except Exception as e:
         logger.warning("improvement_proposer: failed to load traces: %s", e)
         return None

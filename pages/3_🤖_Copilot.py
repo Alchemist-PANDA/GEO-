@@ -3,13 +3,13 @@ import uuid
 import plotly.io as pio
 import streamlit as st
 
-from auth import require_login
 from geo_audit_agent.copilot import engine
 from geo_audit_agent.copilot.context import build_context
+from geo_audit_agent.ui.access import require_user_or_demo
 
 st.set_page_config(page_title="GEO Copilot", page_icon="🤖", layout="wide")
 
-user = require_login()
+user = require_user_or_demo()
 
 if "copilot_conversations" not in st.session_state:
     st.session_state.copilot_conversations = []

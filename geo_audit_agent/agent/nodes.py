@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from google import genai
@@ -25,7 +25,7 @@ def guardrail_node(state: AuditState) -> AuditState:
 
     state.step_log.append({
         "node": "guardrail",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "classification": result.classification,
     })
 

@@ -95,3 +95,17 @@ def test_engine_does_not_substitute_demo_on_live_failure(monkeypatch):
     response = engine.get_response("hello", _base_context())
     assert "temporarily unavailable" in response
     assert "No simulated answer" in response
+
+
+def test_fixture_visibility_answer_cannot_be_mistaken_for_live_evidence():
+    context = _base_context(
+        data_source="simulated",
+        model_results=[],
+        fixture_model_results=[
+            {"model": "ChatGPT", "mentioned": True, "confidence": 0.8},
+            {"model": "Claude", "mentioned": False, "confidence": 0.2},
+        ],
+    )
+    response = mock_engine.generate_response("Where am I visible?", context)
+    assert "DEMO FIXTURE" in response
+    assert "not live provider data" in response

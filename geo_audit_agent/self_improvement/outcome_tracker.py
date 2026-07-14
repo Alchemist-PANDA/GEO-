@@ -18,10 +18,12 @@ def record_trace(agent_id, trace_id, context, decision, outcome=None, score=None
 
 def attach_outcome(trace_id, outcome: dict, score: float):
     try:
+        from sqlmodel import select
+
         from geo_audit_agent.db.models import AgentTrace
         from geo_audit_agent.db.session import get_session
         with get_session() as s:
-            row = s.query(AgentTrace).filter(AgentTrace.trace_id == trace_id).first()
+            row = s.exec(select(AgentTrace).where(AgentTrace.trace_id == trace_id)).first()
             if row:
                 row.outcome = outcome
                 row.score = score

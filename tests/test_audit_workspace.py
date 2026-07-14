@@ -19,7 +19,12 @@ def test_demo_audit_is_unmissably_disclosed():
     assert not app.exception
     assert any("DEMO DATA" in item.value for item in app.error)
     assert any("excluded from authoritative metrics" in item.value for item in app.info)
-    assert len(app.expander) == 5
+    assert sum("FIXTURE" in item.label for item in app.expander) == 5
+    assert app.session_state["active_audit"]["brand_name"] == "Acme Coffee"
+    assert app.session_state["active_audit"]["data_source"] == "simulated"
+    assert app.session_state["audit_results"]["gaps"]
+    assert len(app.session_state["audit_history"]) == 1
+    assert len(app.get("download_button")) == 3
 
 
 def test_primary_ui_contains_no_known_fabricated_telemetry():

@@ -1,9 +1,9 @@
 import streamlit as st
 
-from auth import require_login
+from geo_audit_agent.ui.access import require_user_or_demo
 
 st.set_page_config(page_title="Agentic Workflow", page_icon="🧠", layout="wide")
-user = require_login()
+user = require_user_or_demo()
 
 st.title("🧠 Agentic Workflow (LangGraph)")
 st.caption("Full multi-agent orchestration: input guard → context → policy → agent → inspector")
@@ -14,8 +14,8 @@ with st.form("agentic_form"):
         height=100)
     col1, col2, col3 = st.columns(3)
     brand_name = col1.text_input("Brand Name", value=st.session_state.get("brand_name", "Burger Hub"))
-    category = col2.text_input("Category", value="fast food")
-    city = col3.text_input("City", value="Islamabad")
+    category = col2.text_input("Category", value=st.session_state.get("category", "fast food"))
+    city = col3.text_input("City", value=st.session_state.get("city", "Islamabad"))
     submitted = st.form_submit_button("Run Agentic Workflow", type="primary", use_container_width=True)
 
 if submitted and user_message.strip():
