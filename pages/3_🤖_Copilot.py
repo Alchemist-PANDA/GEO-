@@ -6,9 +6,10 @@ import streamlit as st
 from geo_audit_agent.copilot import engine
 from geo_audit_agent.copilot.context import build_context
 from geo_audit_agent.ui.access import require_user_or_demo
+from geo_audit_agent.ui.theme import apply_theme, render_empty, render_page_header
 
-st.set_page_config(page_title="GEO Copilot", page_icon="🤖", layout="wide")
-
+st.set_page_config(page_title="GEO Copilot", page_icon="◉", layout="wide")
+apply_theme()
 user = require_user_or_demo()
 
 if "copilot_conversations" not in st.session_state:
@@ -19,7 +20,7 @@ if "copilot_confirm_clear" not in st.session_state:
     st.session_state.copilot_confirm_clear = False
 
 
-def _new_conversation(title="New Chat", pinned_chart=None):
+def _new_conversation(title="New conversation", pinned_chart=None):
     conv = {
         "id": str(uuid.uuid4()),
         "title": title,
@@ -48,7 +49,7 @@ def _ask(conv, user_message: str):
     history = [{"role": m["role"], "content": m["content"]} for m in conv["messages"][:-1]]
     answer = engine.get_response(user_message, context, history=history)
     conv["messages"].append({"role": "assistant", "content": answer})
-    if conv["title"] == "New Chat" and len(conv["messages"]) <= 2:
+    if conv["title"] == "New conversation" and len(conv["messages"]) <= 2:
         conv["title"] = user_message[:40] + ("…" if len(user_message) > 40 else "")
 
 
@@ -62,7 +63,7 @@ if pending_context is not None or pending_ask:
             "fig_json": pending_context["fig_json"],
         }
     conv = _new_conversation(
-        title=pending_context.get("chart_title", "New Chat") if pending_context else "New Chat",
+        title=pending_context.get("chart_title", "New conversation") if pending_context else "New conversation",
         pinned_chart=pinned_chart,
     )
     _ask(conv, pending_ask or f"Explain this chart: {pending_context.get('chart_title', '')}")
@@ -72,37 +73,40 @@ if active_conv is None and st.session_state.copilot_conversations:
     active_conv = st.session_state.copilot_conversations[0]
     st.session_state.copilot_active_conversation_id = active_conv["id"]
 
-st.markdown("""
-<style>
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-    background: linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(59,130,246,0.12) 100%);
-    border-radius: 14px;
-}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(124, 58, 237, 0.15);
-    border-radius: 14px;
-}
-</style>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+    [data-testid="stChatMessage"] { border-radius:16px; border:1px solid rgba(17,24,39,.07); padding:.4rem .7rem; }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) { background:#f4f3ff; }
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) { background:rgba(255,255,255,.92); }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-history_col, chat_col = st.columns([3, 7])
+render_page_header(
+    "COPILOT",
+    "GEO Copilot",
+    "Ask questions about the selected audit. Answers are grounded in the evidence available in the active workspace.",
+)
+
+history_col, chat_col = st.columns([3, 7], gap="large")
 
 with history_col:
-    st.markdown("### 💬 History")
-    if st.button("➕ New Chat", use_container_width=True):
+    st.markdown("### Conversations")
+    if st.button("New conversation", use_container_width=True, type="primary"):
         _new_conversation()
         st.rerun()
 
     if not st.session_state.copilot_confirm_clear:
-        if st.button("🗑️ Clear All", use_container_width=True):
+        if st.button("Clear conversation history", use_container_width=True):
             st.session_state.copilot_confirm_clear = True
             st.rerun()
     else:
-        st.warning("Delete all conversations?")
+        st.warning("Delete all conversations from this session?")
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("Yes, clear", use_container_width=True, type="primary"):
+            if st.button("Delete all", use_container_width=True, type="primary"):
                 st.session_state.copilot_conversations = []
                 st.session_state.copilot_active_conversation_id = None
                 st.session_state.copilot_confirm_clear = False
@@ -113,26 +117,34 @@ with history_col:
                 st.rerun()
 
     st.divider()
+    if not st.session_state.copilot_conversations:
+        st.caption("No saved conversations in this session.")
     for conv in st.session_state.copilot_conversations:
         is_active = active_conv and conv["id"] == active_conv["id"]
-        label = ("📌 " if conv.get("pinned_chart") else "") + conv["title"]
-        if st.button(label, key=f"hist_{conv['id']}", use_container_width=True, type="primary" if is_active else "secondary"):
+        label = ("Pinned · " if conv.get("pinned_chart") else "") + conv["title"]
+        if st.button(
+            label,
+            key=f"hist_{conv['id']}",
+            use_container_width=True,
+            type="primary" if is_active else "secondary",
+        ):
             st.session_state.copilot_active_conversation_id = conv["id"]
             st.rerun()
 
 with chat_col:
-    st.markdown("## 🤖 GEO Copilot")
-
     if active_conv is None:
-        st.info("Start a new chat, or click the 💬 icon on any chart to ask about it directly.")
-
-        st.markdown("#### Quick Actions")
+        render_empty(
+            "＋",
+            "Start an evidence-grounded conversation",
+            "Create a conversation or choose a quick question. Run an audit first for brand-specific answers.",
+        )
+        st.markdown("#### Suggested questions")
         qa_cols = st.columns(4)
         quick_actions = [
-            ("📊 My GEO Score", "What is my current GEO score and how am I doing?"),
-            ("🛠️ What to Fix", "What should I fix first to improve my score?"),
-            ("🏆 Competitors", "Show me the competitive landscape"),
-            ("🌐 Visibility", "Where am I visible across AI platforms?"),
+            ("Current score", "What is my current GEO score and how am I doing?"),
+            ("Priority fixes", "What should I fix first to improve my score?"),
+            ("Competitors", "Show me the competitive landscape"),
+            ("Visibility", "Where am I visible across AI platforms?"),
         ]
         for col, (label, prompt) in zip(qa_cols, quick_actions, strict=False):
             with col:
@@ -143,7 +155,7 @@ with chat_col:
     else:
         pinned = active_conv.get("pinned_chart")
         if pinned and pinned.get("fig_json"):
-            st.markdown(f"**📌 {pinned['title']}**")
+            st.markdown(f"**Pinned evidence: {pinned['title']}**")
             try:
                 fig = pio.from_json(pinned["fig_json"])
                 fig.update_layout(height=350)
@@ -156,13 +168,13 @@ with chat_col:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-        st.markdown("##### Quick follow-ups")
+        st.markdown("##### Follow-up questions")
         fq_cols = st.columns(4)
         followups = [
-            ("📊 Score", "What is my GEO score?"),
-            ("🛠️ Fixes", "What should I fix first?"),
-            ("⚔️ Compare", "Compare me against competitors"),
-            ("📈 Trends", "Explain my visibility trend"),
+            ("Score", "What is my GEO score?"),
+            ("Fixes", "What should I fix first?"),
+            ("Compare", "Compare me against competitors"),
+            ("Trends", "Explain my visibility trend"),
         ]
         for col, (label, prompt) in zip(fq_cols, followups, strict=False):
             with col:
@@ -170,11 +182,11 @@ with chat_col:
                     _ask(active_conv, prompt)
                     st.rerun()
 
-        user_input = st.chat_input("Ask the Copilot anything about your GEO performance...")
+        user_input = st.chat_input("Ask about the selected audit evidence…")
         if user_input:
             _ask(active_conv, user_input)
             st.rerun()
 
-st.markdown("---")
-if st.button("⬅️ Back to Dashboard"):
+st.divider()
+if st.button("Return to dashboard"):
     st.switch_page("dashboard.py")
