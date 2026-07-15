@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 import streamlit as st
 
+from geo_audit_agent.ui.theme import apply_theme
+
 
 @dataclass(frozen=True)
 class WorkspaceUser:
@@ -24,6 +26,7 @@ def auth_configured() -> bool:
 
 
 def require_user_or_demo() -> WorkspaceUser:
+    apply_theme()
     if auth_configured():
         from auth import require_login
 
