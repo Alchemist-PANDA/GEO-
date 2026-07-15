@@ -1,17 +1,22 @@
 import streamlit as st
 
 from geo_audit_agent.ui.access import require_user_or_demo
-from geo_audit_agent.ui.theme import render_page_header
+from geo_audit_agent.ui.theme import apply_theme, render_page_header
 
-st.set_page_config(page_title="Agentic Workflow", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Workflow Console", page_icon="◇", layout="wide")
+apply_theme()
 user = require_user_or_demo()
 
-render_page_header("🧠", "Agentic Workflow", "Orchestrate guarded research, policy checks, specialist agents, and inspection in one traceable flow.")
+render_page_header(
+    "ORCHESTRATION",
+    "Workflow Console",
+    "Run a guarded request through context assembly, policy checks, specialist agents, and final inspection.",
+)
 st.caption("Input guard → context → policy → specialist agent → inspector")
 
 with st.form("agentic_form"):
     user_message = st.text_area(
-        "What would you like to do?",
+        "Instruction",
         placeholder="Example: Audit Burger Hub visibility in Islamabad and identify the highest-priority gaps.",
         height=120,
     )
@@ -19,7 +24,7 @@ with st.form("agentic_form"):
     brand_name = col1.text_input("Brand name", value=st.session_state.get("brand_name", "Burger Hub"))
     category = col2.text_input("Category", value=st.session_state.get("category", "fast food"))
     city = col3.text_input("Market", value=st.session_state.get("city", "Islamabad"))
-    submitted = st.form_submit_button("Run agentic workflow", type="primary", use_container_width=True)
+    submitted = st.form_submit_button("Run governed workflow", type="primary", use_container_width=True)
 
 if submitted and user_message.strip():
     from geo_audit_agent.orchestration.langgraph_workflow import build_agentic_graph
@@ -33,8 +38,8 @@ if submitted and user_message.strip():
         user_id=user.id,
     )
 
-    with st.status("Running guarded workflow…", expanded=True) as status:
-        st.write("🛡️ Validating request and permissions")
+    with st.status("Running governed workflow…", expanded=True) as status:
+        st.write("Validating request, context, and permissions")
         try:
             result = build_agentic_graph().invoke(state)
             blocked = result.get("blocked", False)
@@ -60,8 +65,7 @@ if submitted and user_message.strip():
                 st.markdown("### Identified gaps")
                 for gap in result["gaps"]:
                     severity = gap.get("severity", "Medium")
-                    icon = {"Critical": "🔴", "High": "🟠", "Medium": "🟡", "Low": "🟢"}.get(severity, "⚪")
-                    with st.expander(f"{icon} {gap.get('gap_type', 'Gap')} — {severity}"):
+                    with st.expander(f"{severity} · {gap.get('gap_type', 'Gap')}"):
                         st.write(gap.get("description", ""))
 
             if result.get("competitor_data"):
@@ -71,8 +75,8 @@ if submitted and user_message.strip():
             if result.get("action_results"):
                 st.markdown("### Action results")
                 for action_result in result["action_results"]:
-                    icon = {"deployed": "✅", "complete": "✅", "fallback": "📄", "awaiting_approval": "⏳"}.get(action_result.get("status"), "⚠️")
-                    with st.expander(f"{icon} {action_result.get('action_id', 'action')} — {action_result.get('status')}"):
+                    status_label = str(action_result.get("status", "unknown")).replace("_", " ").title()
+                    with st.expander(f"{action_result.get('action_id', 'action')} · {status_label}"):
                         if action_result.get("artifact"):
                             st.code(str(action_result["artifact"])[:2000])
 
@@ -80,14 +84,16 @@ if submitted and user_message.strip():
                 st.json(inspector)
             with st.expander("Trace and usage"):
                 st.code(result.get("trace_id", ""))
-                st.json({
-                    "intent": result.get("intent"),
-                    "blocked": blocked,
-                    "tokens": result.get("tokens", 0),
-                    "cost_usd": result.get("cost_usd", 0.0),
-                })
+                st.json(
+                    {
+                        "intent": result.get("intent"),
+                        "blocked": blocked,
+                        "tokens": result.get("tokens", 0),
+                        "cost_usd": result.get("cost_usd", 0.0),
+                    }
+                )
         except Exception:
             status.update(label="Workflow failed", state="error")
-            st.error("The workflow could not be completed. Please review the inputs and try again.")
+            st.error("The workflow could not be completed. Review the inputs and try again.")
 elif submitted:
     st.warning("Enter a clear instruction before running the workflow.")
