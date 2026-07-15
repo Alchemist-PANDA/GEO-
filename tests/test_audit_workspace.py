@@ -6,8 +6,9 @@ from streamlit.testing.v1 import AppTest
 def test_dashboard_starts_empty_and_discloses_local_mode():
     app = AppTest.from_file("dashboard.py").run(timeout=20)
     assert not app.exception
-    assert any("No sample results are preloaded" in item.value for item in app.info)
-    assert any("Live execution is disabled" in item.value for item in app.warning)
+    assert any("No audit selected" in item.value for item in app.markdown)
+    assert any("No sample score is preloaded" in item.value for item in app.markdown)
+    assert any("Live execution is disabled" in item.value for item in app.info)
 
 
 def test_demo_audit_is_unmissably_disclosed():
@@ -17,7 +18,7 @@ def test_demo_audit_is_unmissably_disclosed():
     app.text_input[2].set_value("Islamabad")
     app.button[0].click().run(timeout=20)
     assert not app.exception
-    assert any("DEMO DATA" in item.value for item in app.error)
+    assert any("Demo data" in item.value for item in app.warning)
     assert any("excluded from authoritative metrics" in item.value for item in app.info)
     assert sum("FIXTURE" in item.label for item in app.expander) == 5
     assert app.session_state["active_audit"]["brand_name"] == "Acme Coffee"

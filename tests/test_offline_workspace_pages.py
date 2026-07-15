@@ -5,14 +5,14 @@ def test_copilot_is_available_without_auth_in_explicit_demo_mode():
     app = AppTest.from_file("pages/3_🤖_Copilot.py").run(timeout=20)
     assert not app.exception
     assert any("Demo workspace" in item.value for item in app.warning)
-    assert any("Start a new chat" in item.value for item in app.info)
+    assert any("Start an evidence-grounded conversation" in item.value for item in app.markdown)
 
 
 def test_action_agent_empty_state_is_available_without_auth():
     app = AppTest.from_file("pages/4_⚡_Action_Agent.py").run(timeout=20)
     assert not app.exception
     assert any("Demo workspace" in item.value for item in app.warning)
-    assert any("Run an audit first" in item.value for item in app.info)
+    assert any("Run a visibility audit first" in item.value for item in app.markdown)
 
 
 def test_action_agent_consumes_the_canonical_audit_context():
@@ -33,8 +33,8 @@ def test_action_agent_consumes_the_canonical_audit_context():
     app.run(timeout=20)
     assert not app.exception
     assert any("Selected audit: Acme Coffee" in item.value for item in app.caption)
-    assert any("DEMO DATA" in item.value for item in app.error)
-    assert any(button.label == "Execute Approved Actions" for button in app.button)
+    assert any("Demo data" in item.value for item in app.warning)
+    assert any(button.label == "Execute approved actions" for button in app.button)
 
 
 def test_copilot_discloses_fixture_context_in_an_end_to_end_answer():
@@ -55,7 +55,7 @@ def test_copilot_discloses_fixture_context_in_an_end_to_end_answer():
         }],
     }
     app.run(timeout=20)
-    next(button for button in app.button if button.label == "🌐 Visibility").click().run(timeout=20)
+    next(button for button in app.button if button.label == "Visibility").click().run(timeout=20)
     assert not app.exception
     assert any("DEMO FIXTURE" in item.value for item in app.markdown)
 
@@ -64,5 +64,5 @@ def test_agentic_workflow_is_available_without_auth():
     app = AppTest.from_file("pages/6_🧠_Agentic_Workflow.py").run(timeout=20)
     assert not app.exception
     assert any("Demo workspace" in item.value for item in app.warning)
-    assert app.text_area[0].label == "What would you like to do?"
-    assert any(button.label == "Run Agentic Workflow" for button in app.button)
+    assert app.text_area[0].label == "Instruction"
+    assert any(button.label == "Run governed workflow" for button in app.button)
