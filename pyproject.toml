@@ -54,6 +54,9 @@ select = ["E", "F", "W", "I", "B", "UP"]
 # E501: long lines allowed; B008: FastAPI Depends() in defaults is idiomatic
 ignore = ["E501", "B008"]
 
+[tool.ruff.lint.per-file-ignores]
+"geo_audit_agent/ui/theme.py" = ["I001"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--strict-markers"
