@@ -30,4 +30,4 @@ jsonld_deploy_instructions.md
 # Database
 *.db
 
-.streamlit/secrets.toml
+.streamlit/secrets.tomldata/anomalies_log.json
