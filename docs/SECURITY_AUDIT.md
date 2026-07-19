@@ -21,32 +21,45 @@ header), and side-effecting "publish" actions are human-approval-gated and
 actually only generate drafts. That is genuinely better than most apps of
 this shape.
 
-**But it is not production-safe yet.** The five most dangerous issues:
+> **Accuracy note (important):** an initial pass of this report was written
+> against a slightly older tree and flagged two High findings —
+> *fabricated competitor intelligence* and *rate limiter fails open without
+> Redis* — that are **already fixed in the current code** and were re-verified
+> as fixed (see "Verified fixed" below). They are retained only as history.
+> The live findings below reflect the current tree (suite: 314 passed).
 
-1. **Fabricated competitor intelligence served as fact (High).** The
-   `/v1/competitors/scan` endpoint returns MD5-hash-derived numbers *and
-   invented factual claims about named third parties* ("`{competitor}` has
-   comprehensive schema.org markup covering LocalBusiness, FAQPage…") with no
-   measurement behind them. This is a product-integrity and
-   defamation/repuational-legal risk, not a cosmetic one.
-2. **Rate limiting silently disables when Redis is absent/unreachable
-   (High).** `is_allowed` returns `True` for everything when `self.redis` is
-   `None`, and the middleware also fails open on `RedisError`. For an app
-   whose per-request cost is unbounded LLM spend, "no Redis → unlimited
-   requests" is a direct cost/DoS exposure.
-3. **`/v1/agentic/run` has no budget/quota enforcement (High).** The
-   `/v1/audits` path checks `is_budget_exceeded`; the agentic path — which
-   runs the full multi-agent graph with multiple LLM calls — invokes the
-   graph directly with no per-user cap.
-4. **The Copilot chat endpoint runs no guardrail at all (Medium-High).**
-   `/v1/copilot/chat` sends the user message plus a client-controlled
-   `context` dict straight into the LLM (`f"Context data: {context}\n\nUser
-   question: {user_message}"`) with no `classify_input` call. Direct prompt
-   injection / system-prompt extraction is unmitigated on this surface.
-5. **The git-history secret (Critical, BLOCKED_OWNER_ACTION).** A live-looking
+**But it is not production-safe yet.** The most dangerous *live* issues:
+
+1. **The git-history secret (Critical, BLOCKED_OWNER_ACTION).** A live-looking
    Gemini key remains in history at commit `a1c9272`; only the owner can
    rotate it and approve a history rewrite. Tracked in
    `docs/DEFERRED_EXTERNAL_VALIDATION.md`.
+2. **`/v1/agentic/run` has no budget/quota enforcement (High).** The
+   `/v1/audits` path checks `is_budget_exceeded` (`routes/audits.py:29`); the
+   agentic path — which runs the full multi-agent graph with multiple LLM
+   calls — invokes the graph directly (`routes/agentic.py:50-51`) with no
+   per-user cap. An authenticated user can drive unbounded LLM spend.
+3. **The Copilot chat endpoint runs no guardrail at all (Medium-High).**
+   `/v1/copilot/chat` sends the user message plus a client-controlled
+   `context` dict straight into the LLM (`copilot/engine.py:37-40`,
+   `f"Context data: {context}\n\nUser question: {user_message}"`) with no
+   `classify_input` call. Direct prompt injection / system-prompt extraction
+   is unmitigated on this surface.
+4. **`/metrics` is unauthenticated (Medium)** (`api/app.py:40`) and there are
+   **no security headers** (CSP/HSTS/X-Frame/X-Content-Type, `api/app.py`).
+5. **Latent SSRF (Medium).** `crawl_competitor(url)`
+   (`geo_intelligence/fingerprint_generator.py:11-16`) fetches an arbitrary
+   URL with no scheme/private-IP validation. Its only caller
+   (`generate_fingerprint`, line 144) is not wired to any route today, so it's
+   "do not wire without a fix" rather than an active hole.
+
+### Verified fixed in the current tree (were flagged, then re-checked)
+- **Competitor intelligence** — `agents/unified_competitor_agent.py` now calls
+  `calculate_visibility_metrics` on real observations and returns
+  `insufficient_evidence` when there is no data, instead of MD5-hash scores.
+- **Rate-limiter fail-open** — `api/rate_limiter.py:53-101` now falls back to a
+  real in-process sliding-window limiter (`_local_is_allowed`) when Redis is
+  `None` or raises, instead of returning `True`.
 
 ---
 
@@ -99,8 +112,8 @@ dict). Memory (`memory/`, mem0) and vector store (Qdrant) are per-brand keyed.
 | # | Severity | Category | File:Line | Description | Impact | Fix |
 |---|---|---|---|---|---|---|
 | F1 | Critical | Secrets | git history `a1c9272` | Live-looking Gemini key in history | Key compromise | Owner rotate + history rewrite (BLOCKED_OWNER_ACTION) |
-| F2 | High | LLM/Integrity | `agents/unified_competitor_agent.py:8-56` | Competitor scores are MD5-hash-derived; explanations are invented claims about named third parties | Defamation/legal + false product data | Compute from real measurement or label "illustrative", drop named factual claims |
-| F3 | High | Cost/DoS | `api/rate_limiter.py:52-53, 77-79` | Rate limiter fails open when Redis is `None` or errors | Unlimited requests → unbounded LLM spend | Fail closed (or in-proc fallback limiter) when Redis down; alert |
+| ~~F2~~ | ~~High~~ **FIXED** | LLM/Integrity | `agents/unified_competitor_agent.py` | ~~Competitor scores MD5-hash-derived + invented claims~~ Now computes real metrics, returns `insufficient_evidence` | — | Verified fixed in current tree |
+| ~~F3~~ | ~~High~~ **FIXED** | Cost/DoS | `api/rate_limiter.py:53-101` | ~~Fails open when Redis down~~ Now falls back to in-process sliding-window limiter | — | Verified fixed in current tree |
 | F4 | High | Cost | `api/routes/agentic.py:33-51` | `/agentic/run` has no budget/quota check (unlike `/audits`) | One user can drive unbounded multi-agent LLM spend | Add `is_budget_exceeded` + usage increment |
 | F5 | Med-High | Prompt injection | `api/routes/copilot.py:74`, `copilot/engine.py:37-40` | Copilot chat runs no guardrail; user msg + client `context` concatenated into prompt | Direct injection / system-prompt extraction | Run `classify_input` on chat; treat context as data, not instructions |
 | F6 | Medium | SSRF | `geo_intelligence/fingerprint_generator.py:11-16` | `crawl_competitor(url)` fetches arbitrary URL, no scheme/IP validation | SSRF to cloud metadata / internal svcs **if wired** (no live caller today) | Validate scheme, block private/link-local IPs, no redirects to them |
@@ -167,8 +180,10 @@ surfaced to the user.
 
 ## Phase 4 — Functionality & correctness
 
-- **F2 is the headline correctness issue** — the competitor scan is
-  measurement-theater.
+- **F2 (competitor scan) is now fixed** — it computes real visibility metrics
+  and returns `insufficient_evidence` rather than hash-derived theater. The
+  remaining correctness watch-item is the `query_llm_node` mock-fallback (see
+  below).
 - `check_citation_node` is now boundary-aware (no "Ola"-in-"solar" false
   positive) — verified fixed.
 - Idempotency: `workers/tasks.py` upserts competitors by name (`:92-121`) —
