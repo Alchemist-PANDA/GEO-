@@ -172,8 +172,24 @@ def get_provider_adapter(provider: str):
             api_key_env="PERPLEXITY_API_KEY",
             endpoint="https://api.perplexity.ai/chat/completions",
         ),
+        # DeepSeek and x.ai (Grok) both expose OpenAI-compatible chat endpoints.
+        "deepseek": OpenAICompatibleAdapter(
+            name="deepseek",
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            api_key_env="DEEPSEEK_API_KEY",
+            endpoint="https://api.deepseek.com/chat/completions",
+        ),
+        "x": OpenAICompatibleAdapter(
+            name="x",
+            model=os.getenv("XAI_MODEL", "grok-2-latest"),
+            api_key_env="XAI_API_KEY",
+            endpoint="https://api.x.ai/v1/chat/completions",
+        ),
     }
     try:
         return adapters[provider]
     except KeyError as exc:
+        # Providers without a public API (e.g. Meta.ai) legitimately have no
+        # live adapter; the caller records this as a "failed" observation
+        # rather than fabricating a result.
         raise ProviderUnavailableError(f"No live adapter exists for provider '{provider}'") from exc

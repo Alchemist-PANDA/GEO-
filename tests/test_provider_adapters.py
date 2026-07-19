@@ -66,3 +66,23 @@ def test_openai_compatible_malformed_response_is_explicit(monkeypatch):
                         lambda *args, **kwargs: _Response(payload={"unexpected": True}))
     with pytest.raises(ProviderUnavailableError, match="malformed"):
         _openai_adapter().query("prompt", prompt_id="p", prompt_version="1")
+
+
+# ---- Newly added OpenAI-compatible providers (DeepSeek, x.ai) ------------
+
+def test_deepseek_and_xai_adapters_exist(monkeypatch):
+    from geo_audit_agent.providers import get_provider_adapter
+    for provider, env in [("deepseek", "DEEPSEEK_API_KEY"), ("x", "XAI_API_KEY")]:
+        monkeypatch.delenv(env, raising=False)
+        adapter = get_provider_adapter(provider)
+        assert adapter.name == provider
+        # No key configured -> clean ProviderUnavailableError, never a crash.
+        from geo_audit_agent.providers import ProviderUnavailableError
+        with pytest.raises(ProviderUnavailableError):
+            adapter.query("hi", prompt_id="t", prompt_version="1")
+
+
+def test_provider_without_public_api_has_no_adapter():
+    from geo_audit_agent.providers import ProviderUnavailableError, get_provider_adapter
+    with pytest.raises(ProviderUnavailableError):
+        get_provider_adapter("meta")
