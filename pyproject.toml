@@ -40,6 +40,10 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
 no_site_packages = true
+# Third-party libs without bundled type stubs (requests, PyYAML) would other-
+# wise raise import-untyped; we don't ship their stubs, so silence it globally
+# (consistent with the CI --ignore-missing-imports intent).
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = "geo_audit_agent.db.models"
