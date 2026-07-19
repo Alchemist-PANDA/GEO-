@@ -30,4 +30,9 @@ jsonld_deploy_instructions.md
 # Database
 *.db
 
-.streamlit/secrets.tomldata/anomalies_log.json
+.streamlit/secrets.toml
+
+# Runtime artifacts (regenerated on every run)
+data/anomalies_log.json
+.coverage
+coverage.xml
