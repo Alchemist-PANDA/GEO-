@@ -26,9 +26,10 @@ def _metric_rows(results: list[dict]) -> list[dict]:
             "prompt_id": result.get("prompt_id"),
             "mode": result.get("mode"),
             "mentioned": result.get("mentioned"),
-            "recommended": result.get("mentioned"),
+            "recommended": result.get("recommended", result.get("recommendation", False)),
             "position": result.get("position"),
-            "citation_urls": [],
+            "citation_urls": result.get("citation_urls", []),
+            "sentiment": result.get("sentiment"),
             "error": result.get("error"),
         }
         for result in results
@@ -49,6 +50,16 @@ def _render_result(result: dict) -> None:
         )
         if mode == "fixture":
             st.warning("Demo fixture. This response did not come from the named provider.")
+        citation_urls = result.get("citation_urls") or []
+        if citation_urls:
+            st.markdown("**Detected source URLs**")
+            for url in citation_urls:
+                st.write(url)
+        st.caption(
+            f"Mention: {result.get('mentioned', False)} · Recommendation: "
+            f"{result.get('recommended', result.get('recommendation', False))} · "
+            f"Sentiment: {result.get('sentiment', 'unknown')}"
+        )
         st.code(result.get("raw_response") or "No response body", language=None)
 
 
@@ -285,7 +296,7 @@ def render_audit_workspace() -> None:
     metrics = calculate_visibility_metrics(
         _metric_rows(results), expected_providers=expected_providers, expected_prompts=["category-recommendation"]
     )
-    metric_data = metrics.as_dict()
+    metric_data = metrics.as_dict(include_confidence_intervals=True)
     if source == "live_api":
         cols = st.columns(3)
         for column, (title, key) in zip(

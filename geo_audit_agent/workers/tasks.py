@@ -1,6 +1,6 @@
 # tasks.py
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
@@ -20,6 +20,19 @@ from geo_audit_agent.db.models import (
 from geo_audit_agent.db.session import engine
 from geo_audit_agent.services.evidence import report_to_evidence
 from geo_audit_agent.workers.celery_app import celery_app
+
+
+def _publish_audit_event(audit_id: str, event: str, **data) -> None:
+    """Publish progress when Redis is available; persistence remains authoritative."""
+    try:
+        import json
+        import os
+
+        import redis
+        client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), socket_timeout=2)
+        client.publish(f"audit:{audit_id}", json.dumps({"event": event, "audit_id": audit_id, **data}))
+    except Exception:
+        logger.debug("Audit event sink unavailable for %s", audit_id, exc_info=True)
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +58,10 @@ def run_audit_task(audit_id: str, user_id: str):
 
         # Update status to running
         audit.status = AuditStatus.RUNNING
+        audit.started_at = datetime.now(timezone.utc)
         session.add(audit)
         session.commit()
+        _publish_audit_event(audit_id, "status_update", status=AuditStatus.RUNNING.value)
 
         # Prepare initial state for the state graph
         initial_state = AuditState(
@@ -69,19 +84,30 @@ def run_audit_task(audit_id: str, user_id: str):
             audit.gaps = final_state.get("gaps", [])
             audit.remediations = final_state.get("remediation", {})
             audit.report = final_state.get("report", {})
+            audit.total_tokens = int(final_state.get("total_tokens", 0))
+            audit.total_cost_usd = float(final_state.get("total_cost_usd", 0.0))
+            audit.completed_at = datetime.now(timezone.utc)
             audit.status = AuditStatus.COMPLETE
 
             session.add(audit)
             session.add(report_to_evidence(audit.report, audit_id=audit.id))
             session.commit()
+            _publish_audit_event(
+                audit_id,
+                "audit_complete",
+                status=AuditStatus.COMPLETE.value,
+                total_cost_usd=audit.total_cost_usd,
+            )
             logger.info("Audit %s completed successfully.", audit_id)
             return True
 
         except Exception as e:
             logger.error("LangGraph execution pipeline crashed for audit %s: %s", audit_id, e, exc_info=True)
             audit.status = AuditStatus.FAILED
+            audit.completed_at = datetime.now(timezone.utc)
             session.add(audit)
             session.commit()
+            _publish_audit_event(audit_id, "error", status=AuditStatus.FAILED.value, error=type(e).__name__)
             return False
 
 @celery_app.task(name="geo_audit_agent.workers.tasks.run_competitor_analysis")

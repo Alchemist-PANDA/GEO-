@@ -136,32 +136,28 @@ def check_citation_node(state: AuditState) -> AuditState:
         })
         return state
 
-    from geo_audit_agent.metrics.entity_detection import EntityVerdict, detect_entity
+    from geo_audit_agent.metrics.observation import interpret_observation
 
-    match = detect_entity(response, brand)
-    if match.verdict is EntityVerdict.MATCH:
-        position = response.casefold().find((match.matched_alias or brand).casefold())
-        context_window = response[max(0, position - 100):position + len(match.matched_alias or brand) + 100]
-
-        sentiment_result = _analyze_citation_sentiment(context_window, brand)
-        state.is_cited = True
-        state.confidence_score = 1.0
-        state.sentiment = sentiment_result.sentiment
-    else:
-        # Partial names are ambiguous. They are recorded as uncertain evidence,
-        # never promoted to a measured citation.
-        state.is_cited = False
-        state.confidence_score = 0.0
-        state.sentiment = "none"
-        if match.verdict is EntityVerdict.UNCERTAIN:
-            state.step_log.append({"node": "entity_detection", "verdict": "uncertain",
-                                   "matched_alias": match.matched_alias})
+    interpretation = interpret_observation(response, brand)
+    state.is_cited = interpretation.mentioned
+    state.recommendation_found = interpretation.recommended
+    state.citation_urls = interpretation.citation_urls
+    state.mention_position = interpretation.position
+    state.measurement_confidence = interpretation.confidence
+    # Historical API consumers treat an exact, boundary-verified mention as a
+    # full citation confidence.  The more nuanced measurement confidence is
+    # retained separately for evidence-quality reporting.
+    state.confidence_score = 1.0 if interpretation.mentioned else 0.0
+    state.sentiment = interpretation.sentiment
 
     state.citation_found = state.is_cited
 
     state.step_log.append({
         "node": "check_citation",
         "is_cited": state.is_cited,
+        "recommended": state.recommendation_found,
+        "position": state.mention_position,
+        "citation_urls": state.citation_urls,
         "confidence": state.confidence_score,
         "sentiment": state.sentiment,
     })
@@ -333,23 +329,15 @@ def planner_node(state: AuditState) -> AuditState:
             "action_count": len(actions),
         })
     except Exception as e:
-        logger.warning(f"Real planner query failed, falling back to mock planner: {e}")
-        planned_actions = []
-        for gap in state.gaps:
-            tool = gap.get("tool_required") or gap.get("tool") or "generate_json_ld"
-            if tool == "create_review_snippet":
-                tool = "generate_review_template"
-            planned_actions.append({
-                "tool": tool,
-                "reason": f"Remediate {gap.get('gap_type') or 'gap'}"
-            })
-        state.planned_actions = planned_actions
+        logger.error("Live planner failed without synthetic fallback: %s", type(e).__name__)
+        state.mode = "failed"
         state.step_log.append({
             "node": "planner",
-            "action_count": len(planned_actions),
-            "mocked": True,
-            "fallback_due_to_error": str(e),
+            "action_count": 0,
+            "mocked": False,
+            "error": type(e).__name__,
         })
+        raise
 
     return state
 
@@ -536,8 +524,10 @@ def generate_report_node(state: AuditState) -> AuditState:
             "execution_mode": execution_mode,
             "raw_response": state.llm_response,
             "mentioned": state.is_cited,
-            "recommendation": state.is_cited,
-            "citation_urls": [],
+            "recommendation": state.recommendation_found,
+            "position": state.mention_position,
+            "citation_urls": state.citation_urls,
+            "measurement_confidence": state.measurement_confidence,
             "input_tokens": state.total_tokens,
             "output_tokens": 0,
             "cost_usd": state.total_cost_usd,

@@ -184,6 +184,8 @@ class ObservationEvidence(SQLModel, table=True):
     raw_response: str = Field(default="")
     mentioned: bool = Field(default=False)
     recommendation: bool = Field(default=False)
+    sentiment: str | None = Field(default=None, max_length=20)
+    measurement_confidence: float = Field(default=0.0, ge=0, le=1)
     position: int | None = Field(default=None, ge=1)
     citation_urls: list[str] = Field(default_factory=list, sa_column=SAColumn(JSONB, server_default=text("'[]'")))
     latency_ms: int = Field(default=0, ge=0)

@@ -95,15 +95,15 @@ def run_multi_model_audit(
 def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> dict:
     """Run one real provider query. Failures stay failures, never fixtures."""
     try:
-        from geo_audit_agent.metrics.entity_detection import EntityVerdict, detect_entity
+        from geo_audit_agent.metrics.observation import interpret_observation
         from geo_audit_agent.providers import get_provider_adapter
 
         adapter = get_provider_adapter(model_info["provider"])
         prompt = f"What are the best {category} options in {city}? Explain your recommendations and cite sources."
         provider_result = adapter.query(prompt, prompt_id="category-recommendation", prompt_version="1.0")
-        entity_match = detect_entity(provider_result.text, brand)
-        mentioned = entity_match.verdict is EntityVerdict.MATCH
-        position = 1 if mentioned else None
+        interpretation = interpret_observation(provider_result.text, brand)
+        mentioned = interpretation.mentioned
+        position = interpretation.position
 
         # Evidence trace
         if mentioned:
@@ -122,9 +122,12 @@ def _run_real_audit(brand: str, category: str, city: str, model_info: dict) -> d
             "model": model_info["name"],
             "provider": model_info["provider"],
             "mentioned": mentioned,
+            "recommended": interpretation.recommended,
+            "recommendation": interpretation.recommended,
             "position": position,
-            "sentiment": "unscored",
-            "confidence": 1.0 if mentioned else 0.0,
+            "sentiment": interpretation.sentiment,
+            "confidence": interpretation.confidence,
+            "citation_urls": interpretation.citation_urls,
             "raw_response": provider_result.text,
             "evidence": evidence,
             "evidence_type": "live_response",
@@ -197,6 +200,8 @@ def _run_simulated_audit(brand: str, category: str, city: str, model_info: dict)
         "model": model_info["name"],
         "provider": model_info["provider"],
         "mentioned": mentioned,
+        "recommended": mentioned,
+        "recommendation": mentioned,
         "position": position,
         "sentiment": sentiment,
         "confidence": confidence,
@@ -207,6 +212,7 @@ def _run_simulated_audit(brand: str, category: str, city: str, model_info: dict)
         "disclosure": "Deterministic demo fixture; not a provider response",
         "prompt_id": "category-recommendation",
         "prompt_version": "1.0",
+        "citation_urls": [],
     }
 
 

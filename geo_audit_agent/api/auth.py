@@ -16,11 +16,15 @@ def claims_from_token(token: str) -> dict:
             detail="Auth not configured",
         )
     try:
+        audience = os.getenv("SUPABASE_JWT_AUDIENCE")
+        issuer = os.getenv("SUPABASE_JWT_ISSUER")
         payload = jwt.decode(
             token,
             secret,
             algorithms=["HS256"],
-            options={"verify_aud": False},
+            audience=audience if audience else None,
+            issuer=issuer if issuer else None,
+            options={"verify_aud": bool(audience), "verify_iss": bool(issuer)},
         )
         if not payload.get("sub"):
             raise HTTPException(

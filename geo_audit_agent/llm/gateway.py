@@ -26,8 +26,10 @@ def _mock(prompt: str, tag: str) -> LLMResult:
 
 def claude(system: str, user: str, *, model: str = "claude-opus-4-8",
            max_tokens: int = 4096, force_json: bool = False) -> LLMResult:
-    if os.getenv("FORCE_MOCK") == "true" or not os.getenv("ANTHROPIC_API_KEY"):
+    if os.getenv("FORCE_MOCK") == "true":
         return _mock(user, "claude")
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise RuntimeError("ANTHROPIC_API_KEY is required for live Claude execution")
     import anthropic
     client = anthropic.Anthropic()
     sys_prompt = system + ("\n\nRespond with ONLY valid JSON." if force_json else "")
@@ -52,8 +54,8 @@ def claude(system: str, user: str, *, model: str = "claude-opus-4-8",
         _record_metrics(result, model, cache_hit=False)
         return result
     except Exception as e:
-        logger.warning("Claude gateway failed, returning mock: %s", e)
-        return _mock(user, "claude-error")
+        logger.error("Claude gateway failed without synthetic fallback: %s", type(e).__name__)
+        raise RuntimeError("Claude provider request failed") from e
 
 
 def router(prompt: str, tier: str = "balanced", correlation_id: str = "") -> LLMResult:

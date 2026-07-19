@@ -16,6 +16,19 @@ Every metric carries its numerator, denominator, and sample size. No observation
 not a zero. Competitor rankings require like-for-like evidence for every entity. Trends require at least two comparable
 real periods.
 
+## Canonical product workflow
+
+`brand setup → prompt set → provider observation → evidence interpretation → metrics → prioritized action plan → recheck`
+
+Evidence is authoritative only when it is live or cached from a live provider.
+Fixture results are clearly disclosed and excluded from visibility metrics. A
+mention, recommendation, sentiment, position, and citation are separate fields.
+The evidence endpoint is available at `/v1/audits/{audit_id}/evidence`.
+
+BrandSight GEO is optimized for SMEs and marketing agencies: local intent,
+client-ready reporting, explainable recommendations, and affordable usage are
+priorities. Enterprise-only controls are not required for the first release.
+
 ## Local setup
 
 Requires Python 3.10 or newer.
