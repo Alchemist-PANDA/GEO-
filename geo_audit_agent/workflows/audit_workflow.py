@@ -2,11 +2,34 @@
 Temporal workflow wrapping the LangGraph audit pipeline.
 Addresses: PE-OS Law 10 (Durable Execution Persistence)
 Replaces: wait_and_rerun.py time.sleep() pattern
+
+NOTE: this is an optional durable-execution path. ``temporalio`` is not a
+core dependency, so the imports are guarded — importing this module without
+temporalio installed degrades to no-op decorators instead of crashing an
+import sweep. Install ``temporalio`` to actually run the workflow.
 """
 from datetime import timedelta
 
-from temporalio import activity, workflow
-from temporalio.common import RetryPolicy
+try:
+    from temporalio import activity, workflow
+    from temporalio.common import RetryPolicy
+    HAS_TEMPORAL = True
+except ImportError:  # pragma: no cover - optional dependency
+    HAS_TEMPORAL = False
+
+    class _NoOpDecorator:
+        """Stand-in so @activity.defn / @workflow.defn don't crash on import."""
+
+        def defn(self, *args, **kwargs):
+            def wrap(fn):
+                return fn
+            return wrap(args[0]) if args and callable(args[0]) else wrap
+
+        def run(self, fn):
+            return fn
+
+    activity = workflow = _NoOpDecorator()  # type: ignore[assignment]
+    RetryPolicy = None  # type: ignore[assignment,misc]
 
 
 @activity.defn

@@ -45,6 +45,16 @@ async def chat_endpoint(
     user_uuid = uuid.UUID(user_id)
     conversation_id = request.conversation_id
 
+    # Guardrail: the copilot sends the user message straight into an LLM, so
+    # classify it for prompt-injection / jailbreak attempts before proceeding.
+    from geo_audit_agent.services.guardrails import classify_input
+    verdict = classify_input(request.message)
+    if verdict.classification == "unsafe":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Message blocked by safety guardrail ({verdict.category or 'unsafe'})",
+        )
+
     # If no conversation ID, create a new one
     if not conversation_id:
         conversation = CopilotConversation(
@@ -74,8 +84,9 @@ async def chat_endpoint(
             async for event in stream_chat(conversation_id, request.message, request.context, session):
                 yield f"data: {json.dumps(event)}\n\n"
         except Exception as e:
-            logger.error(f"Error in chat stream: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+            logger.error(f"Error in chat stream: {e}", exc_info=True)
+            # Generic client-facing message; details stay in server logs.
+            yield f"data: {json.dumps({'type': 'error', 'content': 'An internal error occurred.'})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

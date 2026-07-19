@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from geo_audit_agent.api.rate_limiter import RateLimitMiddleware, RedisRateLimiter
 from geo_audit_agent.api.routes import agentic, audits, brands, competitors, copilot, feedback, health, stream
+from geo_audit_agent.api.security_headers import MetricsAuthMiddleware, SecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,9 @@ app.add_middleware(
 )
 
 app.add_middleware(RateLimitMiddleware, limiter=RedisRateLimiter(limit=100, window=3600))
+# Security headers on every response; /metrics gated by METRICS_TOKEN if set.
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(MetricsAuthMiddleware)
 
 app.include_router(health.router, tags=["Health"])
 app.include_router(brands.router, prefix="/v1", tags=["Brands"])

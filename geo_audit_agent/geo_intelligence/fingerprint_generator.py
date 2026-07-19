@@ -10,9 +10,16 @@ except ImportError:
 
 def crawl_competitor(url: str):
     """Extracts text and structured data from a competitor URL."""
+    from geo_audit_agent.utils.url_guard import UnsafeURLError, validate_public_url
+    try:
+        # SSRF guard: reject non-http(s) and private/loopback/link-local hosts
+        # (blocks cloud-metadata and internal-service access).
+        validate_public_url(url)
+    except UnsafeURLError as e:
+        return {"url": url, "error": f"blocked unsafe URL: {e}"}
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=15, allow_redirects=False)
         response.raise_for_status()
         html = response.text
         soup = BeautifulSoup(html, 'html.parser')

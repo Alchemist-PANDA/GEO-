@@ -35,6 +35,13 @@ async def run_agentic_workflow(
     req: AgenticRequest,
     user_id: str = Depends(get_current_user),
 ):
+    # Cost guard: the agentic graph fans out to multiple LLM calls, so enforce
+    # the same per-user monthly budget cap the /audits path uses. Without this
+    # a single authenticated user could drive unbounded provider spend.
+    from geo_audit_agent.services.cost_tracker import TokenCostTracker
+    if TokenCostTracker().is_budget_exceeded(user_id):
+        raise HTTPException(status_code=429, detail="Monthly budget exceeded")
+
     from geo_audit_agent.orchestration.langgraph_workflow import build_agentic_graph
     from geo_audit_agent.orchestration.state import AgenticState
 
@@ -48,7 +55,9 @@ async def run_agentic_workflow(
 
     try:
         graph = build_agentic_graph()
-        result = graph.invoke(state)
+        # Explicit hard ceiling on graph steps (defense against a runaway
+        # agent chain), rather than relying on the framework default.
+        result = graph.invoke(state, config={"recursion_limit": 15})
     except Exception as e:
         logger.exception("Agentic workflow failed: %s", e)
         raise HTTPException(status_code=500, detail="Workflow execution failed") from e
