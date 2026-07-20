@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+from typing import Any
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,7 +28,7 @@ except ImportError:  # pragma: no cover - dependency preflight handles this.
 else:
     load_dotenv(PROJECT_ROOT / ".env")
 
-from geo_audit_agent.testing.gemini_client import APIError, RateLimitError, generate_content_async
+from geo_audit_agent.testing.gemini_client import APIError, RateLimitError
 
 
 DEFAULT_PROMPTS = [
@@ -77,14 +78,27 @@ def _is_quota_error(error: Exception) -> bool:
     )
 
 
+def _redact_error_message(message: str) -> str:
+    redacted = message
+    for _, key in _keys():
+        if key:
+            redacted = redacted.replace(key, "MASKED")
+    redacted = re.sub(r"key=[^&\s]+", "key=MASKED", redacted)
+    redacted = re.sub(r"api[_-]?key['\"]?\s*[:=]\s*['\"]?[^'\"\s,}]+", "api_key=MASKED", redacted, flags=re.IGNORECASE)
+    redacted = re.sub(r"authorization['\"]?\s*[:=]\s*['\"]?[^'\"\s,}]+", "authorization=MASKED", redacted, flags=re.IGNORECASE)
+    redacted = re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "AIza...MASKED", redacted)
+    redacted = re.sub(r"\bAQ\.[0-9A-Za-z_\-.]{12,}", "AQ...MASKED", redacted)
+    return re.sub(r"\s+", " ", redacted).strip()
+
+
 def _safe_error_details(error: Exception) -> dict[str, object]:
     """Return enough diagnostic detail to debug provider failures without secrets."""
-    message = str(error)
-    redacted = re.sub(r"key=[^&\s]+", "key=MASKED", message)
-    redacted = re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "AIza...MASKED", redacted)
-    redacted = re.sub(r"\s+", " ", redacted).strip()
-    status_match = re.search(r"(?:status|HTTP)\s+(\d{3})", redacted, flags=re.IGNORECASE)
-    http_status = int(status_match.group(1)) if status_match else None
+    redacted = _redact_error_message(str(error))
+    status_match = re.search(r"(?:status|HTTP|code)[^\d]*(\d{3})|^\s*(\d{3})\b", redacted, flags=re.IGNORECASE)
+    http_status = None
+    if status_match:
+        status_value = status_match.group(1) or status_match.group(2)
+        http_status = int(status_value) if status_value else None
     lowered = redacted.lower()
     if _is_quota_error(error):
         category = "quota_or_rate_limit"
@@ -107,6 +121,54 @@ def _safe_error_details(error: Exception) -> dict[str, object]:
         "error_summary": redacted[:320],
         "key_action": key_action,
     }
+
+
+def _usage_value(usage: Any, key: str) -> object:
+    if usage is None:
+        return None
+    if isinstance(usage, dict):
+        return usage.get(key)
+    snake_key = re.sub(r"(?<!^)(?=[A-Z])", "_", key).lower()
+    return getattr(usage, snake_key, None) or getattr(usage, key, None)
+
+
+def _generate_content_sdk(prompt: str, *, model: str, api_key: str, max_output_tokens: int) -> tuple[str, dict[str, object]]:
+    try:
+        from google import genai
+        from google.genai import types
+    except ImportError as exc:
+        raise APIError("google-genai is not installed; install geo_audit_agent requirements before live validation") from exc
+
+    try:
+        response = genai.Client(api_key=api_key).models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.0,
+                max_output_tokens=max_output_tokens,
+            ),
+        )
+    except Exception as exc:
+        raise APIError(f"Gemini SDK request failed: {_redact_error_message(str(exc))}") from exc
+
+    text = getattr(response, "text", "") or ""
+    usage = getattr(response, "usage_metadata", None)
+    return text, {
+        "usageMetadata": {
+            "promptTokenCount": _usage_value(usage, "promptTokenCount"),
+            "candidatesTokenCount": _usage_value(usage, "candidatesTokenCount"),
+        }
+    }
+
+
+async def generate_content_async(prompt: str, *, model: str, api_key: str, max_output_tokens: int) -> tuple[str, dict[str, object]]:
+    return await asyncio.to_thread(
+        _generate_content_sdk,
+        prompt,
+        model=model,
+        api_key=api_key,
+        max_output_tokens=max_output_tokens,
+    )
 
 
 async def run(args: argparse.Namespace) -> dict[str, object]:
