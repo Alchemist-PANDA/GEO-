@@ -33,11 +33,13 @@ python scripts/validate_gemini.py --max-requests 1
 python scripts/validate_gemini.py --max-requests 3
 ```
 
-Only after reviewing the first report should a separately authorized backup be used:
+If the primary key reaches its quota, the validator automatically advances to the next separately authorized key:
 
 ```bash
-python scripts/validate_gemini.py --allow-key-failover --max-requests 1
+python scripts/validate_gemini.py --max-requests 1
 ```
+
+Use `--no-key-failover` only for a primary-key-only diagnostic.
 
 For a local, private review of generated text, opt in explicitly with `--save-responses`; do not commit that report.
 
