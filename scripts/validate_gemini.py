@@ -10,6 +10,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,6 +77,38 @@ def _is_quota_error(error: Exception) -> bool:
     )
 
 
+def _safe_error_details(error: Exception) -> dict[str, object]:
+    """Return enough diagnostic detail to debug provider failures without secrets."""
+    message = str(error)
+    redacted = re.sub(r"key=[^&\s]+", "key=MASKED", message)
+    redacted = re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "AIza...MASKED", redacted)
+    redacted = re.sub(r"\s+", " ", redacted).strip()
+    status_match = re.search(r"(?:status|HTTP)\s+(\d{3})", redacted, flags=re.IGNORECASE)
+    http_status = int(status_match.group(1)) if status_match else None
+    lowered = redacted.lower()
+    if _is_quota_error(error):
+        category = "quota_or_rate_limit"
+        key_action = "try_next_key"
+    elif http_status in (401, 403) or any(marker in lowered for marker in ("api key not valid", "permission", "unauthorized", "forbidden")):
+        category = "auth_or_permission"
+        key_action = "check_key_or_project_access"
+    elif http_status == 404 or any(marker in lowered for marker in ("not found", "not supported", "model")):
+        category = "model_or_endpoint"
+        key_action = "check_gemini_model"
+    elif "network" in lowered:
+        category = "network"
+        key_action = "retry_later"
+    else:
+        category = "api_error"
+        key_action = "inspect_error_summary"
+    return {
+        "error_category": category,
+        "http_status": http_status,
+        "error_summary": redacted[:320],
+        "key_action": key_action,
+    }
+
+
 async def run(args: argparse.Namespace) -> dict[str, object]:
     keys = _keys()
     if not keys:
@@ -115,14 +148,16 @@ async def run(args: argparse.Namespace) -> dict[str, object]:
                 results.append(item)
                 break
             except (RateLimitError, APIError) as error:
+                error_details = _safe_error_details(error)
                 results.append({
                     "prompt_index": prompt_index,
                     "key_slot": key_name,
                     "model": model,
                     "status": "quota_or_error",
                     "error_type": type(error).__name__,
+                    **error_details,
                 })
-                if not args.allow_key_failover or not _is_quota_error(error) or key_index + 1 >= len(keys):
+                if not args.allow_key_failover or error_details["key_action"] != "try_next_key" or key_index + 1 >= len(keys):
                     break
                 key_index += 1
                 # One controlled retry on the next cold key; never round-robin.
