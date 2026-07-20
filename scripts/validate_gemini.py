@@ -16,16 +16,44 @@ from pathlib import Path
 
 # Support `python scripts/validate_gemini.py` from a fresh checkout without
 # requiring the package to be installed first.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - dependency preflight handles this.
+    load_dotenv = None
+else:
+    load_dotenv(PROJECT_ROOT / ".env")
 
 from geo_audit_agent.testing.gemini_client import APIError, RateLimitError, generate_content_async
 
 
 DEFAULT_PROMPTS = [
-    "What should a customer look for when choosing a local marketing agency? Give a concise checklist.",
-    "What are the best ways for a small business to improve its visibility in AI search results?",
-    "How should a marketing agency explain AI-search visibility to a small-business owner?",
-    "Compare the tradeoffs between local SEO and generative engine optimization for an SME.",
+    (
+        "A local dental clinic wants more high-intent patients from AI search. "
+        "What should it improve first across website content, local proof, and review signals?"
+    ),
+    (
+        "A B2B accounting firm serving SMEs wants to be recommended by AI assistants. "
+        "Give a concise GEO action plan that a small marketing agency could execute in 30 days."
+    ),
+    (
+        "An independent HVAC company competes with franchises in one city. "
+        "Which evidence, entities, and service-area pages help AI systems trust and mention it?"
+    ),
+    (
+        "A boutique ecommerce brand sells organic skincare. "
+        "Compare local SEO, traditional SEO, and generative engine optimization for this SME."
+    ),
+    (
+        "A small legal practice wants to understand why AI search does not mention it. "
+        "Explain the diagnostic questions a marketing agency should ask before recommending fixes."
+    ),
+    (
+        "A restaurant group with three locations wants better AI-search visibility. "
+        "List the structured data, review, menu, and local citation improvements that matter most."
+    ),
 ]
 
 
