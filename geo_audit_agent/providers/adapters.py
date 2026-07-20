@@ -49,7 +49,7 @@ class FixtureAdapter:
 @dataclass
 class GeminiAdapter:
     name: str = "google"
-    model: str = "gemini-2.0-flash-lite"
+    model: str = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
     def query(self, prompt: str, *, prompt_id: str, prompt_version: str) -> ProviderResult:
         key = os.getenv("GOOGLE_API_KEY")
@@ -65,7 +65,10 @@ class GeminiAdapter:
             response = genai.Client(api_key=key).models.generate_content(
                 model=self.model,
                 contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=1000),
+                config=types.GenerateContentConfig(
+                    temperature=0.0,
+                    max_output_tokens=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "512")),
+                ),
             )
         except Exception as exc:
             if any(marker in str(exc).lower() for marker in ("401", "403", "api key", "permission")):
