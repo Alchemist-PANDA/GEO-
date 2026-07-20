@@ -1,7 +1,10 @@
 import logging
 from typing import Any
 
-import httpx
+try:
+    import httpx
+except ImportError:  # Optional until a live validation run is requested.
+    httpx = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,9 @@ async def generate_content_async(
     prompt: str,
     model: str,
     api_key: str,
-    timeout: float = 45.0
+    timeout: float = 45.0,
+    max_output_tokens: int = 512,
+    temperature: float = 0.0,
 ) -> tuple[str, dict[str, Any]]:
     """
     Asynchronously calls the Google Gemini/Gemma REST API to generate content.
@@ -23,6 +28,8 @@ async def generate_content_async(
     Raises RateLimitError for HTTP 429, and APIError for other failures.
     """
     # Normalize model name for the REST endpoint
+    if httpx is None:
+        raise APIError("httpx is not installed; install runtime requirements before live validation")
     normalized_model = model
     if not model.startswith("models/"):
         normalized_model = f"models/{model}"
@@ -41,7 +48,8 @@ async def generate_content_async(
             }
         ],
         "generationConfig": {
-            "temperature": 0.2
+            "temperature": temperature,
+            "maxOutputTokens": max_output_tokens,
         }
     }
 
@@ -88,17 +96,19 @@ async def generate_content_async(
             import datetime
             import json
             import os
+            # Never persist prompts, responses, URLs containing credentials, or
+            # exception bodies. Validation runs can contain customer data.
             log_record = {
                 "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
                 "request": {
                     "url": url.split("?key=")[0] + "?key=MASKED",
                     "model": model,
-                    "prompt": prompt
+                    "prompt_chars": len(prompt),
                 },
                 "response": {
                     "status_code": response.status_code if response else None,
-                    "text": response.text if response else None,
-                    "error": error_msg
+                    "response_chars": len(response.text) if response else 0,
+                "error_type": "request_error" if error_msg else None,
                 }
             }
             try:

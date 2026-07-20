@@ -31,3 +31,7 @@ jsonld_deploy_instructions.md
 *.db
 
 .streamlit/secrets.toml
+
+# Local provider validation reports; never commit live responses.
+validation_artifacts/
+data/raw_audit_log.jsonl

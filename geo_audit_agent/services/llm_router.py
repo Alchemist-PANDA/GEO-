@@ -28,9 +28,9 @@ def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = ""
             client = genai.Client(api_key=api_key)
 
             # Map tier constraints to target models
-            model_name = "gemini-2.0-flash-lite"
+            model_name = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
             if tier == "deep":
-                model_name = "gemini-2.0-flash"
+                model_name = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
             response = client.models.generate_content(
                 model=model_name,

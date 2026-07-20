@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import requests
 
@@ -49,11 +49,30 @@ class FixtureAdapter:
 @dataclass
 class GeminiAdapter:
     name: str = "google"
-    model: str = "gemini-2.0-flash-lite"
+    model: str = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    _key_index: int = field(default=0, init=False, repr=False)
+
+    @staticmethod
+    def _keys() -> list[tuple[str, str]]:
+        """Return the primary key followed by configured cold backups."""
+        configured: list[tuple[str, str]] = []
+        primary = os.getenv("GOOGLE_API_KEY")
+        if primary:
+            configured.append(("GOOGLE_API_KEY", primary))
+        for index in range(1, 8):
+            value = os.getenv(f"GOOGLE_API_KEY_{index}")
+            if value and value != primary:
+                configured.append((f"GOOGLE_API_KEY_{index}", value))
+        return configured
+
+    @staticmethod
+    def _is_quota_error(error: Exception) -> bool:
+        message = str(error).lower()
+        return any(marker in message for marker in ("429", "quota", "resource exhausted", "rate limit"))
 
     def query(self, prompt: str, *, prompt_id: str, prompt_version: str) -> ProviderResult:
-        key = os.getenv("GOOGLE_API_KEY")
-        if not key:
+        keys = self._keys()
+        if not keys:
             raise ProviderUnavailableError("GOOGLE_API_KEY is not configured")
         try:
             from google import genai
@@ -61,31 +80,46 @@ class GeminiAdapter:
         except ImportError as exc:
             raise ProviderUnavailableError("google-genai is not installed") from exc
         started = time.perf_counter()
-        try:
-            response = genai.Client(api_key=key).models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=1000),
-            )
-        except Exception as exc:
-            if any(marker in str(exc).lower() for marker in ("401", "403", "api key", "permission")):
-                raise ProviderAuthError("Gemini rejected the configured credential") from exc
-            raise ProviderUnavailableError(f"Gemini request failed: {type(exc).__name__}") from exc
-        text = response.text or ""
-        input_tokens = len(prompt.split())
-        output_tokens = len(text.split())
-        return ProviderResult(
-            provider=self.name,
-            model=self.model,
-            prompt_id=prompt_id,
-            prompt_version=prompt_version,
-            text=text,
-            mode=ExecutionMode.LIVE,
-            latency_ms=int((time.perf_counter() - started) * 1000),
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost_usd=_price(self.name, input_tokens, output_tokens),
-        )
+        last_error: Exception | None = None
+        start_index = self._key_index % len(keys)
+        for offset in range(len(keys)):
+            key_index = (start_index + offset) % len(keys)
+            key_slot, key = keys[key_index]
+            try:
+                response = genai.Client(api_key=key).models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.0,
+                        max_output_tokens=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "512")),
+                    ),
+                )
+                text = response.text or ""
+                input_tokens = len(prompt.split())
+                output_tokens = len(text.split())
+                self._key_index = key_index
+                return ProviderResult(
+                    provider=self.name,
+                    model=self.model,
+                    prompt_id=prompt_id,
+                    prompt_version=prompt_version,
+                    text=text,
+                    mode=ExecutionMode.LIVE,
+                    latency_ms=int((time.perf_counter() - started) * 1000),
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    cost_usd=_price(self.name, input_tokens, output_tokens),
+                    metadata={"key_slot": key_slot, "failover_attempts": str(offset)},
+                )
+            except Exception as exc:
+                last_error = exc
+                if any(marker in str(exc).lower() for marker in ("401", "403", "api key", "permission")):
+                    raise ProviderAuthError("Gemini rejected the configured credential") from exc
+                if not self._is_quota_error(exc):
+                    raise ProviderUnavailableError(f"Gemini request failed: {type(exc).__name__}") from exc
+        raise ProviderUnavailableError(
+            f"Gemini quota exhausted across {len(keys)} configured key(s)"
+        ) from last_error
 
 
 @dataclass
