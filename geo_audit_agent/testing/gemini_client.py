@@ -1,7 +1,10 @@
 import logging
 from typing import Any
 
-import httpx
+try:
+    import httpx
+except ImportError:  # Optional until a live validation run is requested.
+    httpx = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,8 @@ async def generate_content_async(
     Raises RateLimitError for HTTP 429, and APIError for other failures.
     """
     # Normalize model name for the REST endpoint
+    if httpx is None:
+        raise APIError("httpx is not installed; install runtime requirements before live validation")
     normalized_model = model
     if not model.startswith("models/"):
         normalized_model = f"models/{model}"
