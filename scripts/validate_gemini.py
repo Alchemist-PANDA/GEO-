@@ -59,15 +59,24 @@ DEFAULT_PROMPTS = [
 ]
 
 
+def _allowed_key_slots() -> set[str] | None:
+    configured = os.getenv("GEMINI_KEY_SLOTS")
+    if not configured:
+        return None
+    return {slot.strip() for slot in configured.split(",") if slot.strip()}
+
+
 def _keys() -> list[tuple[str, str]]:
     values: list[tuple[str, str]] = []
+    allowed_slots = _allowed_key_slots()
     primary = os.getenv("GOOGLE_API_KEY")
-    if primary:
+    if primary and (allowed_slots is None or "GOOGLE_API_KEY" in allowed_slots):
         values.append(("GOOGLE_API_KEY", primary))
     for index in range(1, 8):
+        key_name = f"GOOGLE_API_KEY_{index}"
         value = os.getenv(f"GOOGLE_API_KEY_{index}")
-        if value and value != primary:
-            values.append((f"GOOGLE_API_KEY_{index}", value))
+        if value and value != primary and (allowed_slots is None or key_name in allowed_slots):
+            values.append((key_name, value))
     return values
 
 
@@ -140,19 +149,20 @@ def _generate_content_sdk(prompt: str, *, model: str, api_key: str, max_output_t
         raise APIError("google-genai is not installed; install geo_audit_agent requirements before live validation") from exc
 
     try:
-        response = genai.Client(api_key=api_key).models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.0,
-                max_output_tokens=max_output_tokens,
-            ),
-        )
+        with genai.Client(api_key=api_key) as client:
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.0,
+                    max_output_tokens=max_output_tokens,
+                ),
+            )
+            text = getattr(response, "text", "") or ""
+            usage = getattr(response, "usage_metadata", None)
     except Exception as exc:
         raise APIError(f"Gemini SDK request failed: {_redact_error_message(str(exc))}") from exc
 
-    text = getattr(response, "text", "") or ""
-    usage = getattr(response, "usage_metadata", None)
     return text, {
         "usageMetadata": {
             "promptTokenCount": _usage_value(usage, "promptTokenCount"),
@@ -171,19 +181,62 @@ async def generate_content_async(prompt: str, *, model: str, api_key: str, max_o
     )
 
 
+def _load_cases(args: argparse.Namespace) -> list[dict[str, object]]:
+    if args.corpus:
+        data = json.loads(args.corpus.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            raise SystemExit("Corpus must be a JSON array of case objects.")
+        cases: list[dict[str, object]] = []
+        for index, item in enumerate(data, start=1):
+            if not isinstance(item, dict):
+                raise SystemExit(f"Corpus item {index} must be an object.")
+            prompt = item.get("prompt")
+            if not isinstance(prompt, str) or not prompt.strip():
+                raise SystemExit(f"Corpus item {index} is missing a non-empty prompt.")
+            case = dict(item)
+            case.setdefault("prompt_id", f"prompt_{index}")
+            case["prompt"] = prompt
+            cases.append(case)
+        return cases
+
+    prompts = args.prompt or DEFAULT_PROMPTS
+    return [
+        {
+            "prompt_index": index,
+            "prompt_id": f"prompt_{index}",
+            "prompt": prompt,
+        }
+        for index, prompt in enumerate(prompts, start=1)
+    ]
+
+
+def _case_metadata(case: dict[str, object], prompt_index: int) -> dict[str, object]:
+    metadata: dict[str, object] = {
+        "prompt_index": prompt_index,
+        "prompt_id": case.get("prompt_id", f"prompt_{prompt_index}"),
+    }
+    for field in ("business_name", "category", "city_or_market", "website", "public_info"):
+        value = case.get(field)
+        if value:
+            metadata[field] = value
+    return metadata
+
+
 async def run(args: argparse.Namespace) -> dict[str, object]:
     keys = _keys()
     if not keys:
         raise SystemExit("No Gemini key configured. Set GOOGLE_API_KEY in a local .env or shell environment.")
     max_requests = min(args.max_requests, int(os.getenv("GEMINI_VALIDATION_MAX_REQUESTS", "4")))
-    prompts = args.prompt or DEFAULT_PROMPTS
-    prompts = prompts[:max_requests]
+    cases = _load_cases(args)
+    cases = cases[:max_requests]
     model = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
     results: list[dict[str, object]] = []
     request_count = 0
     key_index = 0
 
-    for prompt_index, prompt in enumerate(prompts, start=1):
+    for prompt_index, case in enumerate(cases, start=1):
+        prompt = str(case["prompt"])
+        metadata = _case_metadata(case, prompt_index)
         while True:
             key_name, key = keys[key_index]
             request_count += 1
@@ -196,7 +249,7 @@ async def run(args: argparse.Namespace) -> dict[str, object]:
                 )
                 usage = raw.get("usageMetadata", {}) if isinstance(raw, dict) else {}
                 item: dict[str, object] = {
-                    "prompt_index": prompt_index,
+                    **metadata,
                     "key_slot": key_name,
                     "model": model,
                     "status": "passed" if text.strip() else "failed_empty_response",
@@ -212,7 +265,7 @@ async def run(args: argparse.Namespace) -> dict[str, object]:
             except (RateLimitError, APIError) as error:
                 error_details = _safe_error_details(error)
                 results.append({
-                    "prompt_index": prompt_index,
+                    **metadata,
                     "key_slot": key_name,
                     "model": model,
                     "status": "quota_or_error",
@@ -234,6 +287,7 @@ async def run(args: argparse.Namespace) -> dict[str, object]:
         "request_budget": max_requests,
         "requests_attempted": request_count,
         "keys_configured": len(keys),
+        "key_slots_configured": [key_name for key_name, _ in keys],
         "failover_enabled": args.allow_key_failover,
         "passed": sum(1 for item in results if item["status"] == "passed"),
         "results": results,
@@ -243,6 +297,7 @@ async def run(args: argparse.Namespace) -> dict[str, object]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--corpus", type=Path, help="JSON array of case-study prompt objects.")
     parser.add_argument("--prompt", action="append", help="One prompt; repeat for a small fixed corpus.")
     parser.add_argument("--max-requests", type=int, default=4)
     parser.add_argument("--max-output-tokens", type=int, default=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "512")))
