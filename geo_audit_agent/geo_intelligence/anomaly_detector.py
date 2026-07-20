@@ -14,7 +14,7 @@ def query_llms_for_anomalies(queries: list[str], client: genai.Client):
     for query in queries:
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
                 contents=f"List top 5 {query}. Return ONLY names as a comma-separated list."
             )
             response_text = response.text or ""
@@ -31,7 +31,7 @@ def check_factual_correctness(brand_name: str, expected_city: str, expected_cate
     prompt = f"Does the brand '{brand_name}' exist in '{expected_city}'? Is it a '{expected_category}'? Answer with 'Correct' or 'Incorrect' and a short explanation."
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+                model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
             contents=prompt
         )
         response_text = response.text or ""
