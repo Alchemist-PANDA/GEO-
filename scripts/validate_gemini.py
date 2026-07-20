@@ -121,7 +121,13 @@ def main() -> None:
     parser.add_argument("--prompt", action="append", help="One prompt; repeat for a small fixed corpus.")
     parser.add_argument("--max-requests", type=int, default=4)
     parser.add_argument("--max-output-tokens", type=int, default=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "512")))
-    parser.add_argument("--allow-key-failover", action="store_true", help="Use the next configured key only after quota errors.")
+    parser.add_argument(
+        "--no-key-failover",
+        dest="allow_key_failover",
+        action="store_false",
+        default=True,
+        help="Disable automatic backup-key use after a quota/rate-limit error.",
+    )
     parser.add_argument("--save-responses", action="store_true", help="Include response text in the local report; review for PII before sharing.")
     parser.add_argument("--output", type=Path, default=Path("validation_artifacts/gemini/validation.json"))
     args = parser.parse_args()
