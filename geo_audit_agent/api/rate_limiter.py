@@ -77,12 +77,19 @@ class RedisRateLimiter:
         key = f"rate_limit:{client_key}"
         member = f"{now}:{_uuid.uuid4().hex[:8]}"
         try:
-            pipe = self.redis.pipeline()
-            pipe.zremrangebyscore(key, 0, now - self.window)
-            pipe.zcard(key)
-            pipe.zadd(key, {member: now})
-            pipe.expire(key, self.window)
-            _, count, _, _ = pipe.execute()
+            # One atomic Redis script prevents concurrent requests from
+            # racing between the count and insert operations.
+            script = """
+            redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1] - ARGV[2])
+            local count = redis.call('ZCARD', KEYS[1])
+            if count < tonumber(ARGV[3]) then
+                redis.call('ZADD', KEYS[1], ARGV[1], ARGV[4])
+                count = count + 1
+            end
+            redis.call('EXPIRE', KEYS[1], ARGV[2])
+            return count
+            """
+            count = int(self.redis.eval(script, 1, key, now, self.window, self.limit, member))
 
             remaining = max(0, self.limit - count)
             headers = {

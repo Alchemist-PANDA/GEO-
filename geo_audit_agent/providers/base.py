@@ -38,6 +38,11 @@ class ProviderResult:
     cost_usd: float = 0.0
     cache_hit: bool = False
     metadata: dict[str, str] = field(default_factory=dict)
+    recommendation: bool | None = None
+    sentiment: str | None = None
+    position: int | None = None
+    citation_urls: list[str] = field(default_factory=list)
+    error_code: str | None = None
 
 
 class ProviderAdapter(Protocol):

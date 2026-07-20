@@ -4,8 +4,11 @@ from enum import Enum
 import streamlit as st
 from sqlmodel import select
 
+from geo_audit_agent.billing.plans import PLAN_CONFIG
 from geo_audit_agent.db.models import AuditUsage, UserProfile
 from geo_audit_agent.db.session import get_session
+
+TIER_CONFIG = PLAN_CONFIG
 
 
 class UserTier(str, Enum):
@@ -15,53 +18,6 @@ class UserTier(str, Enum):
     BUSINESS = "business"
     ENTERPRISE = "enterprise"
 
-TIER_CONFIG: dict[str, dict] = {
-    "free": {
-        "models": [],  # All mock
-        "audits_per_month": 3,
-        "competitors": 3,
-        "inspector": False,
-        "action_agent": False,
-        "self_improvement": False,
-        "price": 0,
-    },
-    "starter": {
-        "models": ["ChatGPT", "Gemini"],
-        "audits_per_month": 50,
-        "competitors": 5,
-        "inspector": False,
-        "action_agent": False,
-        "self_improvement": False,
-        "price": 29,
-    },
-    "professional": {
-        "models": ["ChatGPT", "Gemini", "Claude.ai"],
-        "audits_per_month": 150,
-        "competitors": 10,
-        "inspector": True,
-        "action_agent": True,
-        "self_improvement": False,
-        "price": 49,
-    },
-    "business": {
-        "models": ["ChatGPT", "Gemini", "Claude.ai", "Perplexity", "DeepSeek"],
-        "audits_per_month": 500,
-        "competitors": 20,
-        "inspector": True,
-        "action_agent": True,
-        "self_improvement": True,
-        "price": 99,
-    },
-    "enterprise": {
-        "models": ["ChatGPT", "Gemini", "Claude.ai", "Perplexity", "DeepSeek", "Meta.ai", "Grok"],
-        "audits_per_month": 999999,
-        "competitors": 999999,
-        "inspector": True,
-        "action_agent": True,
-        "self_improvement": True,
-        "price": 249,
-    },
-}
 
 def get_user_tier(user_id: str) -> str:
     """Get user's tier from database."""

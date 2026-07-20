@@ -6,6 +6,7 @@ from sqlmodel import Session, desc, select
 
 from geo_audit_agent.api.auth import get_current_user
 from geo_audit_agent.api.schemas import AuditCreate, AuditResponse, AuditSummary
+from geo_audit_agent.billing.plans import plan_allows_audit
 from geo_audit_agent.db.models import Audit, AuditStatus, Brand, UserProfile
 from geo_audit_agent.db.session import get_async_session
 from geo_audit_agent.services.cost_tracker import TokenCostTracker
@@ -17,17 +18,7 @@ cost_tracker = TokenCostTracker()
 
 
 def audit_tier_allowed(plan: str, requested_tier: str) -> bool:
-    maximum_tier = {
-        "free": None,
-        "starter": "express",
-        "professional": "balanced",
-        "business": "deep",
-        "enterprise": "deep",
-    }.get(plan)
-    if maximum_tier is None:
-        return False
-    tier_rank = {"express": 0, "balanced": 1, "deep": 2}
-    return tier_rank[requested_tier] <= tier_rank[maximum_tier]
+    return plan_allows_audit(plan, requested_tier)
 
 
 @router.post("/audits", response_model=AuditResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -40,7 +31,10 @@ async def create_audit(
     if not brand or str(brand.user_id) != user_id:
         raise HTTPException(status_code=404, detail="Brand not found")
 
-    profile = session.get(UserProfile, uuid.UUID(user_id))
+    try:
+        profile = session.get(UserProfile, uuid.UUID(user_id))
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authenticated identity") from None
     plan = profile.tier if profile else "free"
     if plan == "free":
         raise HTTPException(status_code=403, detail="A paid plan is required for live provider audits")

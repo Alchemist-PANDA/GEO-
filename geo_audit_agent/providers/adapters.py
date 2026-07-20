@@ -14,6 +14,18 @@ from .base import (
 )
 
 
+def _price(provider: str, input_tokens: int, output_tokens: int) -> float:
+    """Conservative configurable pricing; zero is allowed only in fixtures."""
+    prices = {
+        "google": (0.000075, 0.0003),
+        "anthropic": (0.0008, 0.004),
+        "openai": (0.0004, 0.0016),
+        "perplexity": (0.001, 0.001),
+    }
+    input_price, output_price = prices.get(provider, (0.0, 0.0))
+    return input_tokens / 1000 * input_price + output_tokens / 1000 * output_price
+
+
 @dataclass
 class FixtureAdapter:
     """Explicit deterministic demo data. This adapter is never selected implicitly."""
@@ -60,6 +72,8 @@ class GeminiAdapter:
                 raise ProviderAuthError("Gemini rejected the configured credential") from exc
             raise ProviderUnavailableError(f"Gemini request failed: {type(exc).__name__}") from exc
         text = response.text or ""
+        input_tokens = len(prompt.split())
+        output_tokens = len(text.split())
         return ProviderResult(
             provider=self.name,
             model=self.model,
@@ -68,8 +82,9 @@ class GeminiAdapter:
             text=text,
             mode=ExecutionMode.LIVE,
             latency_ms=int((time.perf_counter() - started) * 1000),
-            input_tokens=len(prompt.split()),
-            output_tokens=len(text.split()),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=_price(self.name, input_tokens, output_tokens),
         )
 
 
@@ -99,6 +114,8 @@ class AnthropicAdapter:
             raise ProviderUnavailableError(f"Anthropic request failed: {type(exc).__name__}") from exc
         text = "".join(block.text for block in response.content if getattr(block, "type", "") == "text")
         usage = getattr(response, "usage", None)
+        input_tokens = getattr(usage, "input_tokens", 0)
+        output_tokens = getattr(usage, "output_tokens", 0)
         return ProviderResult(
             provider=self.name,
             model=self.model,
@@ -107,8 +124,9 @@ class AnthropicAdapter:
             text=text,
             mode=ExecutionMode.LIVE,
             latency_ms=int((time.perf_counter() - started) * 1000),
-            input_tokens=getattr(usage, "input_tokens", 0),
-            output_tokens=getattr(usage, "output_tokens", 0),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=_price(self.name, input_tokens, output_tokens),
         )
 
 
@@ -143,6 +161,8 @@ class OpenAICompatibleAdapter:
         except (KeyError, IndexError, TypeError, ValueError) as exc:
             raise ProviderUnavailableError(f"{self.name} returned a malformed response") from exc
         usage = payload.get("usage", {})
+        input_tokens = int(usage.get("prompt_tokens", 0))
+        output_tokens = int(usage.get("completion_tokens", 0))
         return ProviderResult(
             provider=self.name,
             model=self.model,
@@ -151,8 +171,9 @@ class OpenAICompatibleAdapter:
             text=text,
             mode=ExecutionMode.LIVE,
             latency_ms=int((time.perf_counter() - started) * 1000),
-            input_tokens=int(usage.get("prompt_tokens", 0)),
-            output_tokens=int(usage.get("completion_tokens", 0)),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=_price(self.name, input_tokens, output_tokens),
         )
 
 

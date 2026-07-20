@@ -21,7 +21,10 @@ async def create_brand(
 ):
     """Register a new brand under the current user's profile."""
     # Convert string uuid to UUID object
-    user_uuid = uuid.UUID(user_id)
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authenticated identity") from None
 
     brand = Brand(
         name=payload.name,
@@ -51,7 +54,10 @@ async def list_brands(
     session: Session = Depends(get_async_session)
 ):
     """Retrieve all registered brands belonging to the current user."""
-    user_uuid = uuid.UUID(user_id)
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authenticated identity") from None
     statement = select(Brand).where(Brand.user_id == user_uuid)
     brands = session.exec(statement).all()
 

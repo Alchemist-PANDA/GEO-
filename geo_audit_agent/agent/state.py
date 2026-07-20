@@ -25,6 +25,9 @@ class AuditState(BaseModel):
     force_mock: bool = False
     use_real: bool = False
     citation_found: bool = False
+    recommendation_found: bool = False
+    citation_urls: list[str] = Field(default_factory=list)
+    mention_position: int | None = None
     mode: str = "simulated"
 
     # LLM query results
@@ -35,6 +38,7 @@ class AuditState(BaseModel):
     is_cited: bool = False
     confidence_score: float = 0.0
     sentiment: str = "neutral"
+    measurement_confidence: float = 0.0
 
     # Gap analysis
     gaps: list[dict[str, Any]] = Field(default_factory=list)
@@ -117,4 +121,3 @@ class AuditState(BaseModel):
 
     def keys(self):
         return list(self.model_fields.keys()) + ["brand"]
-

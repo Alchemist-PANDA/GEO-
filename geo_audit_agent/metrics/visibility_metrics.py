@@ -19,6 +19,17 @@ class Metric:
                 "sample_size": self.denominator}
 
 
+def wilson_interval(numerator: int, denominator: int, z: float = 1.96) -> tuple[float, float] | None:
+    """Return a conservative 95% Wilson interval, or None without evidence."""
+    if denominator <= 0:
+        return None
+    p = numerator / denominator
+    denominator_term = 1 + z * z / denominator
+    centre = (p + z * z / (2 * denominator)) / denominator_term
+    margin = z * ((p * (1 - p) / denominator + z * z / (4 * denominator * denominator)) ** 0.5) / denominator_term
+    return (max(0.0, centre - margin), min(1.0, centre + margin))
+
+
 @dataclass(frozen=True)
 class VisibilityMetrics:
     mention_rate: Metric
@@ -28,8 +39,13 @@ class VisibilityMetrics:
     provider_coverage: Metric
     prompt_coverage: Metric
 
-    def as_dict(self) -> dict[str, dict[str, int | float | None]]:
-        return {name: getattr(self, name).as_dict() for name in self.__dataclass_fields__}
+    def as_dict(self, *, include_confidence_intervals: bool = False) -> dict[str, dict[str, Any]]:
+        result = {name: getattr(self, name).as_dict() for name in self.__dataclass_fields__}
+        if include_confidence_intervals:
+            for metric in result.values():
+                interval = wilson_interval(int(metric["numerator"]), int(metric["denominator"]))
+                metric["confidence_interval_95"] = list(interval) if interval else None
+        return result
 
 
 def calculate_visibility_metrics(
