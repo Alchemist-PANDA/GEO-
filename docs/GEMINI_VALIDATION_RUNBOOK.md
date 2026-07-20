@@ -11,8 +11,8 @@ It cannot prove a statistically stable GEO visibility score from four free-tier 
 ## Credential rules
 
 1. Put keys only in a local ignored `.env` or shell environment. Never paste them into chat, GitHub, logs, screenshots, or validation reports.
-2. Use `GOOGLE_API_KEY` as the primary slot. `GOOGLE_API_KEY_1` through `_7` are cold backups.
-3. Do not rotate keys to evade a quota or rate limit. Use a backup only when it is separately authorized, belongs to a project you are allowed to use, and `--allow-key-failover` is explicitly enabled. [Inference: seven keys may still share a project-level quota, so key count does not guarantee seven times the allowance.]
+2. Use `GOOGLE_API_KEY` as the primary slot. `GOOGLE_API_KEY_1` through `_7` are ordered backups. The live adapter automatically advances to the next key only after a quota/rate-limit response.
+3. Do not rotate keys to evade a quota or rate limit. Every configured key must be separately authorized and belong to a project you are allowed to use. [Inference: seven keys may still share a project-level quota, so key count does not guarantee seven times the allowance.]
 4. Restrict each key to the Gemini API and treat it like a password. Google recommends environment variables/Secret Manager and warns against source-control or client-side exposure.
 
 ## Staged execution budget
