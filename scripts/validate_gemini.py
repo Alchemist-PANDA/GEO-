@@ -10,8 +10,13 @@ import asyncio
 import hashlib
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Support `python scripts/validate_gemini.py` from a fresh checkout without
+# requiring the package to be installed first.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from geo_audit_agent.testing.gemini_client import APIError, RateLimitError, generate_content_async
 
