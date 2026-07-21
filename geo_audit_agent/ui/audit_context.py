@@ -43,6 +43,7 @@ def build_audit_context(
         "data_source": source,
         "results": results,
         "summary": summary,
+        "public_evidence": dict(audit.get("public_evidence") or {}),
         "gaps": gaps,
         "report": {
             "geo_score": score,
