@@ -14,6 +14,7 @@ from geo_audit_agent.api.routes import (
     feedback,
     health,
     observations,
+    public_evidence,
     stream,
 )
 
@@ -44,6 +45,7 @@ app.include_router(feedback.router, prefix="/v1", tags=["Feedback"])
 app.include_router(competitors.router, prefix="/v1", tags=["Competitors"])
 app.include_router(stream.router, prefix="/v1", tags=["Streaming"])
 app.include_router(observations.router, prefix="/v1", tags=["Evidence"])
+app.include_router(public_evidence.router, prefix="/v1", tags=["Public Evidence"])
 app.include_router(billing.router, prefix="/v1", tags=["Billing"])
 app.include_router(agentic.router, prefix="/v1", tags=["Agentic"])
 app.include_router(copilot.router, prefix="/v1", tags=["Copilot"])
