@@ -160,10 +160,20 @@ def _top_bar(data: dict[str, Any]) -> tuple[str, str, str]:
         st.markdown("<div class='bs-topbar'>", unsafe_allow_html=True)
         col1, col2, col3, col4, col5 = st.columns([2.3, 2.1, 1.6, 1.6, 1.2])
         col1.markdown(f"**{data['workspace']}**")
-        selected_brand = col2.selectbox("Current selected brand", [brand["name"] for brand in data["brands"]], label_visibility="collapsed")
-        date_range = col3.selectbox("Date range", ["Last 30 days", "Last 7 days", "This quarter", "Custom"], label_visibility="collapsed")
-        provider = col4.selectbox("Provider", PROVIDERS, label_visibility="collapsed")
-        col5.button("Run Audit", type="primary", use_container_width=True)
+        selected_brand = col2.selectbox(
+            "Current selected brand",
+            [brand["name"] for brand in data["brands"]],
+            key="topbar_selected_brand",
+            label_visibility="collapsed",
+        )
+        date_range = col3.selectbox(
+            "Date range",
+            ["Last 30 days", "Last 7 days", "This quarter", "Custom"],
+            key="topbar_date_range",
+            label_visibility="collapsed",
+        )
+        provider = col4.selectbox("Provider", PROVIDERS, key="dashboard_provider_filter", label_visibility="collapsed")
+        col5.button("Run Audit", key="topbar_run_audit_button", type="primary", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
     return selected_brand, date_range, provider
 
@@ -244,22 +254,23 @@ def _new_audit() -> None:
         with st.form("new_audit_form"):
             st.markdown("### Business Information")
             c1, c2 = st.columns(2)
-            business = c1.text_input("Business name", placeholder="Dental Art")
-            website = c2.text_input("Website URL", placeholder="https://example.com")
+            business = c1.text_input("Business name", placeholder="Dental Art", key="new_audit_business_name")
+            website = c2.text_input("Website URL", placeholder="https://example.com", key="new_audit_website_url")
             c3, c4, c5 = st.columns(3)
-            category = c3.text_input("Category", placeholder="Dental clinic")
-            market = c4.text_input("City / market", placeholder="Lahore")
-            country = c5.text_input("Country", value="Pakistan")
+            category = c3.text_input("Category", placeholder="Dental clinic", key="new_audit_category")
+            market = c4.text_input("City / market", placeholder="Lahore", key="new_audit_market")
+            country = c5.text_input("Country", value="Pakistan", key="new_audit_country")
             business_type = st.selectbox(
                 "Business type",
                 ["Local service", "Ecommerce", "B2B service", "Professional service", "Restaurant", "Fitness", "Healthcare", "Legal", "Accounting", "Agency", "Other"],
+                key="new_audit_business_type",
             )
-            target_customer = st.text_input("Target customer", placeholder="SME owners, families, commercial buyers")
-            services = st.text_area("Main services/products", placeholder="Implants, braces, preventive dental care")
-            notes = st.text_area("Optional notes")
+            target_customer = st.text_input("Target customer", placeholder="SME owners, families, commercial buyers", key="new_audit_target_customer")
+            services = st.text_area("Main services/products", placeholder="Implants, braces, preventive dental care", key="new_audit_services")
+            notes = st.text_area("Optional notes", key="new_audit_notes")
 
             st.markdown("### Competitors")
-            competitor_count = st.number_input("Competitor rows", min_value=1, max_value=6, value=2)
+            competitor_count = st.number_input("Competitor rows", min_value=1, max_value=6, value=2, key="new_audit_competitor_rows")
             for index in range(int(competitor_count)):
                 c1, c2, c3 = st.columns(3)
                 c1.text_input("Competitor name", key=f"competitor_name_{index}")
@@ -268,11 +279,11 @@ def _new_audit() -> None:
 
             st.markdown("### AI Providers")
             p1, p2, p3, p4 = st.columns(4)
-            gemini = p1.checkbox("Gemini", value=True)
-            openai = p2.checkbox("OpenAI")
-            claude = p3.checkbox("Claude")
-            perplexity = p4.checkbox("Perplexity")
-            demo_mode = st.toggle("Fixture/demo mode for testing only")
+            gemini = p1.checkbox("Gemini", value=True, key="new_audit_provider_gemini")
+            openai = p2.checkbox("OpenAI", key="new_audit_provider_openai")
+            claude = p3.checkbox("Claude", key="new_audit_provider_claude")
+            perplexity = p4.checkbox("Perplexity", key="new_audit_provider_perplexity")
+            demo_mode = st.toggle("Fixture/demo mode for testing only", key="new_audit_demo_mode")
             if demo_mode:
                 st.warning("Demo mode is not real AI visibility evidence and will be excluded from authoritative metrics.")
 
@@ -283,22 +294,23 @@ def _new_audit() -> None:
                     "Auto prompt categories",
                     ["Best business in city/category", "Service recommendation", "Comparison prompt", "Problem-based prompt", "Local intent prompt", "Buyer-ready prompt"],
                     default=["Best business in city/category", "Service recommendation", "Buyer-ready prompt"],
+                    key="new_audit_auto_prompt_categories",
                 )
                 st.caption("Examples: Best dental clinic in Lahore for implants; Which HVAC company should a commercial building in Karachi consider?")
             with tabs[1]:
-                st.text_area("Manual prompts", placeholder="One prompt per line")
+                st.text_area("Manual prompts", placeholder="One prompt per line", key="new_audit_manual_prompts")
             with tabs[2]:
-                st.file_uploader("Import prompt corpus", type=["json", "csv", "txt"])
+                st.file_uploader("Import prompt corpus", type=["json", "csv", "txt"], key="new_audit_prompt_corpus")
 
             st.markdown("### Quota Controls")
             q1, q2, q3, q4 = st.columns(4)
-            max_requests = q1.number_input("Max requests", min_value=1, max_value=200, value=12)
-            max_tokens = q2.number_input("Max output tokens", min_value=64, max_value=2048, value=384)
-            q3.toggle("Use key failover", value=True)
-            q4.toggle("Stop on auth error", value=True)
-            st.slider("Provider timeout", min_value=10, max_value=120, value=45)
+            max_requests = q1.number_input("Max requests", min_value=1, max_value=200, value=12, key="new_audit_max_requests")
+            max_tokens = q2.number_input("Max output tokens", min_value=64, max_value=2048, value=384, key="new_audit_max_output_tokens")
+            q3.toggle("Use key failover", value=True, key="new_audit_use_key_failover")
+            q4.toggle("Stop on auth error", value=True, key="new_audit_stop_on_auth_error")
+            st.slider("Provider timeout", min_value=10, max_value=120, value=45, key="new_audit_provider_timeout")
 
-            submitted = st.form_submit_button("Run Audit", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Run Audit", key="new_audit_run_submit", type="primary", use_container_width=True)
 
     selected_providers = [name for name, enabled in [("Gemini", gemini), ("OpenAI", openai), ("Claude", claude), ("Perplexity", perplexity)] if enabled]
     prompt_count = len(categories) if "categories" in locals() else 0
@@ -333,11 +345,11 @@ def _brand_detail(data: dict[str, Any], selected_brand: str) -> None:
                 _metric_card(metric)
         _section_card("Main findings summary", "Gemini can classify the brand when public service, market, and trust signals are explicit. Evidence confidence remains gated when corroboration is incomplete.", "Live")
         st.markdown("### Top 5 improvement actions")
-        st.checkbox("Add or strengthen organization and local business schema", value=True)
-        st.checkbox("Make location and service pages crawlable", value=True)
-        st.checkbox("Add review proof and third-party corroboration", value=True)
-        st.checkbox("Publish credentials, team, or case-study evidence where relevant", value=False)
-        st.checkbox("Re-test comparable prompts after implementation", value=False)
+        st.checkbox("Add or strengthen organization and local business schema", value=True, key="brand_action_schema")
+        st.checkbox("Make location and service pages crawlable", value=True, key="brand_action_location_pages")
+        st.checkbox("Add review proof and third-party corroboration", value=True, key="brand_action_review_proof")
+        st.checkbox("Publish credentials, team, or case-study evidence where relevant", value=False, key="brand_action_credentials")
+        st.checkbox("Re-test comparable prompts after implementation", value=False, key="brand_action_retest")
     with tabs[1]:
         df = pd.DataFrame(data["observations"], columns=["Provider", "Prompt", "Mentioned brand", "Mention position", "Recommended?", "Citation count", "Status", "Response hash", "Run date"])
         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -362,11 +374,11 @@ def _brand_detail(data: dict[str, Any], selected_brand: str) -> None:
 def _competitors() -> None:
     render_page_header("Competitors", "Competitor Comparison", "Compare visibility only when evidence is like-for-like.")
     f1, f2, f3, f4, f5 = st.columns(5)
-    f1.selectbox("Brand", ["Dental Art", "JS Engineers", "WeProms Digital"])
-    f2.selectbox("Competitor set", ["Local Lahore clinics", "Pakistan B2B services"])
-    f3.selectbox("Provider", PROVIDERS)
-    f4.selectbox("Prompt category", ["All", "Local intent", "Comparison", "Buyer-ready"])
-    f5.selectbox("Date range", ["Last 30 days", "Last 7 days"])
+    f1.selectbox("Brand", ["Dental Art", "JS Engineers", "WeProms Digital"], key="competitor_brand_filter")
+    f2.selectbox("Competitor set", ["Local Lahore clinics", "Pakistan B2B services"], key="competitor_set_filter")
+    f3.selectbox("Provider", PROVIDERS, key="competitor_provider_filter")
+    f4.selectbox("Prompt category", ["All", "Local intent", "Comparison", "Buyer-ready"], key="competitor_prompt_category_filter")
+    f5.selectbox("Date range", ["Last 30 days", "Last 7 days"], key="competitor_date_range_filter")
     st.warning("Like-for-like comparison unavailable when competitors do not have equal evidence.")
     df = pd.DataFrame(
         [
@@ -412,8 +424,18 @@ def _public_evidence() -> None:
     gaps = ["Missing schema", "Weak service pages", "No location page", "No review proof", "No professional credentials", "No case studies", "No third-party corroboration", "Unclear category positioning"]
     st.dataframe(pd.DataFrame({"Gap": gaps, "Priority": ["High", "High", "Medium", "High", "Medium", "Medium", "High", "Medium"]}), use_container_width=True, hide_index=True)
     st.markdown("### 30-Day Improvement Plan")
-    for action in ["Fix entity clarity", "Improve local proof", "Add schema", "Strengthen service pages", "Add review/citation proof", "Add credentials/case studies", "Re-test AI visibility"]:
-        st.checkbox(action, value=action in {"Fix entity clarity", "Improve local proof"})
+    for index, action in enumerate(
+        [
+            "Fix entity clarity",
+            "Improve local proof",
+            "Add schema",
+            "Strengthen service pages",
+            "Add review/citation proof",
+            "Add credentials/case studies",
+            "Re-test AI visibility",
+        ]
+    ):
+        st.checkbox(action, value=action in {"Fix entity clarity", "Improve local proof"}, key=f"evidence_plan_{index}")
 
 
 def _reports(data: dict[str, Any]) -> None:
@@ -430,10 +452,10 @@ def _reports(data: dict[str, Any]) -> None:
     _section_card("Executive Summary", "Observed AI visibility is based on provider responses and public-facing evidence. Demo observations are excluded from authoritative metrics.", "Live")
     st.write("**Disclaimer:** This report is based on observed AI-provider responses and public-facing evidence. It is not a guarantee of ranking, revenue, traffic, or permanent visibility.")
     c1, c2, c3, c4 = st.columns(4)
-    c1.button("Export PDF", use_container_width=True)
-    c2.button("Export Markdown", use_container_width=True)
-    c3.button("Export JSON", use_container_width=True)
-    c4.button("Copy client summary", use_container_width=True)
+    c1.button("Export PDF", key="report_export_pdf", use_container_width=True)
+    c2.button("Export Markdown", key="report_export_markdown", use_container_width=True)
+    c3.button("Export JSON", key="report_export_json", use_container_width=True)
+    c4.button("Copy client summary", key="report_copy_client_summary", use_container_width=True)
 
 
 def _validation_runs(data: dict[str, Any]) -> None:
@@ -465,17 +487,17 @@ def _settings() -> None:
         st.dataframe(pd.DataFrame(rows, columns=["Provider / slot", "Status", "Last validated", "Last error category", "Recommended action"]), use_container_width=True, hide_index=True)
         st.caption("Actual API keys are never displayed.")
     with tabs[0]:
-        st.text_input("Workspace name", value="BrandSight GEO Agency Workspace")
+        st.text_input("Workspace name", value="BrandSight GEO Agency Workspace", key="settings_workspace_name")
     with tabs[1]:
-        st.multiselect("Enabled providers", ["Gemini", "OpenAI", "Claude", "Perplexity"], default=["Gemini"])
+        st.multiselect("Enabled providers", ["Gemini", "OpenAI", "Claude", "Perplexity"], default=["Gemini"], key="settings_enabled_providers")
     with tabs[3]:
-        st.text_area("Default prompt template", value="Best {category} in {city} for {target_customer}")
+        st.text_area("Default prompt template", value="Best {category} in {city} for {target_customer}", key="settings_default_prompt_template")
     with tabs[4]:
-        st.text_input("Report footer", value="Observed AI visibility. No ranking guarantee.")
+        st.text_input("Report footer", value="Observed AI visibility. No ranking guarantee.", key="settings_report_footer")
     with tabs[5]:
         st.dataframe(pd.DataFrame([["Owner", "Admin"], ["Analyst", "Can run audits"]], columns=["Member", "Role"]), hide_index=True)
     with tabs[6]:
-        st.selectbox("Retain raw responses", ["Never commit raw responses", "30 days local only", "90 days encrypted storage"])
+        st.selectbox("Retain raw responses", ["Never commit raw responses", "30 days local only", "90 days encrypted storage"], key="settings_retention_raw_responses")
 
 
 def _ai_visibility(data: dict[str, Any]) -> None:
@@ -488,7 +510,12 @@ def _brands(data: dict[str, Any], selected_brand: str) -> None:
     render_page_header("Brands", "Brands", "Manage brands and open their GEO profiles.")
     st.dataframe(pd.DataFrame(data["brands"]), use_container_width=True, hide_index=True)
     brand_names = [brand["name"] for brand in data["brands"]]
-    active_name = st.selectbox("Open brand profile", brand_names, index=brand_names.index(selected_brand) if selected_brand in brand_names else 0)
+    active_name = st.selectbox(
+        "Open brand profile",
+        brand_names,
+        index=brand_names.index(selected_brand) if selected_brand in brand_names else 0,
+        key="brand_detail_selected_brand",
+    )
     brand = next(item for item in data["brands"] if item["name"] == active_name)
     st.markdown("### Brand Detail")
     cols = st.columns(4)
