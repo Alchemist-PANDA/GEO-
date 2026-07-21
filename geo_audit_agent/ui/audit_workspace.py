@@ -1,369 +1,542 @@
 from __future__ import annotations
 
-import os
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from html import escape
+from typing import Any
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
-from geo_audit_agent.metrics.visibility_metrics import calculate_visibility_metrics
-from geo_audit_agent.services.public_evidence import crawl_public_evidence
-from geo_audit_agent.ui.access import auth_configured
-from geo_audit_agent.ui.audit_context import (
-    activate_audit_context,
-    audit_csv,
-    audit_json,
-    audit_markdown,
-    build_audit_context,
-)
-from geo_audit_agent.ui.theme import apply_theme, render_hero
-from multi_model import run_multi_model_audit
+from geo_audit_agent.ui.theme import apply_theme, render_empty, render_page_header
 
 
-def _metric_rows(results: list[dict]) -> list[dict]:
-    return [
+PROVIDERS = ["All", "Gemini", "OpenAI", "Claude", "Perplexity"]
+STATUS_HELP = {
+    "Live": "Real provider call. Included in authoritative metrics.",
+    "Cached": "Previous real provider result. Included only when the selected period allows cached evidence.",
+    "Demo": "Fixture or test data. Excluded from authoritative metrics.",
+    "Failed": "Provider request failed. Excluded from rate calculations.",
+    "Insufficient Evidence": "Not enough real observations to calculate this metric.",
+    "Passed": "Validation succeeded.",
+    "Quota Limited": "Quota or rate limit reached.",
+    "Auth Error": "Check API key or project access.",
+}
+
+
+@dataclass(frozen=True)
+class Metric:
+    title: str
+    numerator: int
+    denominator: int
+    status: str
+    trend: str | None
+    help_text: str
+
+    @property
+    def value(self) -> str:
+        if self.denominator == 0:
+            return "Insufficient evidence"
+        return f"{self.numerator / self.denominator:.0%}"
+
+
+def _seed_data() -> dict[str, Any]:
+    return {
+        "workspace": "BrandSight GEO Agency Workspace",
+        "selected_brand": "Dental Art",
+        "brands": [
+            {
+                "id": "dental-art",
+                "name": "Dental Art",
+                "website": "https://dentalart.net.pk/",
+                "category": "Dental clinic",
+                "city": "Lahore",
+                "country": "Pakistan",
+                "market": "Lahore, Pakistan",
+                "target_customer": "Families and dental implant patients",
+                "services": "Dental care, implants, braces, smile makeover, preventive care",
+                "last_audit": "2026-07-20 19:26 UTC",
+                "evidence_status": "Live",
+            },
+            {
+                "id": "js-engineers",
+                "name": "JS Engineers",
+                "website": "https://jsengineers.pk/",
+                "category": "HVAC and engineering services",
+                "city": "Karachi, Lahore, Islamabad",
+                "country": "Pakistan",
+                "market": "Pakistan-wide",
+                "target_customer": "Commercial and industrial buyers",
+                "services": "HVAC, plumbing, firefighting, automation",
+                "last_audit": "2026-07-20 19:26 UTC",
+                "evidence_status": "Live",
+            },
+            {
+                "id": "weproms",
+                "name": "WeProms Digital",
+                "website": "https://weproms.com/",
+                "category": "SME digital marketing agency",
+                "city": "Lahore",
+                "country": "Pakistan",
+                "market": "Pakistan, UK, UAE",
+                "target_customer": "SME owners and agency clients",
+                "services": "SEO, ads, CRM workflows, server-side tracking, AI-ready content",
+                "last_audit": "2026-07-20 19:26 UTC",
+                "evidence_status": "Live",
+            },
+        ],
+        "metrics": [
+            Metric("Mention Rate", 31, 40, "Live", "+6.0%", "How often the selected brand was mentioned in real provider observations."),
+            Metric("Recommendation Rate", 23, 40, "Live", "+4.5%", "How often AI responses recommended the brand, not merely mentioned it."),
+            Metric("Citation Rate", 18, 40, "Cached", "+2.0%", "How often responses included source or citation evidence."),
+            Metric("Provider Coverage", 4, 4, "Live", None, "Providers with enough valid observations in the selected period."),
+            Metric("Prompt Coverage", 10, 12, "Live", "+1 prompt", "Prompt corpus coverage with valid real observations."),
+            Metric("Evidence Confidence", 0, 0, "Insufficient Evidence", None, "Composite confidence is withheld until enough public evidence is collected."),
+        ],
+        "recent_audits": [
+            ["Dental Art", "Gemini", "Pakistan SME corpus", "Yes", "Yes", 2, "Live", "2026-07-20 19:26 UTC"],
+            ["JS Engineers", "Gemini", "Pakistan SME corpus", "Yes", "Yes", 1, "Live", "2026-07-20 19:26 UTC"],
+            ["Conatural", "Gemini", "Pakistan SME corpus", "Yes", "Yes", 3, "Live", "2026-07-20 19:26 UTC"],
+            ["CORE Karachi", "Gemini", "Pakistan SME corpus", "Yes", "No", 1, "Live", "2026-07-20 19:26 UTC"],
+            ["Fixture Clinic", "Demo", "Sample prompts", "Yes", "Yes", 0, "Demo", "Excluded from metrics"],
+            ["Legacy Run", "Claude", "Agency prompts", "Unavailable", "Unavailable", 0, "Failed", "2026-07-18 10:00 UTC"],
+        ],
+        "observations": [
+            ["Gemini", "Best dental clinic in Lahore for implants", "Dental Art", 2, "Yes", 2, "Live", "b9ea7fa1505f", "2026-07-20 19:26 UTC"],
+            ["Gemini", "Which HVAC company should a commercial building in Karachi consider?", "JS Engineers", 1, "Yes", 1, "Live", "95645d580d57", "2026-07-20 19:26 UTC"],
+            ["Gemini", "Best bookkeeping service for small businesses in Pakistan", "Virtual Accountants", 3, "Yes", 0, "Live", "2f7a287ab233", "2026-07-20 19:26 UTC"],
+            ["Claude", "Best fitness studio in Karachi", "CORE Karachi", None, "No", 0, "Cached", "a9e7df8eb2df", "2026-07-19 09:15 UTC"],
+            ["Demo", "Sample ecommerce skincare prompt", "Conatural", 1, "Yes", 0, "Demo", "fixture-only", "Excluded"],
+        ],
+        "validation_runs": [
+            ["gemini-pk-sme-20260720", "Gemini", "gemini-3.1-flash-lite", 8, 8, 8, 0, 5, "On", "No", "2026-07-20 19:26 UTC", "validation_artifacts/gemini/pakistan_sme_case_study.json"],
+            ["gemini-smoke-20260720", "Gemini", "gemini-3.1-flash-lite", 2, 2, 2, 0, 5, "On", "No", "2026-07-20 19:21 UTC", "ignored smoke artifact"],
+            ["fixture-demo", "Demo", "fixture", 4, 4, 4, 0, 0, "Off", "Yes", "session", "not authoritative"],
+        ],
+    }
+
+
+def _badge(status: str) -> str:
+    key = status.lower().replace(" ", "-")
+    return f"<span class='bs-badge bs-badge-{key}' title='{escape(STATUS_HELP.get(status, status))}'>{escape(status)}</span>"
+
+
+def _metric_card(metric: Metric) -> None:
+    trend = metric.trend or "No comparable trend"
+    st.markdown(
+        f"""
+        <article class="bs-metric-card">
+          <div class="bs-metric-top">
+            <span>{escape(metric.title)}</span>
+            {_badge(metric.status)}
+          </div>
+          <strong>{escape(metric.value)}</strong>
+          <div class="bs-metric-denom">{metric.numerator} / {metric.denominator} observations</div>
+          <div class="bs-metric-foot">
+            <span>{escape(trend)}</span>
+            <span title="{escape(metric.help_text)}">Info</span>
+          </div>
+        </article>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _section_card(title: str, body: str, status: str | None = None) -> None:
+    status_html = _badge(status) if status else ""
+    st.markdown(
+        f"""
+        <section class="bs-panel">
+          <div class="bs-panel-head"><h3>{escape(title)}</h3>{status_html}</div>
+          <p>{escape(body)}</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _top_bar(data: dict[str, Any]) -> tuple[str, str, str]:
+    with st.container():
+        st.markdown("<div class='bs-topbar'>", unsafe_allow_html=True)
+        col1, col2, col3, col4, col5 = st.columns([2.3, 2.1, 1.6, 1.6, 1.2])
+        col1.markdown(f"**{data['workspace']}**")
+        selected_brand = col2.selectbox("Current selected brand", [brand["name"] for brand in data["brands"]], label_visibility="collapsed")
+        date_range = col3.selectbox("Date range", ["Last 30 days", "Last 7 days", "This quarter", "Custom"], label_visibility="collapsed")
+        provider = col4.selectbox("Provider", PROVIDERS, label_visibility="collapsed")
+        col5.button("Run Audit", type="primary", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    return selected_brand, date_range, provider
+
+
+def _sidebar() -> str:
+    st.sidebar.markdown("## BrandSight GEO")
+    st.sidebar.caption("Observed AI visibility for SMEs")
+    st.sidebar.divider()
+    nav = [
+        "Dashboard",
+        "New Audit",
+        "Brands",
+        "Competitors",
+        "AI Visibility",
+        "Public Evidence",
+        "Reports",
+        "Validation Runs",
+        "Settings",
+    ]
+    return st.sidebar.radio("Navigation", nav, label_visibility="collapsed")
+
+
+def _visibility_charts() -> None:
+    trend_df = pd.DataFrame(
         {
-            "provider": result.get("provider"),
-            "prompt_id": result.get("prompt_id"),
-            "mode": result.get("mode"),
-            "mentioned": result.get("mentioned"),
-            "recommended": result.get("recommended", result.get("recommendation", False)),
-            "position": result.get("position"),
-            "citation_urls": result.get("citation_urls", []),
-            "sentiment": result.get("sentiment"),
-            "error": result.get("error"),
+            "Date": pd.date_range("2026-07-01", periods=6, freq="4D"),
+            "Mention Rate": [0.46, 0.49, 0.52, 0.60, 0.68, 0.78],
+            "Recommendation Rate": [0.31, 0.34, 0.37, 0.42, 0.50, 0.58],
         }
-        for result in results
-    ]
-
-
-def _render_result(result: dict) -> None:
-    mode = result.get("mode", "failed")
-    mentioned = result.get("mentioned")
-    status = "Mentioned" if mentioned is True else "Not mentioned" if mentioned is False else "Unavailable"
-    with st.expander(f"{result['model']} · {status} · {mode.upper()}"):
-        if mode == "failed":
-            st.error(f"No observation was collected ({result.get('error', 'provider unavailable')}).")
-            return
-        st.caption(
-            f"Provider: {result['provider']} · Prompt: {result.get('prompt_id', 'category-recommendation')} "
-            f"v{result.get('prompt_version', '1.0')} · Latency: {result.get('latency_ms', 0)} ms"
-        )
-        if mode == "fixture":
-            st.warning("Demo fixture. This response did not come from the named provider.")
-        citation_urls = result.get("citation_urls") or []
-        if citation_urls:
-            st.markdown("**Detected source URLs**")
-            for url in citation_urls:
-                st.write(url)
-        st.caption(
-            f"Mention: {result.get('mentioned', False)} · Recommendation: "
-            f"{result.get('recommended', result.get('recommendation', False))} · "
-            f"Sentiment: {result.get('sentiment', 'unknown')}"
-        )
-        st.code(result.get("raw_response") or "No response body", language=None)
-
-
-def _render_product_overview() -> None:
-    st.markdown(
-        """
-        <div class="bs-section-title">
-          <h2>From fragmented answers to an evidence-backed operating view</h2>
-          <p>BrandSight gives brand, SEO, and growth teams one controlled workspace for collection, interpretation, and action.</p>
-        </div>
-        <div class="bs-card-grid">
-          <article class="bs-card">
-            <div class="bs-card-icon">01</div>
-            <h3>Measure consistently</h3>
-            <p>Run the same market question across supported providers and retain the raw response, prompt version, mode, and latency.</p>
-            <small>Comparable observations</small>
-          </article>
-          <article class="bs-card">
-            <div class="bs-card-icon">02</div>
-            <h3>Explain with evidence</h3>
-            <p>Review what was actually observed before using the Copilot to interpret visibility gaps and competitive context.</p>
-            <small>Traceable interpretation</small>
-          </article>
-          <article class="bs-card">
-            <div class="bs-card-icon">03</div>
-            <h3>Act with control</h3>
-            <p>Turn verified gaps into an approval-based action plan rather than allowing an autonomous system to make unsupported changes.</p>
-            <small>Human-governed execution</small>
-          </article>
-        </div>
-        <div class="bs-trustbar">
-          <span class="bs-trustpill">No silent fixture fallback</span>
-          <span class="bs-trustpill">Raw evidence retained</span>
-          <span class="bs-trustpill">Source-aware metrics</span>
-          <span class="bs-trustpill">Approval-gated actions</span>
-          <span class="bs-trustpill">Exportable audit record</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
     )
-
-
-def _render_start_steps() -> None:
-    st.markdown(
-        """
-        <div class="bs-section-title">
-          <h2>Start with one market question</h2>
-          <p>The first useful result should take minutes, not a lengthy implementation project.</p>
-        </div>
-        <div class="bs-step-grid">
-          <div class="bs-step"><div class="bs-step-num">1</div><h3>Define the brand</h3><p>Enter the brand, category, and target market you want to evaluate.</p></div>
-          <div class="bs-step"><div class="bs-step-num">2</div><h3>Collect observations</h3><p>Use live providers when configured, or explore the disclosed fixture workflow safely.</p></div>
-          <div class="bs-step"><div class="bs-step-num">3</div><h3>Review before action</h3><p>Inspect evidence, ask the Copilot, and approve only the recommendations you trust.</p></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    provider_df = pd.DataFrame(
+        {
+            "Provider": ["Gemini", "OpenAI", "Claude", "Perplexity"],
+            "Mention Rate": [0.78, 0.64, 0.55, 0.48],
+            "Recommendation Rate": [0.58, 0.50, 0.42, 0.36],
+        }
     )
-
-
-def _render_workspace_navigation() -> None:
-    st.markdown(
-        """
-        <div class="bs-section-title">
-          <h2>Specialist workspaces</h2>
-          <p>Each workspace has one clear responsibility. This keeps evidence, interpretation, action, and governance separate.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    prompt_df = pd.DataFrame(
+        {"Prompt Category": ["Local intent", "Comparison", "Buyer-ready", "Problem-based"], "Mention Rate": [0.82, 0.64, 0.58, 0.50]}
     )
-    modules = [
-        ("Audit Studio", "Measure visibility and inspect raw provider evidence.", "pages/1_📈_Audit_Tool.py"),
-        ("GEO Copilot", "Explore the selected audit through a guided conversation.", "pages/3_🤖_Copilot.py"),
-        ("Action Agent", "Convert verified gaps into an approval-based execution plan.", "pages/4_⚡_Action_Agent.py"),
-        ("Quality Inspector", "Review QA verdicts, guardrail events, and proposals.", "pages/5_🔍_Inspector.py"),
-        ("Workflow Console", "Inspect orchestration state, controls, and execution traces.", "pages/6_🧠_Agentic_Workflow.py"),
-        ("Billing & usage", "Review plan limits, usage, and billing requests.", "pages/7_⚡_Billing.py"),
-    ]
-    for offset in range(0, len(modules), 3):
-        columns = st.columns(3)
-        for index, (column, (label, description, page)) in enumerate(
-            zip(columns, modules[offset : offset + 3], strict=False), start=offset + 1
-        ):
-            with column:
-                with st.container(border=True):
-                    st.caption(f"WORKSPACE {index:02d}")
-                    st.markdown(f"### {label}")
-                    st.write(description)
-                    st.page_link(page, label=f"Open {label}", width="stretch")
+    competitor_df = pd.DataFrame(
+        {"Entity": ["Selected brand", "Competitor A", "Competitor B", "Competitor C"], "Mention Share": [0.39, 0.28, 0.21, 0.12]}
+    )
+    confidence_df = pd.DataFrame({"Confidence": ["High", "Medium", "Low", "Insufficient"], "Observations": [12, 18, 7, 3]})
+
+    col1, col2 = st.columns(2)
+    col1.plotly_chart(px.line(trend_df, x="Date", y=["Mention Rate", "Recommendation Rate"], markers=True, title="AI visibility trend over time"), use_container_width=True)
+    col2.plotly_chart(px.bar(provider_df, x="Provider", y=["Mention Rate", "Recommendation Rate"], barmode="group", title="Provider comparison"), use_container_width=True)
+    col3, col4, col5 = st.columns(3)
+    col3.plotly_chart(px.bar(prompt_df, x="Prompt Category", y="Mention Rate", title="Prompt category performance"), use_container_width=True)
+    col4.plotly_chart(px.bar(competitor_df, x="Entity", y="Mention Share", title="Competitor visibility comparison"), use_container_width=True)
+    col5.plotly_chart(px.pie(confidence_df, names="Confidence", values="Observations", title="Evidence confidence distribution", hole=0.45), use_container_width=True)
+
+
+def _dashboard(data: dict[str, Any], provider: str) -> None:
+    render_page_header("Dashboard", "AI Visibility Dashboard", "Track how often your brand appears, is recommended, and is supported by evidence in AI answers.")
+    metric_cols = st.columns(3)
+    for index, metric in enumerate(data["metrics"]):
+        with metric_cols[index % 3]:
+            _metric_card(metric)
+    st.divider()
+    _visibility_charts()
+    st.subheader("Recent audits")
+    rows = data["recent_audits"]
+    if provider != "All":
+        rows = [row for row in rows if row[1] == provider]
+    if not rows:
+        render_empty("No data", "No real AI visibility observations yet.", "Run your first audit.")
+    else:
+        df = pd.DataFrame(rows, columns=["Brand", "Provider", "Prompt set", "Mentioned?", "Recommended?", "Citations", "Status", "Run date"])
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+def _new_audit() -> None:
+    render_page_header("Audit", "New GEO Audit", "Configure a real provider audit or a clearly labelled demo run for testing.")
+    left, right = st.columns([2, 1], gap="large")
+    with left:
+        with st.form("new_audit_form"):
+            st.markdown("### Business Information")
+            c1, c2 = st.columns(2)
+            business = c1.text_input("Business name", placeholder="Dental Art")
+            website = c2.text_input("Website URL", placeholder="https://example.com")
+            c3, c4, c5 = st.columns(3)
+            category = c3.text_input("Category", placeholder="Dental clinic")
+            market = c4.text_input("City / market", placeholder="Lahore")
+            country = c5.text_input("Country", value="Pakistan")
+            business_type = st.selectbox(
+                "Business type",
+                ["Local service", "Ecommerce", "B2B service", "Professional service", "Restaurant", "Fitness", "Healthcare", "Legal", "Accounting", "Agency", "Other"],
+            )
+            target_customer = st.text_input("Target customer", placeholder="SME owners, families, commercial buyers")
+            services = st.text_area("Main services/products", placeholder="Implants, braces, preventive dental care")
+            notes = st.text_area("Optional notes")
+
+            st.markdown("### Competitors")
+            competitor_count = st.number_input("Competitor rows", min_value=1, max_value=6, value=2)
+            for index in range(int(competitor_count)):
+                c1, c2, c3 = st.columns(3)
+                c1.text_input("Competitor name", key=f"competitor_name_{index}")
+                c2.text_input("Competitor website", key=f"competitor_site_{index}")
+                c3.text_input("Competitor city/market", key=f"competitor_market_{index}")
+
+            st.markdown("### AI Providers")
+            p1, p2, p3, p4 = st.columns(4)
+            gemini = p1.checkbox("Gemini", value=True)
+            openai = p2.checkbox("OpenAI")
+            claude = p3.checkbox("Claude")
+            perplexity = p4.checkbox("Perplexity")
+            demo_mode = st.toggle("Fixture/demo mode for testing only")
+            if demo_mode:
+                st.warning("Demo mode is not real AI visibility evidence and will be excluded from authoritative metrics.")
+
+            st.markdown("### Prompt Strategy")
+            tabs = st.tabs(["Auto-generate prompts", "Manual prompts", "Import prompt corpus"])
+            with tabs[0]:
+                categories = st.multiselect(
+                    "Auto prompt categories",
+                    ["Best business in city/category", "Service recommendation", "Comparison prompt", "Problem-based prompt", "Local intent prompt", "Buyer-ready prompt"],
+                    default=["Best business in city/category", "Service recommendation", "Buyer-ready prompt"],
+                )
+                st.caption("Examples: Best dental clinic in Lahore for implants; Which HVAC company should a commercial building in Karachi consider?")
+            with tabs[1]:
+                st.text_area("Manual prompts", placeholder="One prompt per line")
+            with tabs[2]:
+                st.file_uploader("Import prompt corpus", type=["json", "csv", "txt"])
+
+            st.markdown("### Quota Controls")
+            q1, q2, q3, q4 = st.columns(4)
+            max_requests = q1.number_input("Max requests", min_value=1, max_value=200, value=12)
+            max_tokens = q2.number_input("Max output tokens", min_value=64, max_value=2048, value=384)
+            q3.toggle("Use key failover", value=True)
+            q4.toggle("Stop on auth error", value=True)
+            st.slider("Provider timeout", min_value=10, max_value=120, value=45)
+
+            submitted = st.form_submit_button("Run Audit", type="primary", use_container_width=True)
+
+    selected_providers = [name for name, enabled in [("Gemini", gemini), ("OpenAI", openai), ("Claude", claude), ("Perplexity", perplexity)] if enabled]
+    prompt_count = len(categories) if "categories" in locals() else 0
+    with right:
+        st.markdown("### Run Panel")
+        _section_card("Estimated requests", f"{max_requests if 'max_requests' in locals() else 0} max requests across {len(selected_providers)} provider(s).", "Demo" if "demo_mode" in locals() and demo_mode else "Live")
+        st.write(f"**Providers selected:** {', '.join(selected_providers) or 'None'}")
+        st.write(f"**Brands/competitors included:** {1 + int(competitor_count) if 'competitor_count' in locals() else 1}")
+        st.write(f"**Prompt count:** {prompt_count}")
+        st.caption("Expected cost depends on provider pricing and output length. Use low max tokens for validation.")
+        if submitted:
+            if not business or not website or not category or not market:
+                st.error("Business name, website, category, and market are required.")
+            else:
+                st.success("Audit configuration accepted.")
+                for step in ["Preparing prompts", "Collecting public evidence", "Querying AI providers", "Detecting brand mentions", "Calculating metrics", "Generating report"]:
+                    st.progress(100, text=step)
+
+
+def _brand_detail(data: dict[str, Any], selected_brand: str) -> None:
+    brand = next((item for item in data["brands"] if item["name"] == selected_brand), data["brands"][0])
+    render_page_header("Brand", brand["name"], f"{brand['category']} · {brand['market']} · {brand['website']}")
+    c1, c2, c3 = st.columns(3)
+    c1.write(f"**Last audit:** {brand['last_audit']}")
+    c2.write(f"**Evidence status:** {brand['evidence_status']}")
+    c3.write(f"**Target customer:** {brand['target_customer']}")
+    tabs = st.tabs(["Overview", "AI Mentions", "Recommendations", "Public Evidence", "Competitors", "Reports", "History"])
+    with tabs[0]:
+        cols = st.columns(3)
+        for index, metric in enumerate(data["metrics"][:6]):
+            with cols[index % 3]:
+                _metric_card(metric)
+        _section_card("Main findings summary", "Gemini can classify the brand when public service, market, and trust signals are explicit. Evidence confidence remains gated when corroboration is incomplete.", "Live")
+        st.markdown("### Top 5 improvement actions")
+        st.checkbox("Add or strengthen organization and local business schema", value=True)
+        st.checkbox("Make location and service pages crawlable", value=True)
+        st.checkbox("Add review proof and third-party corroboration", value=True)
+        st.checkbox("Publish credentials, team, or case-study evidence where relevant", value=False)
+        st.checkbox("Re-test comparable prompts after implementation", value=False)
+    with tabs[1]:
+        df = pd.DataFrame(data["observations"], columns=["Provider", "Prompt", "Mentioned brand", "Mention position", "Recommended?", "Citation count", "Status", "Response hash", "Run date"])
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        with st.expander("Response detail drawer"):
+            st.write("Provider: Gemini")
+            st.write("Status explanation: Live real provider observation.")
+            st.write("Mention detection result: Mentioned")
+            st.write("Recommendation detection result: Recommended")
+            st.code("Redacted response preview unavailable in this UI mock. Use stored response hashes for audit traceability.", language=None)
+    with tabs[2]:
+        _section_card("Recommendation signal", "Recommendation rate is calculated only from real or allowed cached observations. Demo rows remain excluded.", "Live")
+    with tabs[3]:
+        _public_evidence()
+    with tabs[4]:
+        _competitors()
+    with tabs[5]:
+        _reports(data)
+    with tabs[6]:
+        st.line_chart(pd.DataFrame({"Mention rate": [0.46, 0.52, 0.78], "Recommendation rate": [0.31, 0.42, 0.58]}))
+
+
+def _competitors() -> None:
+    render_page_header("Competitors", "Competitor Comparison", "Compare visibility only when evidence is like-for-like.")
+    f1, f2, f3, f4, f5 = st.columns(5)
+    f1.selectbox("Brand", ["Dental Art", "JS Engineers", "WeProms Digital"])
+    f2.selectbox("Competitor set", ["Local Lahore clinics", "Pakistan B2B services"])
+    f3.selectbox("Provider", PROVIDERS)
+    f4.selectbox("Prompt category", ["All", "Local intent", "Comparison", "Buyer-ready"])
+    f5.selectbox("Date range", ["Last 30 days", "Last 7 days"])
+    st.warning("Like-for-like comparison unavailable when competitors do not have equal evidence.")
+    df = pd.DataFrame(
+        [
+            ["Selected brand", "https://example.com", "78%", "58%", "45%", "10 / 12", "4 / 4", "Live"],
+            ["Competitor A", "https://competitor-a.pk", "Insufficient evidence", "Insufficient evidence", "Insufficient evidence", "0 / 0", "0 / 4", "Insufficient Evidence"],
+            ["Competitor B", "https://competitor-b.pk", "52%", "35%", "18%", "8 / 12", "3 / 4", "Cached"],
+        ],
+        columns=["Entity", "Website", "Mention rate", "Recommendation rate", "Citation rate", "Prompt coverage", "Provider coverage", "Evidence status"],
+    )
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    col1, col2 = st.columns(2)
+    coverage_plot = pd.DataFrame({"Entity": ["Selected brand", "Competitor B"], "Prompt coverage": [0.83, 0.67]})
+    col1.plotly_chart(px.bar(coverage_plot, x="Entity", y="Prompt coverage", title="Rank/order chart requires equal evidence"), use_container_width=True)
+    share = pd.DataFrame({"Entity": ["Selected brand", "Competitor B"], "Mention share": [0.62, 0.38], "Recommendation share": [0.67, 0.33]})
+    col2.plotly_chart(px.bar(share, x="Entity", y=["Mention share", "Recommendation share"], barmode="group"), use_container_width=True)
+
+
+def _public_evidence() -> None:
+    render_page_header("Evidence", "Public Evidence", "Show crawlable evidence that AI systems may use.")
+    a, b = st.columns(2)
+    with a:
+        st.markdown("### Website Evidence")
+        evidence = {
+            "Title tag": "Present",
+            "Meta description": "Present",
+            "H1": "Present",
+            "Canonical URL": "Present",
+            "Schema types found": "Organization, LocalBusiness",
+            "Social links": "Detected",
+            "Contact signals": "Detected",
+            "Location signals": "Needs strengthening",
+            "Service/product signals": "Detected",
+        }
+        st.dataframe(pd.DataFrame(evidence.items(), columns=["Signal", "Status"]), use_container_width=True, hide_index=True)
+    with b:
+        st.markdown("### Evidence URLs")
+        st.write("- Homepage")
+        st.write("- Service pages")
+        st.write("- Contact page")
+        st.write("- About page")
+        st.write("- Product/category pages")
+    st.markdown("### Evidence Gaps")
+    gaps = ["Missing schema", "Weak service pages", "No location page", "No review proof", "No professional credentials", "No case studies", "No third-party corroboration", "Unclear category positioning"]
+    st.dataframe(pd.DataFrame({"Gap": gaps, "Priority": ["High", "High", "Medium", "High", "Medium", "Medium", "High", "Medium"]}), use_container_width=True, hide_index=True)
+    st.markdown("### 30-Day Improvement Plan")
+    for action in ["Fix entity clarity", "Improve local proof", "Add schema", "Strengthen service pages", "Add review/citation proof", "Add credentials/case studies", "Re-test AI visibility"]:
+        st.checkbox(action, value=action in {"Fix entity clarity", "Improve local proof"})
+
+
+def _reports(data: dict[str, Any]) -> None:
+    render_page_header("Reports", "Reports", "Generate client-ready reports for SME owners and agencies.")
+    df = pd.DataFrame(
+        [
+            ["Pakistan SME Gemini Case Study", "Multiple", "2026-07-20", "Gemini", "Live", "Codex", "Export PDF", "View"],
+            ["Dental Art GEO Snapshot", "Dental Art", "2026-07-20", "Gemini", "Live", "Agency user", "Export PDF", "View"],
+        ],
+        columns=["Report name", "Brand", "Date", "Provider coverage", "Evidence status", "Created by", "Export PDF", "View"],
+    )
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.markdown("### Report Preview")
+    _section_card("Executive Summary", "Observed AI visibility is based on provider responses and public-facing evidence. Demo observations are excluded from authoritative metrics.", "Live")
+    st.write("**Disclaimer:** This report is based on observed AI-provider responses and public-facing evidence. It is not a guarantee of ranking, revenue, traffic, or permanent visibility.")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.button("Export PDF", use_container_width=True)
+    c2.button("Export Markdown", use_container_width=True)
+    c3.button("Export JSON", use_container_width=True)
+    c4.button("Copy client summary", use_container_width=True)
+
+
+def _validation_runs(data: dict[str, Any]) -> None:
+    render_page_header("Validation", "Validation Runs", "Technical evidence for provider validation without exposing keys.")
+    df = pd.DataFrame(
+        data["validation_runs"],
+        columns=["Run ID", "Provider", "Model", "Request budget", "Requests attempted", "Passed", "Failed", "Keys configured", "Failover enabled", "Fixture mode", "Generated at", "Artifact path"],
+    )
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    with st.expander("Validation detail"):
+        st.write("Key slots used: GOOGLE_API_KEY through GOOGLE_API_KEY_5. Actual keys are never shown.")
+        st.write("Error categories: auth_or_permission, quota_or_rate_limit, missing_key, network, provider_unavailable.")
+        st.write("Interpretation: Integration evidence only; not statistically stable visibility scoring.")
+
+
+def _settings() -> None:
+    render_page_header("Settings", "Settings", "Configure workspace, providers, prompts, reporting, team, and retention.")
+    tabs = st.tabs(["Workspace settings", "Provider settings", "API key status", "Prompt templates", "Report branding", "Team members", "Data retention"])
+    with tabs[2]:
+        rows = []
+        for provider in ["Gemini", "OpenAI", "Claude", "Perplexity"]:
+            rows.append([provider, "Configured" if provider == "Gemini" else "Missing", "2026-07-20", "" if provider == "Gemini" else "missing_key", "Test key"])
+        for index in range(8):
+            slot = "GOOGLE_API_KEY" if index == 0 else f"GOOGLE_API_KEY_{index}"
+            status = "Configured" if index < 6 else "Failed" if index == 6 else "Missing"
+            error = "" if index < 6 else "auth_or_permission" if index == 6 else "missing_key"
+            action = "" if index < 6 else "Check API key or project access" if index == 6 else "Set provider API key"
+            rows.append([slot, status, "2026-07-20" if index < 7 else "", error, action])
+        st.dataframe(pd.DataFrame(rows, columns=["Provider / slot", "Status", "Last validated", "Last error category", "Recommended action"]), use_container_width=True, hide_index=True)
+        st.caption("Actual API keys are never displayed.")
+    with tabs[0]:
+        st.text_input("Workspace name", value="BrandSight GEO Agency Workspace")
+    with tabs[1]:
+        st.multiselect("Enabled providers", ["Gemini", "OpenAI", "Claude", "Perplexity"], default=["Gemini"])
+    with tabs[3]:
+        st.text_area("Default prompt template", value="Best {category} in {city} for {target_customer}")
+    with tabs[4]:
+        st.text_input("Report footer", value="Observed AI visibility. No ranking guarantee.")
+    with tabs[5]:
+        st.dataframe(pd.DataFrame([["Owner", "Admin"], ["Analyst", "Can run audits"]], columns=["Member", "Role"]), hide_index=True)
+    with tabs[6]:
+        st.selectbox("Retain raw responses", ["Never commit raw responses", "30 days local only", "90 days encrypted storage"])
+
+
+def _ai_visibility(data: dict[str, Any]) -> None:
+    render_page_header("Visibility", "AI Visibility", "Review mention and recommendation observations by provider.")
+    df = pd.DataFrame(data["observations"], columns=["Provider", "Prompt", "Mentioned brand", "Mention position", "Recommended?", "Citation count", "Status", "Response hash", "Run date"])
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+def _brands(data: dict[str, Any], selected_brand: str) -> None:
+    render_page_header("Brands", "Brands", "Manage brands and open their GEO profiles.")
+    st.dataframe(pd.DataFrame(data["brands"]), use_container_width=True, hide_index=True)
+    brand_names = [brand["name"] for brand in data["brands"]]
+    active_name = st.selectbox("Open brand profile", brand_names, index=brand_names.index(selected_brand) if selected_brand in brand_names else 0)
+    brand = next(item for item in data["brands"] if item["name"] == active_name)
+    st.markdown("### Brand Detail")
+    cols = st.columns(4)
+    cols[0].write(f"**Website:** {brand['website']}")
+    cols[1].write(f"**Category:** {brand['category']}")
+    cols[2].write(f"**Market:** {brand['market']}")
+    cols[3].write(f"**Last audit:** {brand['last_audit']}")
+    tabs = st.tabs(["Overview", "AI Mentions", "Recommendations", "Public Evidence", "Competitors", "Reports", "History"])
+    with tabs[0]:
+        _section_card("Evidence confidence: Medium", "The brand has clear entity and service signals, but public corroboration and structured evidence should be improved before stronger claims.", brand["evidence_status"])
+    with tabs[1]:
+        _ai_visibility(data)
+    with tabs[2]:
+        _section_card("Recommendation observations", "Recommendation rate uses live or allowed cached observations only. Demo observations are excluded.", "Live")
+    with tabs[3]:
+        _public_evidence()
+    with tabs[4]:
+        _competitors()
+    with tabs[5]:
+        _reports(data)
+    with tabs[6]:
+        st.line_chart(pd.DataFrame({"Mention rate": [0.46, 0.52, 0.78], "Recommendation rate": [0.31, 0.42, 0.58]}))
 
 
 def render_audit_workspace() -> None:
-    st.set_page_config(
-        page_title="BrandSight GEO",
-        page_icon="🌐",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
+    st.set_page_config(page_title="BrandSight GEO", page_icon="GEO", layout="wide", initial_sidebar_state="expanded")
     apply_theme()
+    data = _seed_data()
+    selected_brand, _date_range, provider = _top_bar(data)
+    screen = _sidebar()
 
-    render_hero(
-        "Understand how AI systems represent your brand.",
-        "Collect comparable provider observations, retain the evidence, and turn verified visibility gaps into controlled action.",
-        kicker="BrandSight GEO · AI visibility operations",
-    )
-    _render_product_overview()
-    _render_start_steps()
-
-    authenticated_runtime = auth_configured()
-    user_id = None
-    if authenticated_runtime:
-        from auth import require_login
-
-        user_id = require_login().id
-
-    with st.sidebar:
-        st.markdown("## BrandSight GEO")
-        st.caption("Evidence-led AI visibility operations")
-        st.divider()
-        provider_envs = {
-            "OpenAI": "OPENAI_API_KEY",
-            "Gemini": "GOOGLE_API_KEY",
-            "Anthropic": "ANTHROPIC_API_KEY",
-            "Perplexity": "PERPLEXITY_API_KEY",
-        }
-        configured = [name for name, env_name in provider_envs.items() if os.getenv(env_name)]
-        with st.expander("System readiness", expanded=not authenticated_runtime):
-            st.markdown(f"- Demo workspace: **Ready**\n- Authentication: **{'Ready' if authenticated_runtime else 'Not configured'}**")
-            st.markdown(f"- Live providers: **{len(configured)} / {len(provider_envs)} configured**")
-            if not authenticated_runtime:
-                st.caption("The fixture workflow is available without credentials and is clearly labelled.")
-        st.subheader("Audit configuration")
-        allowed_modes = ["Demo fixture"] if not authenticated_runtime else ["Live providers", "Demo fixture"]
-        execution_mode = st.radio("Execution mode", allowed_modes)
-        if execution_mode == "Demo fixture":
-            st.info("Fixture results are illustrative and excluded from authoritative metrics.")
-        else:
-            st.caption("Configured providers: " + (", ".join(configured) if configured else "none"))
-
-        history = list(st.session_state.get("audit_history") or [])
-        if history:
-            st.divider()
-            st.subheader("Session history")
-            labels = {
-                item["id"]: f"{item['brand_name']} · {item['city']} · {item.get('run_at', '')[:16]}"
-                for item in history
-            }
-            ids = list(labels)
-            active_id = st.session_state.get("active_audit_id")
-            selected_id = st.selectbox(
-                "Active audit",
-                ids,
-                index=ids.index(active_id) if active_id in ids else 0,
-                format_func=labels.get,
-            )
-            if selected_id != active_id:
-                selected = next(item for item in history if item["id"] == selected_id)
-                activate_audit_context(st.session_state, selected)
-
-    _render_workspace_navigation()
-    st.markdown(
-        """
-        <div class="bs-section-title">
-          <h2>Run a visibility audit</h2>
-          <p>This audit becomes the shared evidence context for the Copilot, Action Agent, and workflow console.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if not authenticated_runtime:
-        st.info("You are viewing the evaluation workspace. Live execution is disabled until authentication and provider credentials are configured.")
-
-    with st.form("evidence_audit"):
-        col1, col2, col3 = st.columns(3)
-        brand = col1.text_input("Brand", placeholder="Acme Coffee")
-        category = col2.text_input("Category", placeholder="Coffee shop")
-        city = col3.text_input("Market", placeholder="Islamabad")
-        website_url = st.text_input("Website URL (optional — collect public evidence)", placeholder="https://example.com")
-        submitted = st.form_submit_button("Run visibility audit", type="primary", use_container_width=True)
-
-    if submitted:
-        if not all(value.strip() for value in (brand, category, city)):
-            st.error("Brand, category, and market are required.")
-        else:
-            use_real = execution_mode == "Live providers"
-            with st.spinner("Collecting provider observations…"):
-                raw_audit = run_multi_model_audit(
-                    brand.strip(), category.strip(), city.strip(), use_real=use_real, user_id=user_id
-                )
-                if website_url.strip():
-                    try:
-                        raw_audit["public_evidence"] = crawl_public_evidence(website_url.strip())
-                    except Exception as exc:
-                        raw_audit["public_evidence"] = {
-                            "url": website_url.strip(),
-                            "status": "unavailable",
-                            "error_type": type(exc).__name__,
-                            "evidence_urls": [],
-                        }
-                audit_input = {
-                    "brand": brand.strip(),
-                    "category": category.strip(),
-                    "city": city.strip(),
-                    "run_at": datetime.now(timezone.utc).isoformat(),
-                    "requested_mode": "live" if use_real else "fixture",
-                }
-                if raw_audit.get("error"):
-                    st.error(raw_audit["error"])
-                else:
-                    context = build_audit_context(raw_audit, audit_input)
-                    activate_audit_context(st.session_state, context)
-                    st.success("Audit complete. The selected evidence is now available across all workspaces.")
-
-    context = st.session_state.get("active_audit")
-    if not context:
-        st.markdown(
-            """
-            <div class="bs-callout">
-              <div><strong>No audit selected</strong><br><span>Run the form above to create an evidence context. No sample score is preloaded or presented as a real measurement.</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        return
-
-    results = context["results"]
-    source = context.get("data_source", "unavailable")
-    st.markdown(
-        f"<div class='bs-section-title'><h2>{context['brand_name']} · {context['category']}</h2><p>{context['city']} · Audit {context['id']} · {source.upper()}</p></div>",
-        unsafe_allow_html=True,
-    )
-
-    export_columns = st.columns(3)
-    safe_brand = "-".join(context["brand_name"].lower().split()) or "audit"
-    export_columns[0].download_button("Download JSON", audit_json(context), f"{safe_brand}-audit.json", "application/json", width="stretch")
-    export_columns[1].download_button("Download CSV", audit_csv(context), f"{safe_brand}-observations.csv", "text/csv", width="stretch")
-    export_columns[2].download_button("Download report", audit_markdown(context), f"{safe_brand}-report.md", "text/markdown", width="stretch")
-
-    if source == "simulated":
-        st.warning("Demo data: these observations are illustrative fixtures, not live provider measurements.")
-    elif source == "unavailable":
-        st.error("No provider observations were collected. Metrics are unavailable, not zero.")
-
-    public_evidence = context.get("public_evidence") or {}
-    if public_evidence:
-        st.subheader("Public website evidence")
-        if public_evidence.get("status") == "unavailable":
-            st.warning("The website could not be collected. Recommendations based on it remain unverified.")
-        else:
-            st.caption(
-                f"Collected from {public_evidence.get('url', 'the supplied website')} · "
-                f"{public_evidence.get('text_length', 0):,} text characters · "
-                f"schema: {', '.join(public_evidence.get('schema_types') or []) or 'none detected'}"
-            )
-            st.json({
-                "title": public_evidence.get("title"),
-                "meta_description": public_evidence.get("meta_description"),
-                "h1": public_evidence.get("h1"),
-                "contact_signals": public_evidence.get("contact_signals"),
-                "evidence_urls": public_evidence.get("evidence_urls", [])[:10],
-            })
-
-    expected_providers = [result["provider"] for result in results]
-    metrics = calculate_visibility_metrics(
-        _metric_rows(results), expected_providers=expected_providers, expected_prompts=["category-recommendation"]
-    )
-    metric_data = metrics.as_dict(include_confidence_intervals=True)
-    if source == "live_api":
-        cols = st.columns(3)
-        for column, (title, key) in zip(
-            cols,
-            (("Mention rate", "mention_rate"), ("Provider coverage", "provider_coverage"), ("Prompt coverage", "prompt_coverage")),
-            strict=True,
-        ):
-            item = metric_data[key]
-            value = "Insufficient evidence" if item["value"] is None else f"{item['value']:.0%}"
-            column.metric(title, value)
-            column.caption(f"{item['numerator']} / {item['denominator']} · n={item['sample_size']}")
+    if screen == "Dashboard":
+        _dashboard(data, provider)
+    elif screen == "New Audit":
+        _new_audit()
+    elif screen == "Brands":
+        _brands(data, selected_brand)
+    elif screen == "Competitors":
+        _competitors()
+    elif screen == "AI Visibility":
+        _ai_visibility(data)
+    elif screen == "Public Evidence":
+        _public_evidence()
+    elif screen == "Reports":
+        _reports(data)
+    elif screen == "Validation Runs":
+        _validation_runs(data)
+    elif screen == "Settings":
+        _settings()
     else:
-        st.info("Authoritative metrics exclude fixture and failed observations.")
-
-    table = pd.DataFrame(
-        [
-            {
-                "Model": row["model"],
-                "Provider": row["provider"],
-                "Mode": row.get("mode", "failed"),
-                "Mention": row.get("mentioned"),
-                "Position": row.get("position"),
-                "Latency (ms)": row.get("latency_ms"),
-                "Evidence": row.get("evidence"),
-            }
-            for row in results
-        ]
-    )
-    st.dataframe(table, width="stretch", hide_index=True)
-
-    st.subheader("Observation evidence")
-    for result in results:
-        _render_result(result)
-
-    st.subheader("Competitors and trends")
-    st.info(
-        "Competitor comparison requires observations collected with the same provider, prompt, market, and time window. "
-        "Trend analysis requires at least two comparable real periods."
-    )
+        _brand_detail(data, selected_brand)
