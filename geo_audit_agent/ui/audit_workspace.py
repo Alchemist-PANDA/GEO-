@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from geo_audit_agent.metrics.visibility_metrics import calculate_visibility_metrics
+from geo_audit_agent.services.public_evidence import crawl_public_evidence
 from geo_audit_agent.ui.access import auth_configured
 from geo_audit_agent.ui.audit_context import (
     activate_audit_context,
@@ -237,6 +238,7 @@ def render_audit_workspace() -> None:
         brand = col1.text_input("Brand", placeholder="Acme Coffee")
         category = col2.text_input("Category", placeholder="Coffee shop")
         city = col3.text_input("Market", placeholder="Islamabad")
+        website_url = st.text_input("Website URL (optional — collect public evidence)", placeholder="https://example.com")
         submitted = st.form_submit_button("Run visibility audit", type="primary", use_container_width=True)
 
     if submitted:
@@ -248,6 +250,16 @@ def render_audit_workspace() -> None:
                 raw_audit = run_multi_model_audit(
                     brand.strip(), category.strip(), city.strip(), use_real=use_real, user_id=user_id
                 )
+                if website_url.strip():
+                    try:
+                        raw_audit["public_evidence"] = crawl_public_evidence(website_url.strip())
+                    except Exception as exc:
+                        raw_audit["public_evidence"] = {
+                            "url": website_url.strip(),
+                            "status": "unavailable",
+                            "error_type": type(exc).__name__,
+                            "evidence_urls": [],
+                        }
                 audit_input = {
                     "brand": brand.strip(),
                     "category": category.strip(),
@@ -291,6 +303,25 @@ def render_audit_workspace() -> None:
         st.warning("Demo data: these observations are illustrative fixtures, not live provider measurements.")
     elif source == "unavailable":
         st.error("No provider observations were collected. Metrics are unavailable, not zero.")
+
+    public_evidence = context.get("public_evidence") or {}
+    if public_evidence:
+        st.subheader("Public website evidence")
+        if public_evidence.get("status") == "unavailable":
+            st.warning("The website could not be collected. Recommendations based on it remain unverified.")
+        else:
+            st.caption(
+                f"Collected from {public_evidence.get('url', 'the supplied website')} · "
+                f"{public_evidence.get('text_length', 0):,} text characters · "
+                f"schema: {', '.join(public_evidence.get('schema_types') or []) or 'none detected'}"
+            )
+            st.json({
+                "title": public_evidence.get("title"),
+                "meta_description": public_evidence.get("meta_description"),
+                "h1": public_evidence.get("h1"),
+                "contact_signals": public_evidence.get("contact_signals"),
+                "evidence_urls": public_evidence.get("evidence_urls", [])[:10],
+            })
 
     expected_providers = [result["provider"] for result in results]
     metrics = calculate_visibility_metrics(
