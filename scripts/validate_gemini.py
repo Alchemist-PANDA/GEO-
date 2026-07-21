@@ -12,9 +12,9 @@ import json
 import os
 import re
 import sys
-from typing import Any
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 # Support `python scripts/validate_gemini.py` from a fresh checkout without
 # requiring the package to be installed first.
@@ -28,8 +28,7 @@ except ImportError:  # pragma: no cover - dependency preflight handles this.
 else:
     load_dotenv(PROJECT_ROOT / ".env")
 
-from geo_audit_agent.testing.gemini_client import APIError, RateLimitError
-
+from geo_audit_agent.testing.gemini_client import APIError, RateLimitError  # noqa: E402
 
 DEFAULT_PROMPTS = [
     (

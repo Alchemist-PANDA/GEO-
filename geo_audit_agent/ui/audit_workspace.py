@@ -10,7 +10,6 @@ import streamlit as st
 
 from geo_audit_agent.ui.theme import apply_theme, render_empty, render_page_header
 
-
 PROVIDERS = ["All", "Gemini", "OpenAI", "Claude", "Perplexity"]
 STATUS_HELP = {
     "Live": "Real provider call. Included in authoritative metrics.",
