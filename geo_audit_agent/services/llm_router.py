@@ -11,14 +11,31 @@ from geo_audit_agent.providers import ProviderUnavailableError
 logger = logging.getLogger(__name__)
 
 class LLMProviderResponse:
-    def __init__(self, text: str, total_tokens: int = 200, cost_usd: float = 0.0001, provider: str = "fallback"):
+    def __init__(
+        self,
+        text: str,
+        total_tokens: int = 200,
+        cost_usd: float = 0.0001,
+        provider: str = "fallback",
+        used_fallback: bool = False,
+    ):
         self.text = text
         self.total_tokens = total_tokens
         self.cost_usd = cost_usd
         self.provider = provider
+        self.used_fallback = used_fallback
 
 def query_provider(prompt: str, tier: str = "balanced", correlation_id: str = "") -> LLMProviderResponse:
     """Routes prompt queries to the appropriate LLM provider depending on the tier constraint."""
+    if os.getenv("FORCE_MOCK") == "true":
+        return LLMProviderResponse(
+            text="mock response: FORCE_MOCK is enabled; no live provider was called.",
+            total_tokens=len(prompt.split()),
+            cost_usd=0.0,
+            provider="mock",
+            used_fallback=True,
+        )
+
     api_key = os.getenv("GOOGLE_API_KEY")
     messages = [{"role": "user", "content": prompt}]
 
